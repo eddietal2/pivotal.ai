@@ -1,14 +1,14 @@
-🚀 Pivotal.ai: Agentic AI Swing Trading Advisor
+# 🚀 Pivotal.ai: Agentic AI Swing Trading Advisor
 
 Pivotal.ai is a full-stack, data-driven application that utilizes a custom-built Agentic AI system to identify high-probability swing trading opportunities in the stock and options markets.
 
 This project is designed to showcase mastery in building secure, highly scalable, and disciplined full-stack applications, adhering to best practices like Test-Driven Development (TDD) and Clean Architecture.
 
-💡 Core Value Proposition
+# 💡 Core Value Proposition
 
 In the chaotic world of trading data, Pivotal.ai acts as an intelligent scout. It replaces manual analysis by processing multiple market indicators (Price Action, RSI, Moving Averages) and translating complex data into a concise, actionable trading recommendation (BUY/SHORT) complete with a target price and risk assessment.
 
-🛠️ Technical Architecture
+# 🛠️ Technical Architecture
 
 This application leverages a modern, decoupled stack for security, speed, and maintainability.
 
@@ -48,7 +48,7 @@ PostgreSQL
 
 Utilized for its superior transactional reliability and advanced indexing capabilities required for storing financial data securely.
 
-🧠 Key Engineering Highlights
+# 🧠 Key Engineering Highlights
 
 TDD Workflow: All critical business logic, especially in the Django services (calculating indicators, running agent prompts), was built using a Test-Driven Development approach to ensure near 100% Branch Coverage for financial calculations.
 
