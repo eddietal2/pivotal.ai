@@ -172,7 +172,25 @@ describe('Magic Link Sign-in Flow', () => {
   // FE-202: Input Validation (Format)
   it("should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
     // Steps: 1. Render component. 2. Type invalid email. 3. Click button. 4. Assert error message is visible.
-    expect(true).toBe(false) // Placeholder
+    const expectedErrorText = /The email address provided is not valid./i;
+
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />); 
+
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
+
+    // ACT 1: Type an invalid email format
+    fireEvent.change(emailInput, { target: { value: 'invalid-email-format' } });
+    // ACT 2: Click the button
+    fireEvent.click(button);
+
+    // ASSERT: Assert that the error message is now visible to the user
+    const errorElement = screen.getByText(expectedErrorText); 
+    const computedStyle = global.window.getComputedStyle(errorElement.closest('div'));  
+    expect(computedStyle.height).not.toBe('0px');
+
   })
 
   // FE-203: Successful Submission
