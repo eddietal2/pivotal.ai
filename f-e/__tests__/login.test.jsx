@@ -196,7 +196,22 @@ describe('Magic Link Sign-in Flow', () => {
   // FE-203: Successful Submission
   it("should trigger a POST request to the correct Magic Link API endpoint upon successful submission", () => {
     // Steps: 1. Mock the API call. 2. Type valid email. 3. Click button. 4. Assert the mock API was called with the correct data.
-    expect(true).toBe(false) // Placeholder
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />); 
+
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
+
+    // ACT 1: Type a valid email format
+    const validEmail = 'eddielacrosse2@gmail.com';
+    fireEvent.change(emailInput, { target: { value: validEmail } });
+    // ACT 2: Click the button
+    fireEvent.click(button);
+
+    // ASSERT: Verify that the mock API was called with the correct endpoint and payload
+    expect(true).toBe(false) // Placeholder 
+  
   })
 
   // FE-204: Feedback on Success
