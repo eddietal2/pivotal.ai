@@ -3,6 +3,7 @@
 import Image from "next/image";
 
 import { useTheme } from "@/components/context/ThemeContext";
+import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
 
@@ -19,21 +20,10 @@ export default function Home() {
     : '/login/or-line.png'; // Use this image when theme is 'light'
   
   // DEV: Function to manually toggle the theme (useful for testing)
-  const handleToggle = () => {
-    toggleTheme();
-  };
+  
 
   return (
-    // Mobile & Tablet
     <div className={`${theme === 'dark' ? 'bg-black' : 'bg-white'} flex flex-col items-center justify-center`}>
-      
-      {/* DEV: Theme Toggle Button for manual testing */}
-      {/* <button 
-        onClick={handleToggle} 
-        className="fixed p-2 m-4 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-      >
-        Current Theme: {theme}
-      </button> */}
 
       {/* Desktop */}
       <div className={`mt-32 hidden lg:block ${theme === 'dark' ? 'bg-black' : 'bg-white'} `}>
@@ -50,8 +40,11 @@ export default function Home() {
         <b>This is currently only designed for mobile and tablet screens.</b>
       </div>
 
-
+      {/* Mobile & Tablet */}
       <div className="p-4 md:block lg:hidden">
+
+        {/* Light/Dark Mode */}
+        <ThemeToggleButton></ThemeToggleButton>
         
         {/* Illustration */}
         <CandleStickAnim></CandleStickAnim>
@@ -107,7 +100,6 @@ export default function Home() {
             </Image>
           Google Sign-In
         </Button>
-
       </div>
 
     </div>
