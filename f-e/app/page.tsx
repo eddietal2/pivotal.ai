@@ -37,6 +37,8 @@ export default function Home() {
 
       {/* Desktop */}
       <div className={`mt-32 hidden lg:block ${theme === 'dark' ? 'bg-black' : 'bg-white'} `}>
+        <CandleStickAnim></CandleStickAnim>
+
         <div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
           <Image 
               src={logoSrc} 
@@ -45,13 +47,13 @@ export default function Home() {
               className="object-contain"
           />
         </div>
-        <p>This is currently only designed for mobile and tablet screens.</p>
+        <b>This is currently only designed for mobile and tablet screens.</b>
       </div>
 
 
       <div className="p-4 md:block lg:hidden">
         
-        {/* Illustratiom */}
+        {/* Illustration */}
         <CandleStickAnim></CandleStickAnim>
 
         {/* Logo */}
