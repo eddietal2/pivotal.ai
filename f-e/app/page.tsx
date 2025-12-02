@@ -37,7 +37,7 @@ export default function Home() {
         alt="Pivotal Logo"
       />
       
-      <h3 className={`min-h-screen ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Whaddup Doe</h3>
+      <h3 className={`min-h-screen ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Sign in to your account</h3>
     </div>
   );
 }
