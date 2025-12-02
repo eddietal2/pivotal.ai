@@ -6,7 +6,7 @@ This project is designed to showcase mastery in building secure, highly scalable
 
 Demo Link: https://pivotal-ai-web-app.vercel.app/
 
-### [Currently Under Construction - Link @ Video Last Updated 12/2/2025]
+** [Currently Under Construction - Link & Video Last Updated @ 12/2/2025] **
 
 ![Demo GIF](https://github.com/eddietal2/pivotal.ai/design/demo_gifs/pivotal_login_git_demo.gif?raw=true)
 ![](https://github.com/eddietal2/pivotal.ai/blob/main/design/demo_gifs/pivotal_login_git_demo.gif)
