@@ -1,16 +1,23 @@
 'use client';
 
 import Image from "next/image";
-import CandleStickAnim from "@/components/ui/CandleStickAnim";
+import { CircleFadingArrowUpIcon } from "lucide-react"
+
 import { useTheme } from "@/components/context/ThemeContext";
+import CandleStickAnim from "@/components/ui/CandleStickAnim";
+import { Button } from "@/components/ui/button"
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
 
   // Define the logo source based on the current theme state
   const logoSrc = theme === 'dark' 
-    ? '/logo-v1-white.png'   // Use this image when theme is 'dark'
-    : '/logo-v1.png'; // Use this image when theme is 'light'
+    ? '/login/logo-v1-white.png'   // Use this image when theme is 'dark'
+    : '/login/logo-v1.png'; // Use this image when theme is 'light'
+
+  const orDividerSrc = theme === 'dark' 
+    ? '/login/or-line-light.png'   // Use this image when theme is 'dark'
+    : '/login/or-line.png'; // Use this image when theme is 'light'
   
   // DEV: Function to manually toggle the theme (useful for testing)
   const handleToggle = () => {
@@ -37,7 +44,35 @@ export default function Home() {
         alt="Pivotal Logo"
       />
       
-      <h3 className={`min-h-screen ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Sign in to your account</h3>
+      <h3 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>Sign in to your account</h3>
+
+      <label>
+        Email
+        <br />
+        <input type="email" placeholder="Text"/>
+      </label>
+      
+      <br />
+      <Button className='text-white bg-[#105B92]'>Send Magic Link</Button>
+
+      <Image 
+        src={orDividerSrc} 
+        width={200}
+        height={100}
+        alt="Or Divider"
+      />
+
+      <Button 
+        className={`${theme === 'dark' ? 'text-white bg-[#222]' : 'text-black bg-[#D9D9D9]'}`}>
+          <Image 
+            width={15}
+            height={7}
+            src="/icons/google-icon.png" 
+            alt="Google Icon">
+          </Image>
+          Google Sign-In
+        </Button>
+
     </div>
   );
 }

@@ -12,13 +12,23 @@ describe('Login Page Rendering & Display', () => {
 
   // FE-101: Render All Elements
   it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
+
     // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
     renderWithProviders(<Page />) 
-    // const logo = screen.getByAltText('Pivotal Logo')
-    // const heading = screen.getByText('Sign in to your account', { exact: false })
-    // expect(logo).toBeTruthy();
-    // expect(heading).toBeTruthy();
-    // expect(screen.getByRole('heading', { name: /sign in to your account/i })).toBeInTheDocument();
+
+    const logo = screen.getByAltText('Pivotal Logo')
+    const heading = screen.getByText('Sign in to your account', { exact: false })
+    const emailInput = screen.getByLabelText('Email', { exact: false })
+    const magicLinkButton = screen.getByText('Send Magic Link', { selector: 'button' })
+    const orDivider = screen.getByAltText('Or Divider')
+    const googleSignInButton = screen.getByText('Google Sign-In', { selector: 'button' })
+
+    expect(logo).toBeInTheDocument();
+    expect(heading).toBeInTheDocument();
+    expect(emailInput).toBeInTheDocument();
+    expect(magicLinkButton).toBeInTheDocument();
+    expect(orDivider).toBeInTheDocument();
+    expect(googleSignInButton).toBeInTheDocument();
   })
 
   // FE-102: Candlestick Animation
