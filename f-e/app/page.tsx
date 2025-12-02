@@ -9,8 +9,8 @@ export default function Home() {
 
   // Define the logo source based on the current theme state
   const logoSrc = theme === 'dark' 
-    ? '/logo-dark.png'   // Use this image when theme is 'dark'
-    : '/logo-light.png'; // Use this image when theme is 'light'
+    ? '/logo-v1-white.png'   // Use this image when theme is 'dark'
+    : '/logo-v1.png'; // Use this image when theme is 'light'
   
   // DEV: Function to manually toggle the theme (useful for testing)
   const handleToggle = () => {
