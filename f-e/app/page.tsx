@@ -6,9 +6,12 @@ import { useTheme } from "@/components/context/ThemeContext";
 import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
+import { AlertCircleIcon } from "lucide-react"
+import { Alert, AlertTitle } from "@/components/ui/alert";
+
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   // Define the logo source based on the current theme state
   const logoSrc = theme === 'dark' 
@@ -19,14 +22,14 @@ export default function Home() {
     ? '/login/or-line-light.png'   // Use this image when theme is 'dark'
     : '/login/or-line.png'; // Use this image when theme is 'light'
   
-  // DEV: Function to manually toggle the theme (useful for testing)
+  var errorMessageTitle = "Email doesn't exist.";
   
 
   return (
-    <div className={`${theme === 'dark' ? 'bg-black' : 'bg-white'} flex flex-col items-center justify-center`}>
+    <div className={`${theme === 'dark' ? 'bg-black' : 'bg-white'} flex flex-col items-center justify-center lg:min-h-screen`}>
 
       {/* Desktop */}
-      <div className={`mt-32 hidden lg:block ${theme === 'dark' ? 'bg-black' : 'bg-white'} `}>
+      <div className={`hidden lg:block ${theme === 'dark' ? 'bg-black' : 'bg-white'} `}>
         <CandleStickAnim></CandleStickAnim>
 
         <div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
@@ -37,7 +40,7 @@ export default function Home() {
               className="object-contain"
           />
         </div>
-        <b>This is currently only designed for mobile and tablet screens.</b>
+        <b>This is currently only available for mobile devices at this time.</b>
       </div>
 
       {/* Mobile & Tablet */}
@@ -75,6 +78,14 @@ export default function Home() {
                           focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
            />
         </label>
+
+        {/* Alert Box for Payment Issue */}
+        <div className="">
+        <Alert className="mb-2" variant="destructive">
+          <AlertCircleIcon />
+          <AlertTitle>{errorMessageTitle}</AlertTitle>
+        </Alert>
+        </div>
 
         {/* Magic Link Button */}
         <Button className='text-white bg-[#105B92] w-full'>Send Magic Link</Button>
