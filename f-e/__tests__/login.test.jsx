@@ -17,11 +17,11 @@ describe('Login Page Rendering & Display', () => {
     renderWithProviders(<Page />) 
 
     const logo = screen.getByAltText('Pivotal Logo')
-    const heading = screen.getByText('Sign in to your account', { exact: false })
+    const heading = screen.getByRole('heading', { name: /sign in/i })
     const emailInput = screen.getByLabelText('Email', { exact: false })
-    const magicLinkButton = screen.getByText('Send Magic Link', { selector: 'button' })
+    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i })
     const orDivider = screen.getByAltText('Or Divider')
-    const googleSignInButton = screen.getByText('Google Sign-In', { selector: 'button' })
+    const googleSignInButton = screen.getByRole('button', { name: /google sign-in/i })
 
     expect(logo).toBeInTheDocument();
     expect(heading).toBeInTheDocument();

@@ -1,7 +1,6 @@
 'use client';
 
 import Image from "next/image";
-import { CircleFadingArrowUpIcon } from "lucide-react"
 
 import { useTheme } from "@/components/context/ThemeContext";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
