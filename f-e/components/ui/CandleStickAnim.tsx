@@ -116,7 +116,7 @@ export default function CandleStickAnim() {
 
 
     return (
-        <div className="flex justify-center items-center w-full max-w-sm mx-auto pt-8">
+        <div className="flex justify-center items-center w-full max-w-sm mx-auto pt-8" data-testid="candlestick-animation">
             {/* Inject animation keyframes into the DOM */}
             <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
 

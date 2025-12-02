@@ -42,7 +42,7 @@ export default function Home() {
         <div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
           <Image 
               src={logoSrc} 
-              alt="Pivotal Logo"
+              alt="Pivotal Logo No Desktop App"
               fill={true} 
               className="object-contain"
           />

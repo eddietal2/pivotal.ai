@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import Page from '../app/page'
+import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import { ThemeProvider } from '../components/context/ThemeContext' 
 
 const renderWithProviders = (ui, options) => {
@@ -32,11 +33,13 @@ describe('Login Page Rendering & Display', () => {
   })
 
   // FE-102: Candlestick Animation
-  it("renders a CandleStickLoginAnim component", () => {
-    // This test will check for the presence of the component responsible for the animation, perhaps using a test ID or a specific role/class.
-    // Example: expect(screen.getByTestId('candlestick-animation-container')).toBeInTheDocument();
-    expect(true).toBe(false) // Placeholder
-  })
+  it("renders the CandleStickAnim component", () => {
+    render(<CandleStickAnim />);
+
+    const animationElement = screen.getByTestId("candlestick-animation");
+
+    expect(animationElement).toBeInTheDocument();
+  });
 })
 
 
