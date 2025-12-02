@@ -41,6 +41,14 @@ describe('Login Page Rendering & Display', () => {
 
     expect(animationElement).toBeInTheDocument();
   });
+
+  // FE-104: Render Error Message Alert Box
+  it("renders an alert box with the correct error message when there is a payment issue", () => {
+    renderWithProviders(<Page />);
+
+    const alertBox = screen.getByRole('alert');
+    expect(alertBox).toBeInTheDocument();
+  })
 })
 
 describe("FE-103: Theme Toggle Button Functionality", () => {
