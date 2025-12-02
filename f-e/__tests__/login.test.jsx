@@ -4,6 +4,7 @@ import Page from '../app/page'
 
 // --- A. Rendering & Display ---
 describe('Login Page Rendering & Display', () => {
+  // render(<Page />)
 
   // FE-101: Render All Elements
   it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
