@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, window } from '@testing-library/react'
 import Page from '../app/page'
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
@@ -9,7 +9,7 @@ const renderWithProviders = (ui, options) => {
   return render(ui, { wrapper: ThemeProvider, ...options })
 }
 
-// --- A. Rendering & Display ---
+// Rendering & Display
 describe('Login Page Rendering & Display', () => {
 
   // FE-101: Render All Elements
@@ -43,14 +43,19 @@ describe('Login Page Rendering & Display', () => {
   });
 
   // FE-104: Render Error Message Alert Box
-  it("renders an alert box with the correct error message when there is a payment issue", () => {
+  it("renders an alert box until email input with initially @ 0px height", () => {
     renderWithProviders(<Page />);
 
     const alertBox = screen.getByRole('alert');
+    const computedStyle = window.getComputedStyle(alertBox);
+
     expect(alertBox).toBeInTheDocument();
+    expect(computedStyle.height).toBe('0px');
+
   })
 })
 
+// Toggle Button Functionality Tests
 describe("FE-103: Theme Toggle Button Functionality", () => {
   const mockToggleTheme = jest.fn();
 
@@ -134,20 +139,35 @@ describe("FE-103: Theme Toggle Button Functionality", () => {
 
 });
 
-// --- B. Magic Link Flow ---
+// Magic Link Flow
 describe('Magic Link Sign-in Flow', () => {
 
   // FE-201: Input Validation (Empty)
   it("should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
-    // Steps: 1. Render component. 2. Click button. 3. Assert error message is visible.
-    // renderWithProviders(<Page />) 
+    // Expected error message when the field is empty
+    const expectedErrorText = /Please enter a valid email address/i; 
+    
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />); 
 
-    // button = screen.getByRole('button', { name: /send magic link/i })
-    // button.click().then(() => {
-    //   const errorMessage = screen.getByText(/please enter your email address/i)
-    //   expect(errorMessage).toBeInTheDocument();
-    // })
-  })
+    // ARRANGE 2: Locate the button
+    const button = screen.getByRole('button', { name: /send magic link/i });
+    
+    // ACT: Click the button with the email field intentionally left empty
+    // Using fireEvent.click ensures better compatibility in Jest/RTL
+    fireEvent.click(button); 
+
+    // ASSERT: Assert that the error message is now visible to the user
+    // We use getByText because we expect the error message to be in the DOM and visible.
+    // 1. Get the DOM node where the error text is visible
+    const errorElement = screen.getByText(expectedErrorText); 
+
+    // 2. Get the computed styles for that node
+    const computedStyle = global.window.getComputedStyle(errorElement.closest('div')); // Target the animated wrapper div, which controls height
+
+    // 3. Assert that the height is NOT '0px'
+    expect(computedStyle.height).not.toBe('0px');
+  });
 
   // FE-202: Input Validation (Format)
   it("should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
@@ -174,8 +194,7 @@ describe('Magic Link Sign-in Flow', () => {
   })
 })
 
-
-// --- C. Google Sign-In Flow ---
+// Google Sign-In Flow
 describe('Google Sign-in Flow', () => {
 
   // FE-301: Button Click Action
