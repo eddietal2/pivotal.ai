@@ -1,176 +1,263 @@
 'use client';
 
 import Image from "next/image";
+import { useState } from "react";
+import { AlertCircleIcon, Mail, Lock, Loader2 } from "lucide-react";
 
+// Assuming these external components/hooks are defined elsewhere
 import { useTheme } from "@/components/context/ThemeContext";
 import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
-import { AlertCircleIcon } from "lucide-react"
-import { Alert, AlertTitle } from "@/components/ui/alert";
-import { useState } from "react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"; // Added AlertDescription
 
+// --- Constants ---
+const MAGIC_LINK_API_ENDPOINT = '/api/auth/magic-link';
+const GOOGLE_AUTH_REDIRECT_URL = '/auth/google'; // Placeholder for Google Auth URL
+
+// Helper function (moved the regex outside for efficiency)
+function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Helper function to simulate logging only in development/not in test environment
+const log = (...args: any[]) => {
+    if (process.env.NODE_ENV !== 'test') {
+        console.log(...args);
+    }
+};
 
 export default function Home() {
-	const { theme } = useTheme();
+    const { theme } = useTheme();
 
-	// Determine logo and or/divider images based on theme
-	const logoSrc = theme === 'dark' 
-		? '/login/logo-v1-white.png'   // Use this image when theme is 'dark'
-		: '/login/logo-v1.png'; // Use this image when theme is 'light'
+    const [email, setEmail] = useState('');
+    const [errorMessageTitle, setErrorMessageTitle] = useState('');
+    const [showError, setShowError] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(''); // New state for success
+    const [isSubmitting, setIsSubmitting] = useState(false); // New state for loading/submitting
 
-	const orDividerSrc = theme === 'dark' 
-		? '/login/or-line-light.png'   // Use this image when theme is 'dark'
-		: '/login/or-line.png'; // Use this image when theme is 'light'
-	
-	// State for error message visibility and content (email validation)
+    // Determine logo and or/divider images based on theme
+    const logoSrc = theme === 'dark' 
+        ? '/login/logo-v1-white.png'
+        : '/login/logo-v1.png';
 
-	const [email, setEmail] = useState('');
-	const [errorMessageTitle, setErrorMessageTitle] = useState('');
-	const [showError, setShowError] = useState(false);
+    const orDividerSrc = theme === 'dark' 
+        ? '/login/or-line-light.png'
+        : '/login/or-line.png';
 
-	function handleMagicLinkButtonClick() {
-		console.log("Magic Link button clicked");
+    const handleMagicLinkSubmit = async () => {
+        log("Magic Link button clicked");
 
-		// Check if the email state is empty (after trimming whitespace)
-		if (email.trim() === '') {
-			// --- CASE 1: EMPTY EMAIL ---
-			setErrorMessageTitle("Please enter a valid email address.");
-			setShowError(true);
-			return; // Important: Exit the function if there is an error
-		} 
-		
-		// 1. Hide any previous error message
-		setShowError(false);
-		setErrorMessageTitle(""); // Clear the title
+        // 1. Reset states
+        setShowError(false);
+        setErrorMessageTitle('');
+        setSuccessMessage('');
 
-		// 2. Perform advanced validation (e.g., check email format)
-		if (!isValidEmail(email)) {
-			setErrorMessageTitle("The email address provided is not valid.");
-			setShowError(true);
-			return; // Stop if format is invalid
-		}
-		
-		// 3. If validation passes, proceed with the submission logic
-		console.log(`Email is valid: ${email}. Proceeding to API call.`);
-		// submitEmailForMagicLink(email);
-	}
+        // 2. Validation Checks
+        const trimmedEmail = email.trim();
+        if (trimmedEmail === '') {
+            setErrorMessageTitle("Please enter your email address.");
+            setShowError(true);
+            return;
+        } 
+        
+        if (!isValidEmail(trimmedEmail)) {
+            setErrorMessageTitle("The email address provided is not valid.");
+            setShowError(true);
+            return;
+        }
+        
+        // 3. Start Submission
+        setIsSubmitting(true);
+        log(`Email is valid: ${trimmedEmail}. Submitting to API.`);
 
-	// Helper function (you'd need to define this)
-	function isValidEmail(email: string): boolean {
-		// Simple regex check for validity
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(email);
-	}
+        try {
+            // THE CRITICAL API CALL IMPLEMENTATION
+            const response = await fetch(MAGIC_LINK_API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: trimmedEmail }),
+            });
 
-	return (
-		<div className={`${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-white'} flex flex-col items-center justify-center lg:min-h-screen`}>
+            if (response.ok) {
+                // Success: Update success message
+                setSuccessMessage(
+                    `Success! A magic link has been sent to ${trimmedEmail}. Please check your inbox.`
+                );
+            } else {
+                // Error: Handle non-200 responses
+                const errorData = await response.json().catch(() => ({ message: 'Server error' }));
+                setErrorMessageTitle(errorData.message || 'An unexpected error occurred. Please try again.');
+                setShowError(true);
+            }
+        } catch (error) {
+            // Network error
+            log("Network or API submission error:", error);
+            setErrorMessageTitle('Failed to connect to the sign-in service. Check your internet connection.');
+            setShowError(true);
+        } finally {
+            // Always stop loading, unless success message is set (form should be locked on success)
+            if (!successMessage) { 
+                 setIsSubmitting(false);
+            }
+        }
+    }
 
-			{/* Desktop */}
-			<div className={`hidden lg:block ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-white'} `}>
-				<CandleStickAnim></CandleStickAnim>
+    const handleGoogleSignIn = () => {
+        // Redirect to the Django/backend Google OAuth endpoint
+        window.location.href = GOOGLE_AUTH_REDIRECT_URL;
+    }
 
-				<div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
-					<Image 
-						src={logoSrc} 
-						alt="Pivotal Logo No Desktop App"
-						fill={true} 
-						className="object-contain"
-					/>
-				</div>
-				<b>This is currently only available for mobile devices at this time.</b>
-			</div>
+    // Determine the message and variant for the displayed Alert
+    const displayMessage = successMessage || errorMessageTitle;
+    const alertVariant = successMessage ? 'default' : 'destructive';
+    const alertIcon = successMessage ? <Mail className="h-5 w-5" /> : <AlertCircleIcon className="h-5 w-5" />;
 
-			{/* Mobile & Tablet - ADDED w-full, max-w-sm, mx-auto, and p-4 */}
-			<div className="md:block lg:hidden w-full max-w-sm mx-auto p-4"> 
+    return (
+        <div className={`${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-white'} flex flex-col items-center justify-center lg:min-h-screen font-sans`}>
 
-				{/* Light/Dark Mode */}
-				<ThemeToggleButton></ThemeToggleButton>
-				
-				{/* Illustration */}
-				<CandleStickAnim></CandleStickAnim>
+            {/* Desktop Message - Simplified/Stylized */}
+            <div className={`hidden lg:flex flex-col items-center justify-center p-10 h-screen w-full ${theme === 'dark' ? 'bg-[#0a0a0a] text-gray-300' : 'bg-white text-gray-800'}`}>
+                <CandleStickAnim />
+                <div className="w-full relative mx-auto my-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
+                    <Image 
+                        src={logoSrc} 
+                        alt="Pivotal Logo"
+                        fill={true} 
+                        className="object-contain"
+                    />
+                </div>
+                <b className="text-xl">This is currently optimized for mobile devices.</b>
+                <p className="text-sm mt-2">Please use a smaller screen or mobile browser to access the sign-in features.</p>
+            </div>
 
-				{/* Logo */}
-				<div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
-					<Image 
-						src={logoSrc} 
-						alt="Pivotal Logo"
-						fill={true} 
-						className="object-contain"
-					/>
-				</div>
+            {/* Mobile & Tablet Login Card */}
+            <div className="md:block lg:hidden w-full max-w-sm mx-auto p-6 bg-transparent"> 
 
-				{/* Sign In Heading */}
-				<h3 className={`text-xl text-center my-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Sign in to your account.</h3>
+                {/* Theme Toggle Button */}
+                <div className="flex justify-end mb-4">
+                    <ThemeToggleButton />
+                </div>
+                
+                {/* Illustration */}
+                <CandleStickAnim />
 
-				{/* Email Input */}
-				<label className="block">
-					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-						Email
-					</span>
-					<input 
-						type="email" 
-						value={email} // Added value binding
-						onChange={(e: any) => {
-							setEmail(e.target.value); 
-							console.log(e.target.value);
-							
-							// Hide error immediately if user starts typing
-							if (showError) setShowError(false);
-						}}
-						placeholder="you@example.com" 
-						className="w-full p-3 mb-2 border border-gray-300 rounded-lg 
-									focus:outline-none focus:ring-2 focus:ring-[#105B92] 
-									focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-					/>
-				</label>
+                {/* Logo */}
+                <div className="w-full relative mx-auto mt-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
+                    <Image 
+                        src={logoSrc} 
+                        alt="Pivotal Logo"
+                        fill={true} 
+                        className="object-contain"
+                    />
+                </div>
 
-				{/* Alert Box for Email Input */}
-				<div 
-					// Add transition and duration
-					className={`
-						transition-all duration-300 ease-in-out
-						${showError ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}
-						overflow-hidden
-					`}
-				>
-					<Alert className="mb-2" variant="destructive">
-						{/* ... Alert content */}
-						<AlertCircleIcon />
-						<AlertTitle>{errorMessageTitle}</AlertTitle>
-					</Alert>
-				</div>
+                {/* Sign In Heading */}
+                <h3 className={`text-2xl font-bold text-center my-8 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Sign in to your account
+                </h3>
 
-				{/* Magic Link Button */}
-				<Button 
-					onClick={handleMagicLinkButtonClick}
-					className='text-white bg-[#105B92] w-full'>
-					Send Magic Link
-					</Button>
+                {/* Alert Box for Messages (Error or Success) */}
+                <div 
+                    data-testid="alert-box"
+                    className={`
+                        transition-all duration-300 ease-in-out mb-4
+                        ${(showError || successMessage) ? 'max-h-screen opacity-100 p-1' : 'max-h-0 opacity-0'}
+                        overflow-hidden
+                    `}
+                >
+                    {(showError || successMessage) && (
+                        <Alert variant={alertVariant} className="flex items-start space-x-3 rounded-lg shadow-md">
+                            <div className="flex-shrink-0 mt-0.5">{alertIcon}</div>
+                            <div className="flex-grow">
+                                <AlertTitle className="text-base font-semibold">
+                                    {successMessage ? 'Login Link Sent' : 'Validation Error'}
+                                </AlertTitle>
+                                <AlertDescription className="text-sm">
+                                    {displayMessage}
+                                </AlertDescription>
+                            </div>
+                        </Alert>
+                    )}
+                </div>
 
-				{/* OR Divider */}
-				<div className="relative w-full h-8 my-4"> 
-					<Image 
-						className="object-contain" // Ensures the image scales properly within the container
-						src={orDividerSrc} 
-						alt="Or Divider"
-						fill={true} 
-					/>
-				</div>
 
-				{/* Google Sign-In Button */}
-				<Button 
-					className={`w-full ${theme === 'dark' ? 'text-white bg-[#222]' : 'text-black bg-[#D9D9D9]'}`}>
-					<Image 
-						width={15}
-						height={7}
-						src="/icons/google-icon.png" 
-						alt="Google Icon">
-					</Image>
-					Google Sign-In
-				</Button>
-			</div>
+                {/* Email Input */}
+                <label className="block space-y-1">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+                        Email Address
+                    </span>
+                    <input 
+                        type="email" 
+                        value={email}
+                        onChange={(e) => {
+                            setEmail(e.target.value); 
+                            // Clear error/success messages immediately when user starts typing
+                            setShowError(false);
+                            setSuccessMessage('');
+                        }}
+                        placeholder="you@example.com" 
+                        disabled={isSubmitting || !!successMessage} // Disable while submitting or on success
+                        className="w-full p-3 border border-gray-300 rounded-lg 
+                                   focus:outline-none focus:ring-2 focus:ring-[#105B92] 
+                                   focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        data-testid="email-input"
+                    />
+                </label>
 
-		</div>
-	);
+                {/* Magic Link Button */}
+                <Button 
+                    onClick={handleMagicLinkSubmit}
+                    disabled={isSubmitting || !!successMessage} // Disable while submitting or on success
+                    className='text-white bg-[#105B92] hover:bg-[#0c4770] w-full mt-4 transition-all duration-200'
+                    data-testid="magic-link-button"
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                        </>
+                    ) : (
+                        <>
+                            <Lock className="h-4 w-4 mr-2" />
+                            Send Magic Link
+                        </>
+                    )}
+                </Button>
+
+                {/* OR Divider */}
+                <div className="relative w-full h-8 my-4 flex items-center justify-center"> 
+                    {/* Using a simple text divider as image paths can be complex in testing */}
+                    <hr className="flex-grow border-gray-300 dark:border-gray-700" />
+                    <span className="mx-2 text-xs text-gray-500 dark:text-gray-400">OR</span>
+                    <hr className="flex-grow border-gray-300 dark:border-gray-700" />
+                    {/* Fallback to Image if preferred:
+                    <Image 
+                        className="object-contain" 
+                        src={orDividerSrc} 
+                        alt="Or Divider"
+                        fill={true} 
+                    />
+                    */}
+                </div>
+
+                {/* Google Sign-In Button */}
+                <Button 
+                    onClick={handleGoogleSignIn}
+                    disabled={isSubmitting || !!successMessage} // Disable while submitting or on success
+                    className={`w-full hover:shadow-lg hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-700 transition-all duration-200 
+                                ${theme === 'dark' ? 'text-white bg-[#222] hover:bg-[#333]' : 'text-gray-800 bg-[#D9D9D9] hover:bg-[#c9c9c9]'}`}
+                    data-testid="google-sign-in-button"
+                >
+                    {/* Using an external public SVG for Google icon for better compatibility */}
+                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor"><path d="M22.04 12.01c0-.75-.07-1.46-.21-2.14h-9.83v4.06h5.5c-.24 1.25-.97 2.37-2.07 3.16v2.64h3.4a9.922 9.922 0 0 0 3.17-7.72z" fill="#4285F4"/><path d="M12 22a9.92 9.92 0 0 0 6.89-2.52l-3.4-2.64c-.93.63-2.11 1.01-3.49 1.01-2.67 0-4.94-1.78-5.74-4.18H2.76v2.75a9.998 9.998 0 0 0 9.24 5.48z" fill="#34A853"/><path d="M6.26 13.91c-.13-.38-.21-.78-.21-1.2s.08-.82.21-1.2V9.96H2.76A9.997 9.997 0 0 0 2.01 12c0 .76.13 1.5.34 2.18l3.91-3.04z" fill="#FBBC04"/><path d="M12 4.16c1.69 0 3.2.58 4.4 1.72l3.03-3.03C17.76 1.85 15.05 1 12 1A9.998 9.998 0 0 0 2.76 4.88l3.49 2.75C7.06 5.94 9.33 4.16 12 4.16z" fill="#EA4335"/></svg>
+                    Sign in with Google
+                </Button>
+            </div>
+
+        </div>
+    );
 }
