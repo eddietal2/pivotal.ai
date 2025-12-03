@@ -1,5 +1,5 @@
 """
-URL configuration for pivotal_api project.
+URL configuration for the authentication app.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -14,10 +14,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+
+from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('auth/', include('authentication.urls')),
+    path("", views.save_user, name="register"),
+    # path("articles/<int:year>/", views.year_archive),
+    # path("articles/<int:year>/<int:month>/", views.month_archive),
+    # path("articles/<int:year>/<int:month>/<slug:slug>/", views.article_detail),
 ]
