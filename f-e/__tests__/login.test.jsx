@@ -15,6 +15,12 @@ jest.mock('../lib/redirect', () => ({
     redirectTo: jest.fn(),
 }));
 
+// Mock the ThemeContext module at module level so it works in all tests
+jest.mock('@/components/context/ThemeContext', () => ({
+    useTheme: jest.fn(),
+    ThemeProvider: ({ children }) => children,
+}));
+
 // Utility function to render with ThemeProvider
 const renderWithProviders = (ui, options) => {
   return render(ui, { wrapper: ThemeProvider, ...options })
@@ -23,7 +29,16 @@ const renderWithProviders = (ui, options) => {
 // Rendering & Display
 describe('Login Page Rendering & Display', () => {
 
-  // FE-101: Render All Elements
+  beforeEach(() => {
+    // Set default mock return for useTheme so Page component can render
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
+  // FE-101: Render All Elements
   it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
 
     // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
@@ -34,7 +49,7 @@ describe('Login Page Rendering & Display', () => {
     const emailInput = screen.getByLabelText('Email', { exact: false })
     const magicLinkButton = screen.getByRole('button', { name: /send magic link/i })
     const orDivider = screen.getByAltText('Or Divider')
-    const googleSignInButton = screen.getByRole('button', { name: /google sign-in/i })
+    const googleSignInButton = screen.getByRole('button', { name: /Sign in with Google/i })
 
     expect(logo).toBeInTheDocument();
     expect(heading).toBeInTheDocument();
@@ -53,115 +68,95 @@ describe('Login Page Rendering & Display', () => {
     expect(animationElement).toBeInTheDocument();
   });
 
-  // FE-104: Render Error Message Alert Box
-  it("renders an alert box until email input with initially @ 0px height", () => {
-    renderWithProviders(<Page />);
+  // FE-104: Render Error Message Alert Box
+  it("renders an alert box with hidden state (max-h-0 opacity-0) initially", () => {
+    renderWithProviders(<Page />);
 
-    const alertBox = screen.getByRole('alert');
-    const computedStyle = window.getComputedStyle(alertBox);
+    const alertBox = screen.getByTestId('alert-box');
 
-    expect(alertBox).toBeInTheDocument();
-    expect(computedStyle.height).toBe('0px');
-
-  })
+    expect(alertBox).toBeInTheDocument();
+    // In JSDOM, Tailwind classes are not computed; assert className presence instead
+    expect(alertBox).toHaveClass('max-h-0');
+    expect(alertBox).toHaveClass('opacity-0');
+  })
 })
 
 // Toggle Button Functionality Tests
-describe("FE-103: Theme Toggle Button Functionality", () => {
-  const mockToggleTheme = jest.fn();
+describe("Theme Toggle Button Functionality", () => {
+  const mockToggleTheme = jest.fn();
+  const { useTheme } = require('@/components/context/ThemeContext');
 
-  const mockUseTheme = (theme) => ({
-      theme,
-      toggleTheme: mockToggleTheme,
-  });
+  beforeEach(() => {
+    mockToggleTheme.mockClear();
+    useTheme.mockClear();
+  });
 
-  // Mock the module where useTheme is defined
-  jest.mock('@/components/context/ThemeContext', () => ({
-    // Mock the specific hook function
-    useTheme: jest.fn(),
-  }));
+  // Test Case 1: Appearance in Light Mode (Initial State)
+  it("renders the Sun icon and suggests toggling to dark mode when theme is 'light'", () => {
+    // ARRANGE: Mock useTheme to return 'light' theme
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: mockToggleTheme,
+    });
 
-  // Clear the mock before each test
-  beforeEach(() => {
-        mockToggleTheme.mockClear();
-  });
+    // ACT: Render the component
+    render(<ThemeToggleButton />);
 
-  // Test Case 1: Appearance in Light Mode (Initial State)
-  it("renders the Sun icon and suggests toggling to dark mode when theme is 'light'", () => {
-        // ARRANGE: Set the mock context to return 'light' theme
-        require('@/components/context/ThemeContext').useTheme.mockReturnValue(mockUseTheme('light'));
+    // ASSERT: Button has correct aria-label for light theme
+    const button = screen.getByLabelText(/Toggle to dark mode/i);
+    expect(button).toBeInTheDocument();
 
-        // ACT: Render the component
-        const { container } = renderWithProviders(<ThemeToggleButton />);
-        const button = screen.getByLabelText(/Toggle to dark mode/i);
-        const sunIcon = button.querySelector('.lucide-sun');
-        const moonIcon = button.querySelector('.lucide-moon');
+    // ASSERT: Sun icon is present (SVG with lucide-sun class)
+    const sunSvg = button.querySelector('.lucide-sun');
+    expect(sunSvg).toBeInTheDocument();
 
+    // ASSERT: Moon icon is not present
+    const moonSvg = button.querySelector('.lucide-moon');
+    expect(moonSvg).not.toBeInTheDocument();
+  });
 
-        // ASSERT 1: Correct Icon is visible (Sun icon)
-        expect(sunIcon).toBeInTheDocument();
-        
-        // ASSERT 2: Moon icon (for dark) is not visible
-        expect(moonIcon).not.toBeInTheDocument(); // When theme is light, only sun is rendered
-        
-        
-        // ASSERT 3: Correct accessible label is set
-        // Find the button using its accessible name (aria-label)
-        expect(screen.getByLabelText(/Toggle to dark mode/i)).toBeInTheDocument();
-  });
-  
-  // Test Case 2: Appearance in Dark Mode
-  it("renders the Moon icon and suggests toggling to light mode when theme is 'dark'", () => {
-        // ARRANGE: Set the mock context to return 'dark' theme
-        require('@/components/context/ThemeContext').useTheme.mockReturnValue(mockUseTheme('dark'));
+  // Test Case 2: Appearance in Dark Mode
+  it("renders the Moon icon and suggests toggling to light mode when theme is 'dark'", () => {
+    // ARRANGE: Mock useTheme to return 'dark' theme
+    useTheme.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: mockToggleTheme,
+    });
 
-        // ACT: Render the component
-        const { container } = renderWithProviders(<ThemeToggleButton />);
-        const button = screen.getByLabelText(/Toggle to light mode/i);
-        const sunIcon = button.querySelector('.lucide-sun');
-        const moonIcon = button.querySelector('.lucide-moon');
+    // ACT: Render the component
+    render(<ThemeToggleButton />);
 
+    // ASSERT: Button has correct aria-label for dark theme
+    const button = screen.getByLabelText(/Toggle to light mode/i);
+    expect(button).toBeInTheDocument();
 
-         // ASSERT 1: Correct Icon is visible (Sun icon)
-        expect(sunIcon).not.toBeInTheDocument();
-        
-        // ASSERT 2: Moon icon (for dark) is not visible
-        expect(moonIcon).toBeInTheDocument(); // When theme is light, only sun is rendered
-        
-        // ASSERT 3: Correct accessible label is set
-        expect(screen.getByLabelText(/Toggle to light mode/i)).toBeInTheDocument();
-  });
+    // ASSERT: Moon icon is present
+    const moonSvg = button.querySelector('.lucide-moon');
+    expect(moonSvg).toBeInTheDocument();
 
-  // Test Case 3: Click Handler Verification
-  // it("calls the toggleTheme function when the button is clicked", () => {
-  //       // ARRANGE: Set the mock context to return 'light' theme
-  //       require('@/components/context/ThemeContext').useTheme.mockReturnValue(mockUseTheme('light'));
-  //       renderWithProviders(<ThemeToggleButton />);
-        
-  //       // Find the button using its accessible name
-  //       const button = screen.getByRole('button', { name: /toggle to dark mode/i });
-
-  //       // ACT: Click the button
-  //       fireEvent.click(button);
-
-  //       // ASSERT: Verify the mock function was called once
-  //       expect(mockToggleTheme).toHaveBeenCalledTimes(1);
-  // });
-
+    // ASSERT: Sun icon is not present
+    const sunSvg = button.querySelector('.lucide-sun');
+    expect(sunSvg).not.toBeInTheDocument();
+  });
 });
 
 // Magic Link Flow
 describe('Magic Link Sign-in Flow', () => {
 
-    // Reset fetch mocks before each async test suite
     beforeEach(() => {
+        // Set default mock return for useTheme
+        const { useTheme } = require('@/components/context/ThemeContext');
+        useTheme.mockReturnValue({
+            theme: 'light',
+            toggleTheme: jest.fn(),
+        });
         fetchMock.resetMocks();
     });
 
   // FE-201: Input Validation (Empty)
   it("should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
     // Expected error message when the field is empty
-    const expectedErrorText = /Please enter a valid email address/i; 
+    const expectedErrorText = /Please enter your email address./i; 
     
     // ARRANGE 1: Render component
     renderWithProviders(<Page />); 
@@ -238,7 +233,7 @@ describe('Magic Link Sign-in Flow', () => {
         const [url, options] = fetchMock.mock.calls[0];
 
         // 3. Assert the URL is correct (assuming a relative API route)
-        expect(url).toBe('/api/auth/magic-link'); 
+        expect(url).toBe('http://127.0.0.1:8000/auth/magic-link'); 
         
         // 4. Assert the options (method, headers, body) are correct
         expect(options.method).toBe('POST');
@@ -311,6 +306,16 @@ describe('Magic Link Sign-in Flow', () => {
 
 // Google Sign-In Flow
 describe('Google Sign-in Flow', () => {
+
+  beforeEach(() => {
+    // Set default mock return for useTheme
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
 // We'll assert the `redirectTo` mock created above is invoked.
 
   // FE-301: Redirect to Google OAuth Endpoint

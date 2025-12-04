@@ -125,7 +125,7 @@ export default function Home() {
                 <div className="w-full relative mx-auto my-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
                     <Image 
                         src={logoSrc} 
-                        alt="Pivotal Logo"
+                        alt="Pivotal Logo Desktop Message"
                         fill={true} 
                         className="object-contain"
                     />
@@ -230,18 +230,12 @@ export default function Home() {
 
                 {/* OR Divider */}
                 <div className="relative w-full h-8 my-4 flex items-center justify-center"> 
-                    {/* Using a simple text divider as image paths can be complex in testing */}
-                    <hr className="flex-grow border-gray-300 dark:border-gray-700" />
-                    <span className="mx-2 text-xs text-gray-500 dark:text-gray-400">OR</span>
-                    <hr className="flex-grow border-gray-300 dark:border-gray-700" />
-                    {/* Fallback to Image if preferred:
                     <Image 
                         className="object-contain" 
                         src={orDividerSrc} 
                         alt="Or Divider"
                         fill={true} 
                     />
-                    */}
                 </div>
 
                 {/* Google Sign-In Button */}
