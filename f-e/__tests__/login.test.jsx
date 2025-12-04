@@ -4,10 +4,16 @@ import Page from '../app/page'
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
 import { ThemeProvider } from '../components/context/ThemeContext' 
+import { redirectTo } from '../lib/redirect'
 
 // in your Jest setup (e.g., in setupFilesAfterEnv) or imported here.
 import fetchMock from 'jest-fetch-mock'; 
 fetchMock.enableMocks(); 
+
+// Mock the redirect helper so `redirectTo` is a Jest mock function
+jest.mock('../lib/redirect', () => ({
+    redirectTo: jest.fn(),
+}));
 
 // Utility function to render with ThemeProvider
 const renderWithProviders = (ui, options) => {
@@ -305,30 +311,32 @@ describe('Magic Link Sign-in Flow', () => {
 
 // Google Sign-In Flow
 describe('Google Sign-in Flow', () => {
+// We'll assert the `redirectTo` mock created above is invoked.
 
-  // FE-301: Button Click Action
-  it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", () => {
-    
-    // ARRANGE: Mock window.location.assign since redirecting changes the current URL
-    const mockLocationAssign = jest.fn();
-    Object.defineProperty(window, 'location', {
-        value: { assign: mockLocationAssign },
-        writable: true,
+  // FE-301: Redirect to Google OAuth Endpoint
+  it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
+    const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google'; 
+
+    // ARRANGE: Render component
+    renderWithProviders(<Page />); 
+
+    // ARRANGE: Locate the button via data-testid which is more deterministic
+    const googleSignInButton = screen.getByTestId('google-sign-in-button');
+
+    // Sanity checks
+    expect(googleSignInButton).toBeInTheDocument();
+    expect(googleSignInButton).toBeEnabled();
+
+    // ACT: Click the Google Sign In button
+    fireEvent.click(googleSignInButton);
+
+    // ASSERT: Wait for `redirectTo` helper to be called
+    await waitFor(() => {
+        expect(redirectTo).toHaveBeenCalledTimes(1);
     });
-    
-    // Define the expected OAuth URL (adjust this based on your actual route)
-    const expectedOAuthURL = '/api/auth/google/login/';
 
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
-    
-    // ARRANGE 2: Locate the button
-    const googleSignInButton = screen.getByRole('button', { name: /google sign-in/i });
+    expect(redirectTo).toHaveBeenCalledWith(expectedOAuthURL);
+  });
 
-    // ACT: Click the Google Sign In button
-    fireEvent.click(googleSignInButton);
-
-    // ASSERT: Assert window.location.assign was called with the correct OAuth URL.
-    expect(mockLocationAssign).toHaveBeenCalledWith(expectedOAuthURL);
-  })
-})
+// You can now write other tests without worrying about restoring the mock.
+});

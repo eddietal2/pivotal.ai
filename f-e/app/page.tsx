@@ -9,9 +9,9 @@ import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { redirectTo } from '../lib/redirect';
 
 const MAGIC_LINK_API_ENDPOINT = 'http://127.0.0.1:8000/auth/magic-link';
-const GOOGLE_AUTH_REDIRECT_URL = '/auth/google'; 
 
 // Helper function (moved the regex outside for efficiency)
 function isValidEmail(email: string): boolean {
@@ -103,10 +103,12 @@ export default function Home() {
             }
         }
     }
-
+	 // Google OAuth Sign-In Handler
+	const GOOGLE_AUTH_REDIRECT_URL = 'http://127.0.0.1:8000/auth/google'; 
     const handleGoogleSignIn = () => {
-        // Redirect to the Django/backend Google OAuth endpoint
-        window.location.href = GOOGLE_AUTH_REDIRECT_URL;
+        // Redirect to the Django/backend Google OAuth endpoint via helper
+        redirectTo(GOOGLE_AUTH_REDIRECT_URL);
+        log("Google Sign-In button clicked - Redirecting to Google OAuth endpoint.");
     }
 
     // Determine the message and variant for the displayed Alert
