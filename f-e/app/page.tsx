@@ -4,16 +4,14 @@ import Image from "next/image";
 import { useState } from "react";
 import { AlertCircleIcon, Mail, Lock, Loader2 } from "lucide-react";
 
-// Assuming these external components/hooks are defined elsewhere
 import { useTheme } from "@/components/context/ThemeContext";
 import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"; // Added AlertDescription
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-// --- Constants ---
-const MAGIC_LINK_API_ENDPOINT = '/api/auth/magic-link';
-const GOOGLE_AUTH_REDIRECT_URL = '/auth/google'; // Placeholder for Google Auth URL
+const MAGIC_LINK_API_ENDPOINT = 'http://127.0.0.1:8000/auth/magic-link';
+const GOOGLE_AUTH_REDIRECT_URL = '/auth/google'; 
 
 // Helper function (moved the regex outside for efficiency)
 function isValidEmail(email: string): boolean {
@@ -85,7 +83,7 @@ export default function Home() {
             if (response.ok) {
                 // Success: Update success message
                 setSuccessMessage(
-                    `Success! A magic link has been sent to ${trimmedEmail}. Please check your inbox.`
+                    `Magic link sent! Check your email.`
                 );
             } else {
                 // Error: Handle non-200 responses
