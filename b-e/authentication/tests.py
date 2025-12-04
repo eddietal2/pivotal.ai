@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from authentication.models import User
+import custom_console
 
 # Define the URL using the correct name from your urls.py
 SEND_MAGIC_LINK_URL = reverse('send_magic_link') 
@@ -23,6 +24,8 @@ class MagicLinkAuthTests(TestCase):
         
         # Create a test user so the view can look them up
         self.user = User.objects.create(email=self.valid_email, first_name="Eddie")
+
+        print(f"{custom_console.COLOR_CYAN}--- Starting MagicLinkAuthTest ---{custom_console.RESET_COLOR}")
 
     # BE-101: Test for successful magic link email sending
     def test_send_magic_link_success(self):
@@ -47,7 +50,7 @@ class MagicLinkAuthTests(TestCase):
         expected_msg = f'Magic link sent to {self.valid_email}.'
         self.assertEqual(response.json()['message'], expected_msg)
         
-        print("✅ Test for successful magic link sending passed ⚠️ WITHOUT EMAIL INTEGRATION.")
+        print(f"{custom_console.COLOR_GREEN}✅ BE-101: Test for successful magic link sending passed ⚠️ WITHOUT EMAIL INTEGRATION.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # BE-102: Test for missing email field in the request body
@@ -77,7 +80,7 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 3: Check the specific error message content
         self.assertIn('message', response_json)
         self.assertIn('Required field missing', response_json['message'])
-        print("✅ Test for missing email passed.")
+        print(f"{custom_console.COLOR_GREEN}✅ BE-102: Test for missing email passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # BE-103: Test for invalid email format in the request body
@@ -109,7 +112,7 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('message', response_json)
         self.assertIn('Invalid email format', response_json['message'])
 
-        print("✅ Test for invalid email format passed.")
+        print(f"{custom_console.COLOR_GREEN}✅ BE-103: Test for invalid email format passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # BE-201: Test for looking up existing user by email
@@ -138,7 +141,7 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 2: Verify that User.objects.filter was called with the correct email
         mock_user_model.objects.filter.assert_called_with(email=self.valid_email)
 
-        print("✅ Test for existing user lookup passed.")
+        print(f"{custom_console.COLOR_GREEN}✅ BE-201: Test for existing user lookup passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # BE-202: Test for creation of new user
@@ -176,5 +179,7 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 2: Verify that User was instantiated with the correct email and first_name
         mock_user_model.assert_called_with(email=new_user_email, first_name=new_user_first_name)
 
-        print("✅ Test for new user creation passed.")
+        print(f"{custom_console.COLOR_GREEN}✅ BE-202: Test for new user creation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-203: Test for handling database error during user lookup

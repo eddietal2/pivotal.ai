@@ -2,11 +2,14 @@ from django.http import HttpResponse, JsonResponse # New import for API response
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import User
+import custom_console
 
 # The @csrf_exempt decorator tells Django to skip the CSRF check for this specific view.
 # This is being used with POSTMAN requests for testing purposes.
 @csrf_exempt
 def save_user(request):
+    print(f"{custom_console.COLOR_YELLOW}save_user view {custom_console.RESET_COLOR}")
+
     if request.method == "POST":
         email = None
         first_name = None
@@ -66,7 +69,7 @@ def save_user(request):
 
 @csrf_exempt
 def send_magic_link_email(request):
-    print("send_magic_link_email view called")
+    print(f"{custom_console.COLOR_YELLOW}send_magic_link_email view {custom_console.RESET_COLOR}")
     # return HttpResponse("This is a placeholder response for send_magic_link_email view.") 
     if request.method == "POST":
         email = None
@@ -137,12 +140,12 @@ def send_magic_link_email(request):
 
 @csrf_exempt
 def google_oauth_redirect(request):
-    print("google_oauth_redirect view called")
+    print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")
     return HttpResponse("This is a placeholder response for google_oauth_redirect view.")
 
 @csrf_exempt
 def get_user(request):
-    print("get_user view called")
+    print(f"{custom_console.COLOR_YELLOW}get_user view called {custom_console.RESET_COLOR}")
     
     if request.method == "POST":
         email = None
