@@ -10,9 +10,7 @@ def save_user(request):
     if request.method == "POST":
         email = None
         first_name = None
-        
         # 1. Default data source is request.POST (for form-urlencoded/form-data)
-        # This handles Postman requests set to 'x-www-form-urlencoded' or 'form-data'
         data = request.POST
         
         if data:
@@ -106,6 +104,16 @@ def send_magic_link_email(request):
             }, status=400) # HTTP 400 Bad Request
         
         try:
+            # Look up the user by email
+            user = User.objects.filter(email=email).first()
+            
+            if not user:
+                # User not found
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'User with email "{email}" not found.'
+                }, status=404)  # HTTP 404 Not Found
+            
             # Here you would implement the logic to send the magic link email.
             # For demonstration, we'll just print to console.
             print(f"Sending magic link to {email}")
@@ -131,3 +139,62 @@ def send_magic_link_email(request):
 def google_oauth_redirect(request):
     print("google_oauth_redirect view called")
     return HttpResponse("This is a placeholder response for google_oauth_redirect view.")
+
+@csrf_exempt
+def get_user(request):
+    print("get_user view called")
+    
+    if request.method == "POST":
+        email = None
+        
+        # 1. Try to get email from request.POST (form-urlencoded/form-data)
+        data = request.POST
+        if data:
+            email = data.get("email")
+        
+        # 2. If email is missing, manually parse request.body as JSON
+        if not email and request.body:
+            try:
+                json_data = json.loads(request.body.decode('utf-8'))
+                email = json_data.get("email")
+            except json.JSONDecodeError:
+                pass
+        
+        # Validation: Ensure email is provided
+        if not email:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Required field missing: "email".'
+            }, status=400)  # HTTP 400 Bad Request
+        
+        try:
+            # Query the user by email using filter() instead of all()
+            user = User.objects.filter(email=email).first()
+            
+            if user:
+                # User found: return user details
+                return JsonResponse({
+                    'status': 'success',
+                    'user_id': user.pk,
+                    'email': user.email,
+                    'first_name': user.first_name
+                }, status=200)  # HTTP 200 OK
+            else:
+                # User not found
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'User with email "{email}" not found.'
+                }, status=404)  # HTTP 404 Not Found
+                
+        except Exception as e:
+            print(f"Error retrieving user: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)  # HTTP 500 Internal Server Error
+    
+    # Handle non-POST requests
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed. Use POST to retrieve a user.'
+    }, status=405)  # HTTP 405 Method Not Allowed

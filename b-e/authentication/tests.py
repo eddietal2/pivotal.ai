@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
+from authentication.models import User
 
 # Define the URL using the correct name from your urls.py
 SEND_MAGIC_LINK_URL = reverse('send_magic_link') 
@@ -19,7 +20,11 @@ class MagicLinkAuthTests(TestCase):
         
         # Data payload for a successful request (must be JSON string)
         self.valid_data = json.dumps({"email": self.valid_email})
+        
+        # Create a test user so the view can look them up
+        self.user = User.objects.create(email=self.valid_email, first_name="Eddie")
 
+    # BE-101: Test for successful magic link email sending
     def test_send_magic_link_success(self):
         """
         GIVEN a valid email in the request body
@@ -41,9 +46,11 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('message', response.json())
         expected_msg = f'Magic link sent to {self.valid_email}.'
         self.assertEqual(response.json()['message'], expected_msg)
+        
         print("✅ Test for successful magic link sending passed WITHOUT EMAIL INTEGRATION.")
         print("----------------------------------\n")
 
+    # BE-102: Test for missing email field in the request body
     def test_send_magic_link_missing_email(self):
         """
         GIVEN no email in the request body
@@ -73,6 +80,7 @@ class MagicLinkAuthTests(TestCase):
         print("✅ Test for missing email passed.")
         print("----------------------------------\n")
 
+    # BE-103: Test for invalid email format in the request body
     def test_send_magic_link_invalid_email_format(self):
         """
         GIVEN a email in the request body
@@ -102,4 +110,33 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('Invalid email format', response_json['message'])
 
         print("✅ Test for invalid email format passed.")
+        print("----------------------------------\n")
+
+    # BE-104: Test for looking up existing user by email
+    @patch('authentication.views.User')  # Mock the User model
+    def test_send_magic_link_existing_user_lookup(self, mock_user_model):
+        """
+        GIVEN a valid email in the request body
+        WHEN a POST request is made to the send_magic_link_email endpoint
+        THEN it should attempt to look up the user by email.
+        """
+        # ARRANGE
+        mock_user_instance = MagicMock()
+        mock_user_model.objects.filter.return_value.exists.return_value = True
+        mock_user_model.objects.filter.return_value.first.return_value = mock_user_instance
+
+        # ACT: Make the POST request
+        response = self.client.post(
+            SEND_MAGIC_LINK_URL,
+            data=self.valid_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify that User.objects.filter was called with the correct email
+        mock_user_model.objects.filter.assert_called_with(email=self.valid_email)
+
+        print("✅ Test for existing user lookup passed.")
         print("----------------------------------\n")
