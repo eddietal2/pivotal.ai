@@ -274,10 +274,10 @@ describe('Magic Link Sign-in Flow', () => {
     // Steps: 1. Mock error API. 2. Submit form. 3. Assert user-friendly error is displayed.
     
     // ARRANGE 0: Mock an error response (e.g., 401 Unauthorized/Bad Request)
-    const apiErrorResponse = JSON.stringify({ detail: "User account is inactive." });
+    const apiErrorResponse = JSON.stringify({ message: "Failed to connect to the sign-in service. Check your internet connection." });
     fetchMock.mockResponseOnce(apiErrorResponse, { status: 401 });
     // Assuming the component displays the error content in the alert box
-    const expectedErrorText = /User account is inactive./i;
+    const expectedErrorText = /Failed to connect to the sign-in service. Check your internet connection./i;
 
     // ARRANGE 1: Render component
     renderWithProviders(<Page />); 
