@@ -95,6 +95,16 @@ def send_magic_link_email(request):
                 'message': 'Required field missing: email'
             }, status=400) # HTTP 400 Bad Request
         
+        # Email Format Validation (simple regex check)
+        import re
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if not re.match(email_regex, email):
+            return JsonResponse({
+                'status': 'error',
+                'code': 400,
+                'message': 'Invalid email format'
+            }, status=400) # HTTP 400 Bad Request
+        
         try:
             # Here you would implement the logic to send the magic link email.
             # For demonstration, we'll just print to console.

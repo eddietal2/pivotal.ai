@@ -41,6 +41,8 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('message', response.json())
         expected_msg = f'Magic link sent to {self.valid_email}.'
         self.assertEqual(response.json()['message'], expected_msg)
+        print("✅ Test for successful magic link sending passed WITHOUT EMAIL INTEGRATION.")
+        print("----------------------------------\n")
 
     def test_send_magic_link_missing_email(self):
         """
@@ -68,5 +70,36 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 3: Check the specific error message content
         self.assertIn('message', response_json)
         self.assertIn('Required field missing', response_json['message'])
+        print("✅ Test for missing email passed.")
+        print("----------------------------------\n")
 
-    
+    def test_send_magic_link_invalid_email_format(self):
+        """
+        GIVEN a email in the request body
+        WHEN a POST request is made
+        THEN it should return a 400 Bad Request status, and the response should 
+        indicate the email format is invalid.
+        """
+
+        # ACT: Make the POST request with empty data
+        response = self.client.post(
+            SEND_MAGIC_LINK_URL,
+            data={"email": "eddielacrosse.com"}, # Ensure empty data is sent as JSON
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the status code
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # ASSERT 2: Check the actual keys returned by the view 
+        response_json = response.json()
+
+        self.assertIn('status', response_json)
+        self.assertEqual(response_json['status'], 'error')
+
+        # ASSERT 3: Check the specific error message content
+        self.assertIn('message', response_json)
+        self.assertIn('Invalid email format', response_json['message'])
+
+        print("✅ Test for invalid email format passed.")
+        print("----------------------------------\n")
