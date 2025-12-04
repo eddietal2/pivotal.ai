@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',  # for handling CORS
 
     # custom apps
     'authentication',
@@ -54,7 +55,26 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # for handling CORS
 ]
+
+# ------------------------------------
+# CORS Settings (ADDED SECTION)
+# ------------------------------------
+
+# If set to True, all origins would be allowed. We prefer specific origins for better security.
+CORS_ALLOW_ALL_ORIGINS = False 
+
+# List of allowed frontend origins that can make requests to this Django API.
+# This MUST include the origin that was blocked: http://192.168.1.68:3000
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.68:3000", # <-- This is where your frontend's address is specified.
+]
+
+# Set to True if your frontend needs to send cookies, authentication headers, or tokens.
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'pivotal_api.urls'
 

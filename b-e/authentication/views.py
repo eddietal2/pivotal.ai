@@ -1,9 +1,10 @@
-from django.http import JsonResponse # New import for API responses
+from django.http import HttpResponse, JsonResponse # New import for API responses
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import User
 
 # The @csrf_exempt decorator tells Django to skip the CSRF check for this specific view.
+# This is being used with POSTMAN requests for testing purposes.
 @csrf_exempt
 def save_user(request):
     if request.method == "POST":
@@ -64,3 +65,53 @@ def save_user(request):
         'status': 'error',
         'message': 'Method not allowed. Use POST to save a user.'
     }, status=405) # HTTP 405 Method Not Allowed
+
+@csrf_exempt
+def send_magic_link_email(request):
+    print("send_magic_link_email view called")
+    return HttpResponse("This is a placeholder response for send_magic_link_email view.") 
+    # if request.method == "POST":
+    #     email = None
+        
+    #     # 1. Default data source is request.POST (for form-urlencoded/form-data)
+    #     data = request.POST
+        
+    #     if data:
+    #         email = data.get("email")
+        
+    #     # 2. If data is still missing, manually parse request.body as JSON
+    #     if not email and request.body:
+    #         try:
+    #             json_data = json.loads(request.body.decode('utf-8'))
+    #             email = json_data.get("email")
+    #         except json.JSONDecodeError:
+    #             pass 
+
+    #     # Validation Check: Ensure email is present
+    #     if not email:
+    #         return JsonResponse({
+    #             'status': 'error',
+    #             'message': 'Required field missing: "email". Ensure Postman body is correctly configured (x-www-form-urlencoded or raw JSON).'
+    #         }, status=400) # HTTP 400 Bad Request
+        
+    #     try:
+    #         # Here you would implement the logic to send the magic link email.
+    #         # For demonstration, we'll just print to console.
+    #         print(f"Sending magic link to {email}")
+            
+    #         return JsonResponse({
+    #             'status': 'success',
+    #             'message': f'Magic link sent to {email}.'
+    #         }, status=200) # HTTP 200 OK
+            
+    #     except Exception as e:
+    #         print(f"Error sending magic link: {e}")
+    #         return JsonResponse({
+    #             'status': 'error',
+    #             'message': f'Server error: {e}'
+    #         }, status=500) # HTTP 500 Internal Server Error
+    
+    # return JsonResponse({
+    #     'status': 'error',
+    #     'message': 'Method not allowed. Use POST to send a magic link.'
+    # }, status=405) # HTTP 405 Method Not Allowedq
