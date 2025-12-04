@@ -146,7 +146,7 @@ export default function Home() {
                 <CandleStickAnim />
 
                 {/* Logo */}
-                <div className="w-full relative mx-auto mt-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
+                <div className="w-full relative mx-auto" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
                     <Image 
                         src={logoSrc} 
                         alt="Pivotal Logo"
@@ -171,12 +171,12 @@ export default function Home() {
                 >
                     {(showError || successMessage) && (
                         <Alert variant={alertVariant} className="flex items-start space-x-3 rounded-lg shadow-md">
-                            <div className="flex-shrink-0 mt-0.5">{alertIcon}</div>
+                            <div className="flex-shrink-0 mt-0.5 text-green-800 dark:text-green-200">{alertIcon}</div>
                             <div className="flex-grow">
-                                <AlertTitle className="text-base font-semibold">
+                                <AlertTitle className="text-base font-semibold text-green-800 dark:text-green-200">
                                     {successMessage ? 'Login Link Sent' : 'Validation Error'}
                                 </AlertTitle>
-                                <AlertDescription className="text-sm">
+                                <AlertDescription className="text-sm text-yellow-900 dark:text-yellow-100">
                                     {displayMessage}
                                 </AlertDescription>
                             </div>
