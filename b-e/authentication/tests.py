@@ -47,7 +47,7 @@ class MagicLinkAuthTests(TestCase):
         expected_msg = f'Magic link sent to {self.valid_email}.'
         self.assertEqual(response.json()['message'], expected_msg)
         
-        print("✅ Test for successful magic link sending passed WITHOUT EMAIL INTEGRATION.")
+        print("✅ Test for successful magic link sending passed ⚠️ WITHOUT EMAIL INTEGRATION.")
         print("----------------------------------\n")
 
     # BE-102: Test for missing email field in the request body
@@ -143,7 +143,7 @@ class MagicLinkAuthTests(TestCase):
 
     # BE-202: Test for creation of new user
     @patch('authentication.views.User')  # Mock the User model
-    def save_user_new_user_creation(self, mock_user_model):
+    def test_save_user_new_user_creation(self, mock_user_model):
         """
         GIVEN a valid email and first_name in the request body
         WHEN a POST request is made to the save_user endpoint
