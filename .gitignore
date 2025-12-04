@@ -1,7 +1,46 @@
 .env
 
-# Frontend (f-e)
-/f-e/node_modules
+# Project-wide ignores (covers all subprojects under this workspace)
 
-# Backend (b-e)
+## Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+**/*.py[cod]
+
+## Virtual envs
+.venv/
+**/.venv/
 /b-e/.venv
+
+## Node / JS
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+.pnpm-debug.log
+
+## Next.js / build artifacts
+/.next/
+**/.next/
+/out/
+/build/
+/dist/
+
+## Environment
+.env
+.env.*
+
+## Misc
+.DS_Store
+*.pem
+coverage/
+
+# IDEs
+.vscode/
+.idea/
+
+# Python bytecode and caches
+__pycache__/
+
+__pycache__/
