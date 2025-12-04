@@ -21,6 +21,7 @@ from . import views
 urlpatterns = [
     path("", views.save_user, name="register"),
     path("magic-link", views.send_magic_link_email, name="send_magic_link"),
+    path("google", views.google_oauth_redirect, name="google_oauth_redirect"),
     # path("articles/<int:year>/", views.year_archive),
     # path("articles/<int:year>/<int:month>/", views.month_archive),
     # path("articles/<int:year>/<int:month>/<slug:slug>/", views.article_detail),
