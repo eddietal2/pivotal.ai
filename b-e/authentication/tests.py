@@ -112,7 +112,7 @@ class MagicLinkAuthTests(TestCase):
         print("✅ Test for invalid email format passed.")
         print("----------------------------------\n")
 
-    # BE-104: Test for looking up existing user by email
+    # BE-201: Test for looking up existing user by email
     @patch('authentication.views.User')  # Mock the User model
     def test_send_magic_link_existing_user_lookup(self, mock_user_model):
         """
@@ -139,4 +139,42 @@ class MagicLinkAuthTests(TestCase):
         mock_user_model.objects.filter.assert_called_with(email=self.valid_email)
 
         print("✅ Test for existing user lookup passed.")
+        print("----------------------------------\n")
+
+    # BE-202: Test for creation of new user
+    @patch('authentication.views.User')  # Mock the User model
+    def save_user_new_user_creation(self, mock_user_model):
+        """
+        GIVEN a valid email and first_name in the request body
+        WHEN a POST request is made to the save_user endpoint
+        THEN it should create a new user with that email and first_name.
+        """
+        # ARRANGE
+        new_user_email = "newuser@example.com"
+        new_user_first_name = "New"
+        new_user_data = json.dumps({
+            "email": new_user_email,
+            "first_name": new_user_first_name
+        })
+        
+        mock_user_instance = MagicMock()
+        mock_user_instance.pk = 123
+        mock_user_instance.email = new_user_email
+        mock_user_instance.first_name = new_user_first_name
+        mock_user_model.return_value = mock_user_instance
+
+        # ACT: Make the POST request
+        response = self.client.post(
+            reverse('register'),
+            data=new_user_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # ASSERT 2: Verify that User was instantiated with the correct email and first_name
+        mock_user_model.assert_called_with(email=new_user_email, first_name=new_user_first_name)
+
+        print("✅ Test for new user creation passed.")
         print("----------------------------------\n")
