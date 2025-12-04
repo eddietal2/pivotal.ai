@@ -154,14 +154,14 @@ class MagicLinkAuthTests(TestCase):
         """
         # ARRANGE
         new_user_email = "newuser@example.com"
-        new_user_first_name = "New"
+        new_user_first_name = "John"
         new_user_data = json.dumps({
             "email": new_user_email,
             "first_name": new_user_first_name
         })
         
         mock_user_instance = MagicMock()
-        mock_user_instance.pk = 123
+        mock_user_instance.pk = 0  # Simulate a new user with an ID
         mock_user_instance.email = new_user_email
         mock_user_instance.first_name = new_user_first_name
         mock_user_model.return_value = mock_user_instance
@@ -182,4 +182,36 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-202: Test for new user creation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
-    # BE-203: Test for handling database error during user lookup
+    # BE-301: Test for A unique, time-limited token/JWT that is generated for the user.
+    def test_magic_link_token_generation(self):
+        """
+        GIVEN a valid user ID in the request body
+        WHEN a POST request is made to the generate_magic_link_token endpoint
+        THEN it should generate a unique, time-limited token/JWT for the user."""
+
+        # ARRANGE
+        user_id = self.user.id
+        new_user_data = json.dumps({"id": user_id})
+        
+        # ACT: Make the POST request
+        response = self.client.post(
+            reverse('generate_magic_link_token'),
+            data=new_user_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify that a token is returned in the response
+        response_json = response.json()
+        self.assertIn('token', response_json)
+        token = response_json['token']
+        self.assertIsInstance(token, str)
+        
+        # ASSERT 3: Verify user_id is in the response
+        self.assertIn('user_id', response_json)
+        self.assertEqual(response_json['user_id'], user_id)
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-301: Test for magic link token generation passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")

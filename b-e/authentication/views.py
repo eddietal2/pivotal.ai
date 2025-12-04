@@ -1,8 +1,19 @@
 from django.http import HttpResponse, JsonResponse # New import for API responses
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 import json
 from .models import User
 import custom_console
+
+from rest_framework_simplejwt.tokens import Token
+from rest_framework_simplejwt.settings import api_settings
+from datetime import datetime, timedelta
+
+# Custom Magic Link Token
+class MagicLinkToken(Token):
+    """Custom JWT token for magic link authentication"""
+    token_type = 'magic_link'
+    lifetime = timedelta(minutes=10)
 
 # The @csrf_exempt decorator tells Django to skip the CSRF check for this specific view.
 # This is being used with POSTMAN requests for testing purposes.
@@ -138,6 +149,69 @@ def send_magic_link_email(request):
         'message': 'Method not allowed. Use POST to send a magic link.'
     }, status=405) # HTTP 405 Method Not Allowed
 
+@csrf_exempt
+def generate_magic_link_token(request):
+    print(f"{custom_console.COLOR_YELLOW}generate_magic_link_token view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "POST":
+        user_id = None
+        
+        # 1. Try to get user_id from request.POST
+        data = request.POST
+        if data:
+            user_id = data.get("id")
+        
+        # 2. If user_id is missing, manually parse request.body as JSON
+        if not user_id and request.body:
+            try:
+                json_data = json.loads(request.body.decode('utf-8'))
+                user_id = json_data.get("id")
+            except json.JSONDecodeError:
+                pass
+        
+        # Validation: Ensure user_id is provided
+        if not user_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Required field missing: "id".'
+            }, status=400)
+        
+        try:
+            # Look up user by ID
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'User with ID "{user_id}" not found.'
+                }, status=404)
+            
+            # Generate magic link token using djangorestframework-simplejwt
+            token = MagicLinkToken()
+            token['user_id'] = user.id
+            token['email'] = user.email
+            
+            print(f"Generated magic link token for user {user.id}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'token': str(token),
+                'user_id': user.id,
+                'message': f'Magic link token generated for user ID {user.id}.'
+            }, status=200)
+        
+        except Exception as e:
+            print(f"Error generating magic link token: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)
+    
+    # Handle non-POST requests
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed. Use POST to generate a magic link token.'
+    }, status=405)
+    
 @csrf_exempt
 def google_oauth_redirect(request):
     print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")

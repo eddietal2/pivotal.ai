@@ -22,6 +22,7 @@ urlpatterns = [
     path("", views.save_user, name="register"),
     path("user", views.get_user, name="get_user"),
     path("magic-link", views.send_magic_link_email, name="send_magic_link"),
+    path("magic-link-token", views.generate_magic_link_token, name="generate_magic_link_token"),
     path("google", views.google_oauth_redirect, name="google_oauth_redirect"),
     # path("articles/<int:year>/", views.year_archive),
     # path("articles/<int:year>/<int:month>/", views.month_archive),
