@@ -61,7 +61,6 @@ class MagicLinkAuthTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
         # ASSERT 2: Check the actual keys returned by the view 
-        # (Based on your error: it returns 'status' and 'message', not 'error')
         response_json = response.json()
         self.assertIn('status', response_json)
         self.assertEqual(response_json['status'], 'error')
@@ -69,3 +68,5 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 3: Check the specific error message content
         self.assertIn('message', response_json)
         self.assertIn('Required field missing', response_json['message'])
+
+    

@@ -91,7 +91,8 @@ def send_magic_link_email(request):
         if not email:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Required field missing: "email". Ensure Postman body is correctly configured (x-www-form-urlencoded or raw JSON).'
+                'code': 400,
+                'message': 'Required field missing: email'
             }, status=400) # HTTP 400 Bad Request
         
         try:
