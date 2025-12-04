@@ -191,10 +191,13 @@ def generate_magic_link_token(request):
             token['email'] = user.email
             
             print(f"Generated magic link token for user {user.id}")
+
+            generated_url = f"http://127.0.0.1:8000/auth/magic-link?token={str(token)}"
             
             return JsonResponse({
                 'status': 'success',
                 'token': str(token),
+                'magic_link_url': str(generated_url),
                 'user_id': user.id,
                 'message': f'Magic link token generated for user ID {user.id}.'
             }, status=200)

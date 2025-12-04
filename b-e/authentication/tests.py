@@ -215,3 +215,40 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-301: Test for magic link token generation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-302: The full Magic Link URL is correctly constructed, pointing to the Next.js frontend login handler with the generated token as a query parameter.
+    def test_magic_link_url_construction(self):
+        """
+        GIVEN a valid user ID in the request body
+        WHEN a POST request is made to the generate_magic_link_token endpoint
+        THEN it should construct the full Magic Link URL with the token as a query parameter.
+        """
+
+        # ARRANGE
+        user_id = self.user.id
+        new_user_data = json.dumps({"id": user_id})
+        
+        # ACT: Make the POST request
+        response = self.client.post(
+            reverse('generate_magic_link_token'),
+            data=new_user_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify that a token is returned in the response
+        response_json = response.json()
+        self.assertIn('token', response_json)
+        token = response_json['token']
+        
+        # Construct expected URL
+        expected_url = f"http://127.0.0.1:8000/auth/magic-link?token={token}"
+
+        # ASSERT 3: Verify that the constructed URL is correct
+        self.assertIn('magic_link_url', response_json)
+        self.assertEqual(response_json['magic_link_url'], expected_url)
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-302: Test for magic link URL construction passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
