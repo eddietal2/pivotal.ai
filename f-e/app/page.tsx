@@ -104,7 +104,7 @@ export default function Home() {
         }
     }
 	 // Google OAuth Sign-In Handler
-	const GOOGLE_AUTH_REDIRECT_URL = 'http://127.0.0.1:8000/auth/google'; 
+	const GOOGLE_AUTH_REDIRECT_URL = 'http://127.0.0.1:8000/auth/google-oauth'; 
     const handleGoogleSignIn = () => {
         // Redirect to the Django/backend Google OAuth endpoint via helper
         redirectTo(GOOGLE_AUTH_REDIRECT_URL);
