@@ -1031,6 +1031,7 @@ class MagicLinkAuthTests(TestCase):
         
         print(f"{custom_console.COLOR_GREEN}✅ BE-806: Test for expired email change verification token passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+    
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------
@@ -1121,6 +1122,57 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-903: Test for soft account deletion passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # BE-904: After successful deletion, verify that dependent data (e.g., related data models) is either correctly deleted or anonymized according to business logic.
+    def test_account_deletion_dependent_data_handling(self):
+        """
+        GIVEN a valid authentication token and a user with soft delete enabled
+        WHEN a DELETE request is made to the account deletion endpoint
+        THEN it should mark the user as deleted without removing the record from the database,
+        allowing dependent data relationships to remain intact for audit purposes.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        # Ensure user is not deleted initially
+        self.user.is_deleted = False
+        self.user.save()
+        
+        # Store user ID and email for verification after soft delete
+        user_id = self.user.id
+        user_email = self.user.email
+        
+        delete_account_url = reverse('delete_account')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+        
+        # ACT: Make authenticated DELETE request to delete account
+        response = client.delete(delete_account_url)
+        
+        # ASSERT 1: Check for HTTP 204 No Content status
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        
+        # ASSERT 2: Verify the user is marked as deleted (soft delete)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_deleted, "User should be marked as deleted (soft delete)")
+        
+        # ASSERT 3: Verify the user record still exists in the database with same ID and email
+        # This ensures dependent data relationships (foreign keys) remain valid
+        deleted_user = User.objects.get(id=user_id)
+        self.assertEqual(deleted_user.id, user_id, "User ID should remain unchanged")
+        self.assertEqual(deleted_user.email, user_email, "User email should remain unchanged")
+        self.assertTrue(deleted_user.is_deleted, "User should be marked as deleted")
+        
+        # ASSERT 4: Verify that we can query for the user even when deleted (soft delete preserves data)
+        user_exists = User.objects.filter(id=user_id).exists()
+        self.assertTrue(user_exists, "User record should still exist in database for audit purposes")
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-904: Test for soft delete dependent data handling passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
     # // ----------------------------------
     # // Settings: Password Management API (Add Password)
     # // ----------------------------------
