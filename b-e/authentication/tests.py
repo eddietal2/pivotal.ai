@@ -787,3 +787,41 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-705: Test for Google OAuth error handling passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # // ----------------------------------
+    # // Settings: Email Change API
+    # // ----------------------------------
+    # BE-801: A PUT/PATCH request to /api/user/email without a valid session/JWT returns an HTTP 401 Unauthorized status code.
+    def test_email_change_unauthorized(self):
+        """
+        GIVEN no authentication token
+        WHEN a PUT request is made to the email change endpoint
+        THEN it should return HTTP 403 Forbidden status code.
+        """
+        # ARRANGE
+        new_email = "newemail@example.com"
+        change_email_url = reverse('change_email')
+        
+        # ACT: Make PUT request without authentication token
+        response = self.client.put(
+            change_email_url,
+            data=json.dumps({'new_email': new_email}),
+            content_type='application/json'
+        )
+        
+        # ASSERT: Should return 403 Forbidden (DRF returns 403 for unauthenticated requests with IsAuthenticated permission)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-801: Test for unauthorized email change passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+        
+
+    # // ----------------------------------
+    # // Settings: Account Deletion API
+    # // ----------------------------------
+    # BE-901: 
+
+    # // ----------------------------------
+    # // Settings: Password Management API (Add Password)
+    # // ----------------------------------
+    # BE-801: 

@@ -19,12 +19,23 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+
+    # User Registration and Retrieval URLs
     path("", views.save_user, name="register"),
     path("user", views.get_user, name="get_user"),
+
+    # Mafic Link URLs
     path("magic-link", views.send_magic_link_email, name="send_magic_link"),
     path("magic-link-token", views.generate_magic_link_token, name="generate_magic_link_token"),
+
+    # Google OAuth URLs
     path("google-oauth", views.google_oauth_redirect, name="google_oauth_redirect"),
     path("google-callback", views.google_oauth_callback, name="google_oauth_callback"),
+
+    # Settings Page URLs``
+    path("settings/email", views.change_email, name="change_email"),
+
+    # Example URL patterns for reference
     # path("articles/<int:year>/", views.year_archive),
     # path("articles/<int:year>/<int:month>/", views.month_archive),
     # path("articles/<int:year>/<int:month>/<slug:slug>/", views.article_detail),

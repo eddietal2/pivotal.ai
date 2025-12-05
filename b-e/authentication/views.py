@@ -13,6 +13,8 @@ import custom_console
 
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from datetime import datetime, timedelta
 
 # Custom Magic Link Token
@@ -23,6 +25,10 @@ class MagicLinkToken(Token):
 
 # The @csrf_exempt decorator tells Django to skip the CSRF check for this specific view.
 # This is being used with POSTMAN requests for testing purposes.
+
+# // ----------------------------
+# User Registration and Retrieval Views
+# // ----------------------------   
 @csrf_exempt
 def save_user(request):
     print(f"{custom_console.COLOR_YELLOW}save_user view {custom_console.RESET_COLOR}")
@@ -143,6 +149,9 @@ def get_user(request):
         'message': 'Method not allowed. Use POST to retrieve a user.'
     }, status=405)  # HTTP 405 Method Not Allowed
 
+# // ----------------------------
+# Magic Link Views 
+# // ----------------------------   
 @csrf_exempt
 def send_magic_link_email(request):
     print(f"{custom_console.COLOR_YELLOW}send_magic_link_email view {custom_console.RESET_COLOR}")
@@ -441,7 +450,10 @@ def generate_magic_link_token(request):
         'status': 'error',
         'message': 'Method not allowed. Use POST to generate a magic link token.'
     }, status=405)
-    
+
+# // ----------------------------
+# Google OAuth Views 
+# // ----------------------------   
 @csrf_exempt
 def google_oauth_redirect(request):
     print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")
@@ -552,3 +564,60 @@ def google_oauth_callback(request):
             'message': f'OAuth request failed: {str(e)}'
         }, status=500)   
 
+# // ----------------------------
+# Settings Page Views 
+# // ----------------------------   
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def change_email(request):
+    print(f"{custom_console.COLOR_YELLOW}change_email view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "PUT":
+        # Get the authenticated user from the request
+        user = request.user
+        
+        # Parse request data
+        new_email = None
+        
+        # Try to get new_email from request.data (DRF handles this)
+        if hasattr(request, 'data'):
+            new_email = request.data.get("new_email")
+        
+        # Fallback: manually parse request.body as JSON
+        if not new_email and request.body:
+            try:
+                json_data = json.loads(request.body.decode('utf-8'))
+                new_email = json_data.get("new_email")
+            except json.JSONDecodeError:
+                pass
+        
+        # Validation: Ensure new_email is provided
+        if not new_email:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Required field missing: "new_email".'
+            }, status=400)
+        
+        try:
+            # Update user's email
+            user.email = new_email
+            user.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Email updated successfully for user ID {user.id}.',
+                'new_email': user.email
+            }, status=200)
+        
+        except Exception as e:
+            print(f"Error changing email: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only POST requests are allowed.'
+    }, status=405)
