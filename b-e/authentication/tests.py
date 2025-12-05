@@ -681,6 +681,77 @@ class MagicLinkAuthTests(TestCase):
         print("----------------------------------\n")
 
     # BE-704: If the Google email already exists, the social account is correctly linked to the existing user, and the user is logged in.
+    def test_google_oauth_existing_user_linking(self):
+        """
+        GIVEN a Google OAuth callback with an email that already exists in the database
+        WHEN the callback endpoint processes the OAuth response
+        THEN it should link the Google account to the existing user and return their info.
+        """
+        # ARRANGE
+        existing_user_email = self.valid_email  # Use the email from setUp (already exists in DB)
+        valid_auth_code = "valid_auth_code_example"
+        
+        # Verify the user already exists
+        self.assertTrue(User.objects.filter(email=existing_user_email).exists())
+        existing_user = User.objects.get(email=existing_user_email)
+        existing_user_id = existing_user.id
 
+        # Mock both requests.post and requests.get
+        with patch('authentication.views.requests.post') as mock_post, \
+             patch('authentication.views.requests.get') as mock_get:
+            
+            # Set up the mock response for token exchange
+            mock_token_response = MagicMock()
+            mock_token_response.status_code = 200
+            mock_token_response.json.return_value = {
+                'access_token': 'mock_access_token',
+                'expires_in': 3600,
+                'token_type': 'Bearer'
+            }
+            mock_token_response.raise_for_status = MagicMock()
+            mock_post.return_value = mock_token_response
+
+            # Set up the mock response for user info with existing user's email
+            mock_userinfo_response = MagicMock()
+            mock_userinfo_response.status_code = 200
+            mock_userinfo_response.json.return_value = {
+                'email': existing_user_email,
+                'name': 'Eddie Taliaferro',
+                'given_name': 'Eddie',
+                'family_name': 'Taliaferro',
+                'picture': 'https://lh3.googleusercontent.com/a/ACg8ocLYn7qYHOrc6esfKzZzw7jqN-kRRwQROrLu-YCHmV8Tx9ZcIFC-=s96-c',
+                'id': '103537052942083007886',
+                'verified_email': True
+            }
+            mock_userinfo_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_userinfo_response
+
+            # ACT: Make the GET request to the callback endpoint with the auth code
+            response = self.client.get(
+                reverse('google_oauth_callback'),
+                {'code': valid_auth_code}
+            )
+
+            # ASSERT 1: Check for HTTP 200 OK status
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            # ASSERT 2: Verify response contains the existing user's info
+            response_json = response.json()
+            self.assertEqual(response_json['status'], 'success')
+            self.assertIn('user_info', response_json)
+            self.assertEqual(response_json['user_info']['email'], existing_user_email)
+            self.assertEqual(response_json['user_info']['name'], 'Eddie Taliaferro')
+
+            # ASSERT 3: Verify the user still exists in the database (not duplicated)
+            user_count = User.objects.filter(email=existing_user_email).count()
+            self.assertEqual(user_count, 1, "Should not create duplicate user")
+
+            # ASSERT 4: Verify the same user ID is associated (linking confirmation)
+            still_existing_user = User.objects.get(email=existing_user_email)
+            self.assertEqual(still_existing_user.id, existing_user_id, 
+                           "User ID should remain the same after Google OAuth linking")
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-704: Test for existing user Google account linking passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
 
     # BE-705: If Google returns an error (e.g., user denied access), the system handles it gracefully and redirects the user back to the login page with an error message.
