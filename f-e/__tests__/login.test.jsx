@@ -326,7 +326,7 @@ describe('Google Sign-in Flow', () => {
 
 // We'll assert the `redirectTo` mock created above is invoked.
 
-  // FE-301: Redirect to Google OAuth Endpoint
+  // FE-206: Redirect to Google OAuth Endpoint
   it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
     const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google-oauth'; 
 
@@ -367,7 +367,7 @@ describe('Post Login Redirect', () => {
     });
   });
 
-  // FE-401: Redirect After Successful Login
+  // FE-301: Redirect After Successful Login
   it("should redirect the user to the homescreen after successful login", async () => {
     
     // User is redirected to the Home Page / Dashboard after successful login.
@@ -403,6 +403,37 @@ describe('Post Login Redirect', () => {
     await waitFor(() => {
       expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
     });
+  });
+
+  // FE-302: No Redirect on LoginFailure
+  it("should not redirect the user if the login attempt fails", async () => {
+    
+    // ARRANGE 0: Mock failed API response
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      success: false, 
+      message: 'Invalid email address.'
+    }), { status: 400 });
+
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
+
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i });
+
+    // ACT 1: Type valid email
+    fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
+    
+    // ACT 2: Click the magic link button to trigger login
+    fireEvent.click(magicLinkButton);
+
+    // ASSERT 1: Wait for error message to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid email address./i)).toBeInTheDocument();
+    });
+
+    // ASSERT 2: Verify redirectTo was NOT called
+    expect(redirectTo).not.toHaveBeenCalled();
   });
 
 });
