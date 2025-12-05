@@ -27,6 +27,9 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_CYAN}--- Starting MagicLinkAuthTest ---{custom_console.RESET_COLOR}")
 
+    # // ----------------------------------
+    # // Request Handling
+    # // ----------------------------------
     # BE-101: Test for successful magic link email sending
     def test_send_magic_link_success(self):
         """
@@ -115,6 +118,9 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-103: Test for invalid email format passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # // ----------------------------------
+    # // User Creation & Lookup
+    # // ----------------------------------
     # BE-201: Test for looking up existing user by email
     @patch('authentication.views.send_mail')  # Mock send_mail to avoid email sending
     @patch('authentication.views.User')  # Mock the User model
@@ -186,6 +192,9 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-202: Test for new user creation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # // ----------------------------------
+    # // Link Generation
+    # // ----------------------------------
     # BE-301: Test for A unique, time-limited token/JWT that is generated for the user.
     def test_magic_link_token_generation(self):
         """
@@ -257,6 +266,9 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-302: Test for magic link URL construction passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # // ----------------------------------
+    # // Email Sending (mocked, from emails service)
+    # // ----------------------------------
     # BE-401: Verify that Django's email service (django.core.mail.send_mail) is called exactly once.
     @patch('authentication.views.send_mail')  # Mock the send_mail function
     def test_send_magic_link_email_successful(self, mock_send_mail):
@@ -324,4 +336,57 @@ class MagicLinkAuthTests(TestCase):
         print(f"Email Body: {expected_body}")
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-402: Test for email content passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # // ----------------------------------
+    # // Token Validation
+    # // ----------------------------------
+    # BE-501: A request with a valid, non-expired token authenticates the user and returns a JWT for the user.
+    def test_magic_link_token_validation(self):
+        """
+        GIVEN a valid token generated for a user
+        WHEN the token is validated
+        THEN it should confirm the token is valid and corresponds to the correct user.
+        """
+        # ARRANGE
+        user_id = self.user.id
+        new_user_data = json.dumps({"id": user_id})
+        
+        # ACT: Make the POST request to generate token
+        response = self.client.post(
+            reverse('generate_magic_link_token'),
+            data=new_user_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify that a token is returned in the response
+        response_json = response.json()
+        self.assertIn('token', response_json)
+        token = response_json['token']
+
+        # ASSERT 3: Decode and validate the JWT token
+        from rest_framework_simplejwt.tokens import UntypedToken
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+        
+        try:
+            # Validate token by attempting to decode it
+            decoded_token = UntypedToken(token)
+            
+            # Verify token contains expected user_id
+            self.assertEqual(decoded_token['user_id'], user_id)
+            
+            # Verify token contains email
+            self.assertEqual(decoded_token['email'], self.valid_email)
+            
+            print(f"Generated Token: {token}")
+            print(f"Decoded user_id: {decoded_token['user_id']}")
+            print(f"Decoded email: {decoded_token['email']}")
+            
+        except (InvalidToken, TokenError) as e:
+            self.fail(f"Token validation failed: {e}")
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-501: Test for token validation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
