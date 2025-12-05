@@ -755,3 +755,30 @@ class MagicLinkAuthTests(TestCase):
         print("----------------------------------\n")
 
     # BE-705: If Google returns an error (e.g., user denied access), the system handles it gracefully and redirects the user back to the login page with an error message.
+    def test_google_oauth_callback_error_handling(self):
+        """
+        GIVEN an error response from Google during OAuth callback
+        WHEN the callback endpoint processes the error
+        THEN it should handle the error gracefully and return an appropriate response.
+        """
+        # ARRANGE
+        error_description = "access_denied"
+        
+        # ACT: Make the GET request to the callback endpoint with an error
+        response = self.client.get(
+            reverse('google_oauth_callback'),
+            {'error': 'access_denied', 'error_description': error_description}
+        )
+
+        # ASSERT 1: Check for HTTP 400 Bad Request status
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # ASSERT 2: Verify response contains the error message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('message', response_json)
+        self.assertIn('OAuth authorization failed', response_json['message'])
+        self.assertIn('access_denied', response_json['message'])
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-705: Test for Google OAuth error handling passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
