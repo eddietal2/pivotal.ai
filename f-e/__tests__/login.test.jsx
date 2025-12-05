@@ -41,7 +41,7 @@ describe('Login Page Rendering & Display', () => {
   });
 
   // FE-101: Render All Elements
-  it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
+  it("FE-101 renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
 
     // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
     renderWithProviders(<Page />)
@@ -63,7 +63,7 @@ describe('Login Page Rendering & Display', () => {
   })
 
   // FE-102: Candlestick Animation
-  it("renders the CandleStickAnim component", () => {
+  it("FE-102 renders the CandleStickAnim component", () => {
     render(<CandleStickAnim />);
 
     const animationElement = screen.getByTestId("candlestick-animation");
@@ -71,8 +71,8 @@ describe('Login Page Rendering & Display', () => {
     expect(animationElement).toBeInTheDocument();
   });
 
-  // FE-104: Render Error Message Alert Box
-  it("renders an alert box with hidden state (max-h-0 opacity-0) initially", () => {
+  // FE-103: Render Error Message Alert Box
+  it("FE-103 renders an alert box with hidden state (max-h-0 opacity-0) initially", () => {
     renderWithProviders(<Page />);
 
     const alertBox = screen.getByTestId('alert-box');
@@ -84,7 +84,6 @@ describe('Login Page Rendering & Display', () => {
   })
 })
 
-
 // Toggle Button Functionality Tests
 describe("Theme Toggle Button Functionality", () => {
   const mockToggleTheme = jest.fn();
@@ -95,8 +94,8 @@ describe("Theme Toggle Button Functionality", () => {
     useTheme.mockClear();
   });
 
-  // Test Case 1: Appearance in Light Mode (Initial State)
-  it("renders the Sun icon and suggests toggling to dark mode when theme is 'light'", () => {
+  // FE-104: Appearance in Light Mode (Initial State)
+  it("FE-104 renders the Sun icon and suggests toggling to dark mode when theme is 'light'", () => {
     // ARRANGE: Mock useTheme to return 'light' theme
     useTheme.mockReturnValue({
       theme: 'light',
@@ -119,8 +118,8 @@ describe("Theme Toggle Button Functionality", () => {
     expect(moonSvg).not.toBeInTheDocument();
   });
 
-  // Test Case 2: Appearance in Dark Mode
-  it("renders the Moon icon and suggests toggling to light mode when theme is 'dark'", () => {
+  // FE-105: Test Case 2: Appearance in Dark Mode
+  it("FE-105 renders the Moon icon and suggests toggling to light mode when theme is 'dark'", () => {
     // ARRANGE: Mock useTheme to return 'dark' theme
     useTheme.mockReturnValue({
       theme: 'dark',
@@ -160,7 +159,7 @@ describe('Magic Link Sign-in Flow', () => {
   });
 
   // FE-201: Input Validation (Empty)
-  it("should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
+  it("FE-201 should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
     // Expected error message when the field is empty
     const expectedErrorText = /Please enter your email address./i;
 
@@ -186,7 +185,7 @@ describe('Magic Link Sign-in Flow', () => {
   });
 
   // FE-202: Input Validation (Format)
-  it("should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
+  it("FE-202 should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
     // Steps: 1. Render component. 2. Type invalid email. 3. Click button. 4. Assert error message is visible.
     const expectedErrorText = /The email address provided is not valid./i;
 
@@ -210,7 +209,7 @@ describe('Magic Link Sign-in Flow', () => {
   })
 
   // FE-203: Successful Submission
-  it("should trigger a POST request to the correct Magic Link API endpoint upon successful submission", async () => {
+  it("FE-203 should trigger a POST request to the correct Magic Link API endpoint upon successful submission", async () => {
     // Steps: 1. Mock the API call. 2. Type valid email. 3. Click button. 4. Assert the mock API was called with the correct data.
 
     // ARRANGE 0: Mock the successful fetch response (Status 200, no content needed for a POST request)
@@ -249,7 +248,7 @@ describe('Magic Link Sign-in Flow', () => {
   })
 
   // FE-204: Feedback on Success
-  it("should display a success message and disable the form after a successful API response", async () => {
+  it("FE-204 should display a success message and disable the form after a successful API response", async () => {
     // Steps: 1. Mock success API. 2. Submit form. 3. Assert success message is visible and button is disabled.
 
     // ARRANGE 0: Mock the successful fetch response
@@ -277,7 +276,7 @@ describe('Magic Link Sign-in Flow', () => {
   })
 
   // FE-205: Error Handling
-  it("should display a clear, user-friendly error message if the API returns an error", async () => {
+  it("FE-205 should display a clear, user-friendly error message if the API returns an error", async () => {
     // Steps: 1. Mock error API. 2. Submit form. 3. Assert user-friendly error is displayed.
 
     // ARRANGE 0: Mock an error response (e.g., 401 Unauthorized/Bad Request)
@@ -324,10 +323,10 @@ describe('Google Sign-in Flow', () => {
     });
   });
 
-  // We'll assert the `redirectTo` mock created above is invoked.
+  // FE-206: We'll assert the `redirectTo` mock created above is invoked.
 
   // FE-206: Redirect to Google OAuth Endpoint
-  it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
+  it("FE-206 should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
     const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google-oauth';
 
     // ARRANGE: Render component
