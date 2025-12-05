@@ -540,3 +540,82 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-701: Test for Google OAuth initial redirect passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-702: When the callback URL is hit with a valid code from Google, the system correctly calls the Google API (using mocks) to exchange the code for an access token.
+    def test_google_oauth_callback_token_exchange(self):
+        """
+        GIVEN a valid authorization code from Google
+        WHEN the callback endpoint is hit
+        THEN it should call the Google API to exchange the code for an access token and retrieve user info.
+        """
+        # ARRANGE
+        valid_auth_code = "valid_auth_code_example"
+
+        # Mock both requests.post and requests.get
+        with patch('authentication.views.requests.post') as mock_post, \
+             patch('authentication.views.requests.get') as mock_get:
+            
+            # Set up the mock response for token exchange
+            mock_token_response = MagicMock()
+            mock_token_response.status_code = 200
+            mock_token_response.json.return_value = {
+                'access_token': 'mock_access_token',
+                'expires_in': 3600,
+                'token_type': 'Bearer',
+                'refresh_token': 'mock_refresh_token',
+                'id_token': 'mock_id_token'
+            }
+            mock_token_response.raise_for_status = MagicMock()
+            mock_post.return_value = mock_token_response
+
+            # Set up the mock response for user info
+            mock_userinfo_response = MagicMock()
+            mock_userinfo_response.status_code = 200
+            mock_userinfo_response.json.return_value = {
+                'email': 'eddielacrosse2@gmail.com',
+                'name': 'Eddie Taliaferro',
+                'given_name': 'Eddie',
+                'family_name': 'Taliaferro',
+                'picture': 'https://lh3.googleusercontent.com/a/ACg8ocLYn7qYHOrc6esfKzZzw7jqN-kRRwQROrLu-YCHmV8Tx9ZcIFC-=s96-c',
+                'id': '103537052942083007886',
+                'verified_email': True
+            }
+            mock_userinfo_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_userinfo_response
+
+            # ACT: Make the GET request to the callback endpoint with the auth code
+            response = self.client.get(
+                reverse('google_oauth_callback'),
+                {'code': valid_auth_code}
+            )
+
+            # ASSERT 1: Check for HTTP 200 OK status
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            # ASSERT 2: Verify that requests.post was called to exchange the code
+            mock_post.assert_called_once()
+            called_args, called_kwargs = mock_post.call_args
+            self.assertEqual(called_args[0], 'https://oauth2.googleapis.com/token')
+
+            # ASSERT 3: Verify that requests.get was called to fetch user info
+            mock_get.assert_called_once()
+            called_args, called_kwargs = mock_get.call_args
+            self.assertEqual(called_args[0], 'https://www.googleapis.com/oauth2/v2/userinfo')
+            self.assertEqual(called_kwargs['headers']['Authorization'], 'Bearer mock_access_token')
+
+            # ASSERT 4: Verify response contains user info
+            response_json = response.json()
+            self.assertEqual(response_json['status'], 'success')
+            self.assertIn('user_info', response_json)
+            self.assertEqual(response_json['user_info']['email'], 'eddielacrosse2@gmail.com')
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-702: Test for Google OAuth token exchange passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-703: If the Google email is new, a new Django user is created and successfully logged in.
+
+
+    # BE-704: If the Google email already exists, the social account is correctly linked to the existing user, and the user is logged in.
+
+
+    # BE-705: If Google returns an error (e.g., user denied access), the system handles it gracefully and redirects the user back to the login page with an error message.

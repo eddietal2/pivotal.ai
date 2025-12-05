@@ -2,7 +2,11 @@ from django.http import HttpResponse, JsonResponse # New import for API response
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.core.mail import send_mail
+from django.shortcuts import redirect
+from os import getenv
+from urllib.parse import urlencode
 import json
+import requests
 from .models import User
 import custom_console
 
@@ -301,10 +305,6 @@ def google_oauth_redirect(request):
     print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")
     
     # Get Google OAuth credentials from settings/environment
-    from os import getenv
-    from urllib.parse import urlencode
-    from django.shortcuts import redirect
-    
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
     redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
     
@@ -352,9 +352,6 @@ def google_oauth_callback(request):
         }, status=400)
     
     # Get credentials from environment
-    from os import getenv
-    import requests
-    
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
     client_secret = getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
     redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
