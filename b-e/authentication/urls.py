@@ -35,6 +35,7 @@ urlpatterns = [
     # Settings Page URLs``
     path("settings/email", views.change_email, name="change_email"),
     path("settings/email/verify", views.verify_email_change, name="change_email_verification"),
+    path("settings/account/delete", views.delete_account, name="delete_account"),
 
     # Example URL patterns for reference
     # path("articles/<int:year>/", views.year_archive),

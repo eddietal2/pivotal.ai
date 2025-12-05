@@ -713,4 +713,43 @@ def verify_email_change(request):
         'message': 'Invalid request method. Only GET requests are allowed.'
     }, status=405)
 
+@csrf_exempt
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    """
+    Delete the authenticated user's account.
+    Requires authentication.
+    """
+    print(f"{custom_console.COLOR_YELLOW}delete_account view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "DELETE":
+        # Get the authenticated user
+        user = request.user
+        
+        try:
+            # Store user email for response message
+            user_email = user.email
+            user_id = user.id
+            
+            # Delete the user account
+            user.delete()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Account for user ID {user_id} ({user_email}) has been successfully deleted.'
+            }, status=200)
+            
+        except Exception as e:
+            print(f"Error deleting account: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only DELETE requests are allowed.'
+    }, status=405)
+
 

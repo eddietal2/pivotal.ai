@@ -1034,7 +1034,24 @@ class MagicLinkAuthTests(TestCase):
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------
-    # BE-901: 
+    # BE-901: A DELETE request to /api/user/account without a valid session/JWT returns an HTTP 401 Unauthorized status code.
+    def test_account_deletion_unauthorized(self):
+        """
+        GIVEN no authentication token
+        WHEN a DELETE request is made to the account deletion endpoint
+        THEN it should return HTTP 401 Unauthorized status code.
+        """
+        # ARRANGE
+        delete_account_url = reverse('delete_account')
+        
+        # ACT: Make DELETE request without authentication token
+        response = self.client.delete(delete_account_url)
+        
+        # ASSERT: Should return 401 Unauthorized (JWT authentication returns 401 when no credentials provided)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-901: Test for unauthorized account deletion passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
 
     # // ----------------------------------
     # // Settings: Password Management API (Add Password)
