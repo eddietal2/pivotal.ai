@@ -353,3 +353,56 @@ describe('Google Sign-in Flow', () => {
 
 // You can now write other tests without worrying about restoring the mock.
 });
+
+// ------------------------ 
+// D. Post Login --> Homescreen / Redirect
+// ------------------------
+describe('Post Login Redirect', () => {
+  beforeEach(() => {
+    // Set default mock return for useTheme
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
+  // FE-401: Redirect After Successful Login
+  it("should redirect the user to the homescreen after successful login", async () => {
+    
+    // User is redirected to the Home Page / Dashboard after successful login.
+    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    
+    // ARRANGE 0: Mock successful API response with redirect_url
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      success: true, 
+      message: 'Magic link sent! Check your email.',
+      redirect_url: expectedHomePageURL 
+    }), { status: 200 });
+
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
+
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i });
+
+    // ACT 1: Type valid email
+    fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
+    
+    // ACT 2: Click the magic link button to trigger login
+    fireEvent.click(magicLinkButton);
+
+    // ASSERT 1: Wait for success message to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Magic link sent! Check your email./i)).toBeInTheDocument();
+    });
+
+    // ASSERT 2: Verify redirectTo was called with the homescreen URL from API response
+    // This will FAIL until the login component is updated to handle redirect_url from the API
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
+    });
+  });
+
+});
