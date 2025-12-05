@@ -984,6 +984,53 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-805: Test for email change verification passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # BE-806: A GET request with an expired token fails to change the email and returns an HTTP 400/403 status code.
+    def test_email_change_verification_expired_token(self):
+        """
+        GIVEN an expired verification token for email change
+        WHEN a GET request is made to the verification endpoint
+        THEN it should fail to update the user's email and return HTTP 400/403 status code.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from itsdangerous import URLSafeTimedSerializer, SignatureExpired
+
+        new_email = "expiredemail@example.com"
+        change_email_url = reverse('change_email_verification')
+
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+
+        # Generate a valid token (we'll mock the expiration in the view)
+        serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+        token = serializer.dumps({'user_id': self.user.id, 'new_email': new_email}, salt='email-change')
+
+        # Create a mock serializer that raises SignatureExpired when loads is called
+        mock_serializer = MagicMock()
+        mock_serializer.loads.side_effect = SignatureExpired('Signature expired')
+
+        # Patch the URLSafeTimedSerializer constructor to return our mock
+        with patch('itsdangerous.URLSafeTimedSerializer', return_value=mock_serializer):
+            # ACT: Make GET request to verification endpoint with "expired" token
+            response = client.get(f"{change_email_url}?token={token}")
+
+        # ASSERT: Should return 400 Bad Request
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # ASSERT: Verify user's email has NOT been updated
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.email, new_email)
+
+        # ASSERT: Verify error message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('expired', response_json['message'].lower())
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-806: Test for expired email change verification token passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------
