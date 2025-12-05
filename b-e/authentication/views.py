@@ -732,8 +732,9 @@ def delete_account(request):
             user_email = user.email
             user_id = user.id
             
-            # Delete the user account
-            user.delete()
+            # Soft delete: set is_deleted flag instead of hard delete
+            user.is_deleted = True
+            user.save()
             
             return JsonResponse({
                 'status': 'success',

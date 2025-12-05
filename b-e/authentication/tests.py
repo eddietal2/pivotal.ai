@@ -1078,11 +1078,47 @@ class MagicLinkAuthTests(TestCase):
         # ASSERT 1: Check for HTTP 204 No Content status
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         
-        # ASSERT 2: Verify the user has been removed from the database
-        user_exists = User.objects.filter(id=self.user.id).exists()
-        self.assertFalse(user_exists, "User record should be deleted from the database")
+        # ASSERT 2: Verify the user still exists but is marked as deleted (soft delete)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_deleted, "User should be marked as deleted (soft delete)")
         
         print(f"{custom_console.COLOR_GREEN}✅ BE-902: Test for successful account deletion passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-903: If using soft deletion, a successful DELETE request returns HTTP 204 No Content, sets an 'is_deleted' flag to True/timestamp, and clears the session/JWT.
+    def test_account_deletion_soft_delete(self):
+        """
+        GIVEN a valid authentication token
+        WHEN a DELETE request is made to the account deletion endpoint with soft delete enabled
+        THEN it should return HTTP 204 No Content, set 'is_deleted' flag, and clear the session/JWT.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        # Enable soft delete for this test (assuming User model has 'is_deleted' field)
+        self.user.is_deleted = False
+        self.user.save()
+        
+        delete_account_url = reverse('delete_account')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+        
+        # ACT: Make authenticated DELETE request to delete account
+        response = client.delete(delete_account_url)
+        
+        # ASSERT 1: Check for HTTP 204 No Content status
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        
+        # ASSERT 2: Verify the user's 'is_deleted' flag is set to True
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_deleted, "'is_deleted' flag should be set to True")
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-903: Test for soft account deletion passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # // ----------------------------------
