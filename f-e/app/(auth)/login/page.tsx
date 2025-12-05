@@ -1,7 +1,7 @@
 'use client';
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircleIcon, Mail, Lock, Loader2 } from "lucide-react";
 
 import { useTheme } from "@/components/context/ThemeContext";
@@ -34,6 +34,17 @@ export default function LoginPage() {
     const [showError, setShowError] = useState(false);
     const [successMessage, setSuccessMessage] = useState(''); // New state for success
     const [isSubmitting, setIsSubmitting] = useState(false); // New state for loading/submitting
+
+    // Check if user is already authenticated on mount
+    useEffect(() => {
+        const user = localStorage.getItem('user');
+        const token = localStorage.getItem('auth_token');
+        
+        if (user && token) {
+            log('User already authenticated, redirecting to home...');
+            redirectTo('http://192.168.1.68:3000/home');
+        }
+    }, []); // Empty dependency array [] ensures this runs only once on mount
 
     // Determine logo and or/divider images based on theme
     const logoSrc = theme === 'dark' 
@@ -88,6 +99,20 @@ export default function LoginPage() {
                 setSuccessMessage(
                     data.message || `Magic link sent! Check your email.`
                 );
+                
+                // Store authentication data if user info is provided
+                if (data.user) {
+                    // Store user data in localStorage for persistence across pages
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    log('User data stored in localStorage');
+                }
+                
+                // Store session token if provided
+                if (data.token || data.access_token) {
+                    const token = data.token || data.access_token;
+                    localStorage.setItem('auth_token', token);
+                    log('Authentication token stored');
+                }
                 
                 // If redirect_url is provided, redirect the user
                 if (data.redirect_url) {

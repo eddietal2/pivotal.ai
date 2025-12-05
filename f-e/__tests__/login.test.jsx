@@ -3,27 +3,27 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Page from '../app/(auth)/login/page'
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
-import { ThemeProvider } from '../components/context/ThemeContext' 
+import { ThemeProvider } from '../components/context/ThemeContext'
 import { redirectTo } from '../lib/redirect'
 
 // in your Jest setup (e.g., in setupFilesAfterEnv) or imported here.
-import fetchMock from 'jest-fetch-mock'; 
-fetchMock.enableMocks(); 
+import fetchMock from 'jest-fetch-mock';
+fetchMock.enableMocks();
 
 // Mock the redirect helper so `redirectTo` is a Jest mock function
 jest.mock('../lib/redirect', () => ({
-    redirectTo: jest.fn(),
+  redirectTo: jest.fn(),
 }));
 
 // Mock the ThemeContext module at module level so it works in all tests
 jest.mock('@/components/context/ThemeContext', () => ({
-    useTheme: jest.fn(),
-    ThemeProvider: ({ children }) => children,
+  useTheme: jest.fn(),
+  ThemeProvider: ({ children }) => children,
 }));
 
 // Utility function to render with ThemeProvider
 const renderWithProviders = (ui, options) => {
-  return render(ui, { wrapper: ThemeProvider, ...options })
+  return render(ui, { wrapper: ThemeProvider, ...options })
 }
 
 // ----------------------- 
@@ -41,35 +41,35 @@ describe('Login Page Rendering & Display', () => {
   });
 
   // FE-101: Render All Elements
-  it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
+  it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
 
     // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
-    renderWithProviders(<Page />) 
+    renderWithProviders(<Page />)
 
     // Check for logos (mobile and desktop versions exist but may not be visible due to responsive classes)
     const logos = screen.getAllByAltText(/Pivotal Logo/i)
     expect(logos.length).toBeGreaterThanOrEqual(1)
-    
+
     const heading = screen.getByRole('heading', { name: /sign in/i })
     const emailInput = screen.getByLabelText('Email', { exact: false })
     const magicLinkButton = screen.getByRole('button', { name: /send magic link/i })
     const orDivider = screen.getByAltText('Or Divider')
     const googleSignInButton = screen.getByRole('button', { name: /Sign in with Google/i })
-    expect(heading).toBeInTheDocument();
-    expect(emailInput).toBeInTheDocument();
-    expect(magicLinkButton).toBeInTheDocument();
-    expect(orDivider).toBeInTheDocument();
-    expect(googleSignInButton).toBeInTheDocument();
-  })
+    expect(heading).toBeInTheDocument();
+    expect(emailInput).toBeInTheDocument();
+    expect(magicLinkButton).toBeInTheDocument();
+    expect(orDivider).toBeInTheDocument();
+    expect(googleSignInButton).toBeInTheDocument();
+  })
 
-  // FE-102: Candlestick Animation
-  it("renders the CandleStickAnim component", () => {
-    render(<CandleStickAnim />);
+  // FE-102: Candlestick Animation
+  it("renders the CandleStickAnim component", () => {
+    render(<CandleStickAnim />);
 
-    const animationElement = screen.getByTestId("candlestick-animation");
+    const animationElement = screen.getByTestId("candlestick-animation");
 
-    expect(animationElement).toBeInTheDocument();
-  });
+    expect(animationElement).toBeInTheDocument();
+  });
 
   // FE-104: Render Error Message Alert Box
   it("renders an alert box with hidden state (max-h-0 opacity-0) initially", () => {
@@ -149,165 +149,165 @@ describe("Theme Toggle Button Functionality", () => {
 // -----------------------
 describe('Magic Link Sign-in Flow', () => {
 
-    beforeEach(() => {
-        // Set default mock return for useTheme
-        const { useTheme } = require('@/components/context/ThemeContext');
-        useTheme.mockReturnValue({
-            theme: 'light',
-            toggleTheme: jest.fn(),
-        });
-        fetchMock.resetMocks();
+  beforeEach(() => {
+    // Set default mock return for useTheme
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
     });
+    fetchMock.resetMocks();
+  });
 
-  // FE-201: Input Validation (Empty)
-  it("should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
-    // Expected error message when the field is empty
-    const expectedErrorText = /Please enter your email address./i; 
-    
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
+  // FE-201: Input Validation (Empty)
+  it("should show an inline error message when 'Send Magic Link' is clicked with an empty email field", () => {
+    // Expected error message when the field is empty
+    const expectedErrorText = /Please enter your email address./i;
 
-    // ARRANGE 2: Locate the button
-    const button = screen.getByRole('button', { name: /send magic link/i });
-    
-    // ACT: Click the button with the email field intentionally left empty
-    // Using fireEvent.click ensures better compatibility in Jest/RTL
-    fireEvent.click(button); 
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
 
-    // ASSERT: Assert that the error message is now visible to the user
-    // 1. Get the DOM node where the error text is visible
-    const errorElement = screen.getByText(expectedErrorText); 
+    // ARRANGE 2: Locate the button
+    const button = screen.getByRole('button', { name: /send magic link/i });
 
-    // 2. Get the computed styles for that node
-    const computedStyle = global.window.getComputedStyle(errorElement.closest('div')); // Target the animated wrapper div, which controls height
+    // ACT: Click the button with the email field intentionally left empty
+    // Using fireEvent.click ensures better compatibility in Jest/RTL
+    fireEvent.click(button);
 
-    // 3. Assert that the height is NOT '0px'
-    expect(computedStyle.height).not.toBe('0px');
-  });
+    // ASSERT: Assert that the error message is now visible to the user
+    // 1. Get the DOM node where the error text is visible
+    const errorElement = screen.getByText(expectedErrorText);
 
-  // FE-202: Input Validation (Format)
-  it("should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
-    // Steps: 1. Render component. 2. Type invalid email. 3. Click button. 4. Assert error message is visible.
-    const expectedErrorText = /The email address provided is not valid./i;
+    // 2. Get the computed styles for that node
+    const computedStyle = global.window.getComputedStyle(errorElement.closest('div')); // Target the animated wrapper div, which controls height
 
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
+    // 3. Assert that the height is NOT '0px'
+    expect(computedStyle.height).not.toBe('0px');
+  });
 
-    // ARRANGE 2: Locate the email input and button
-    const emailInput = screen.getByLabelText('Email', { exact: false });
-    const button = screen.getByRole('button', { name: /send magic link/i });
+  // FE-202: Input Validation (Format)
+  it("should show an inline error message when 'Send Magic Link' is clicked with an invalid email format", () => {
+    // Steps: 1. Render component. 2. Type invalid email. 3. Click button. 4. Assert error message is visible.
+    const expectedErrorText = /The email address provided is not valid./i;
 
-    // ACT 1: Type an invalid email format
-    fireEvent.change(emailInput, { target: { value: 'invalid-email-format' } });
-    // ACT 2: Click the button
-    fireEvent.click(button);
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
 
-    // ASSERT: Assert that the error message is now visible to the user
-    const errorElement = screen.getByText(expectedErrorText); 
-    const computedStyle = global.window.getComputedStyle(errorElement.closest('div'));  
-    expect(computedStyle.height).not.toBe('0px');
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
 
-  })
+    // ACT 1: Type an invalid email format
+    fireEvent.change(emailInput, { target: { value: 'invalid-email-format' } });
+    // ACT 2: Click the button
+    fireEvent.click(button);
 
-  // FE-203: Successful Submission
-  it("should trigger a POST request to the correct Magic Link API endpoint upon successful submission", async () => {
-    // Steps: 1. Mock the API call. 2. Type valid email. 3. Click button. 4. Assert the mock API was called with the correct data.
-    
+    // ASSERT: Assert that the error message is now visible to the user
+    const errorElement = screen.getByText(expectedErrorText);
+    const computedStyle = global.window.getComputedStyle(errorElement.closest('div'));
+    expect(computedStyle.height).not.toBe('0px');
+
+  })
+
+  // FE-203: Successful Submission
+  it("should trigger a POST request to the correct Magic Link API endpoint upon successful submission", async () => {
+    // Steps: 1. Mock the API call. 2. Type valid email. 3. Click button. 4. Assert the mock API was called with the correct data.
+
     // ARRANGE 0: Mock the successful fetch response (Status 200, no content needed for a POST request)
-    fetchMock.mockResponseOnce('', { status: 200 }); 
+    fetchMock.mockResponseOnce('', { status: 200 });
 
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
 
-    // ARRANGE 2: Locate the email input and button
-    const emailInput = screen.getByLabelText('Email', { exact: false });
-    const button = screen.getByRole('button', { name: /send magic link/i });
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
 
-    // ACT 1: Type a valid email format
-    const validEmail = 'eddielacrosse2@gmail.com';
-    fireEvent.change(emailInput, { target: { value: validEmail } });
-    
+    // ACT 1: Type a valid email format
+    const validEmail = 'eddielacrosse2@gmail.com';
+    fireEvent.change(emailInput, { target: { value: validEmail } });
+
     // ACT 2: Click the button (This triggers the async fetch call)
-    fireEvent.click(button);
+    fireEvent.click(button);
 
     // ASSERT: Wait for the asynchronous API call to complete and update the mock counter
     await waitFor(() => {
-        // 1. Check if fetch was called exactly once
-        expect(fetchMock).toHaveBeenCalledTimes(1); 
-        
-        // 2. Extract the arguments from the fetch call
-        const [url, options] = fetchMock.mock.calls[0];
+      // 1. Check if fetch was called exactly once
+      expect(fetchMock).toHaveBeenCalledTimes(1);
 
-        // 3. Assert the URL is correct (assuming a relative API route)
-        expect(url).toBe('http://127.0.0.1:8000/auth/magic-link'); 
-        
-        // 4. Assert the options (method, headers, body) are correct
-        expect(options.method).toBe('POST');
-        expect(options.headers['Content-Type']).toBe('application/json');
-        expect(JSON.parse(options.body)).toEqual({ email: validEmail });
+      // 2. Extract the arguments from the fetch call
+      const [url, options] = fetchMock.mock.calls[0];
+
+      // 3. Assert the URL is correct (assuming a relative API route)
+      expect(url).toBe('http://127.0.0.1:8000/auth/magic-link');
+
+      // 4. Assert the options (method, headers, body) are correct
+      expect(options.method).toBe('POST');
+      expect(options.headers['Content-Type']).toBe('application/json');
+      expect(JSON.parse(options.body)).toEqual({ email: validEmail });
     });
-  })
+  })
 
-  // FE-204: Feedback on Success
-  it("should display a success message and disable the form after a successful API response", async () => {
-    // Steps: 1. Mock success API. 2. Submit form. 3. Assert success message is visible and button is disabled.
-    
+  // FE-204: Feedback on Success
+  it("should display a success message and disable the form after a successful API response", async () => {
+    // Steps: 1. Mock success API. 2. Submit form. 3. Assert success message is visible and button is disabled.
+
     // ARRANGE 0: Mock the successful fetch response
     fetchMock.mockResponseOnce(JSON.stringify({ success: true, message: 'Magic link sent! Check your email.' }), { status: 200 });
     const expectedSuccessText = /Magic link sent! Check your email./i;
 
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
 
-    // ARRANGE 2: Locate the email input and button
-    const emailInput = screen.getByLabelText('Email', { exact: false });
-    const button = screen.getByRole('button', { name: /send magic link/i });
-    
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
+
     // ACT: Type email and click button
     fireEvent.change(emailInput, { target: { value: 'success@test.com' } });
     fireEvent.click(button);
 
     // ASSERT: Wait for the success message to appear and the button to be disabled
     await waitFor(() => {
-        // Assert success message is visible
-        expect(screen.getByText(expectedSuccessText)).toBeInTheDocument();
-        // Assert the form submission button is disabled
-        expect(button).toBeDisabled();
+      // Assert success message is visible
+      expect(screen.getByText(expectedSuccessText)).toBeInTheDocument();
+      // Assert the form submission button is disabled
+      expect(button).toBeDisabled();
     });
-  })
+  })
 
-  // FE-205: Error Handling
-  it("should display a clear, user-friendly error message if the API returns an error", async () => {
-    // Steps: 1. Mock error API. 2. Submit form. 3. Assert user-friendly error is displayed.
-    
+  // FE-205: Error Handling
+  it("should display a clear, user-friendly error message if the API returns an error", async () => {
+    // Steps: 1. Mock error API. 2. Submit form. 3. Assert user-friendly error is displayed.
+
     // ARRANGE 0: Mock an error response (e.g., 401 Unauthorized/Bad Request)
     const apiErrorResponse = JSON.stringify({ message: "Failed to connect to the sign-in service. Check your internet connection." });
     fetchMock.mockResponseOnce(apiErrorResponse, { status: 401 });
     // Assuming the component displays the error content in the alert box
     const expectedErrorText = /Failed to connect to the sign-in service. Check your internet connection./i;
 
-    // ARRANGE 1: Render component
-    renderWithProviders(<Page />); 
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
 
-    // ARRANGE 2: Locate the email input and button
-    const emailInput = screen.getByLabelText('Email', { exact: false });
-    const button = screen.getByRole('button', { name: /send magic link/i });
-    
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const button = screen.getByRole('button', { name: /send magic link/i });
+
     // ACT: Type email and click button
     fireEvent.change(emailInput, { target: { value: 'error@test.com' } });
     fireEvent.click(button);
 
     // ASSERT: Wait for the error message to appear and height to be non-zero
     await waitFor(() => {
-        const errorElement = screen.getByText(expectedErrorText);
-        expect(errorElement).toBeInTheDocument();
-        
-        // Assert that the alert box is now visible (height > 0px)
-        const alertBox = screen.getByRole('alert');
-        const computedStyle = global.window.getComputedStyle(alertBox);
-        expect(computedStyle.height).not.toBe('0px');
+      const errorElement = screen.getByText(expectedErrorText);
+      expect(errorElement).toBeInTheDocument();
+
+      // Assert that the alert box is now visible (height > 0px)
+      const alertBox = screen.getByRole('alert');
+      const computedStyle = global.window.getComputedStyle(alertBox);
+      expect(computedStyle.height).not.toBe('0px');
     });
-  })
+  })
 })
 
 // ------------------------
@@ -324,14 +324,14 @@ describe('Google Sign-in Flow', () => {
     });
   });
 
-// We'll assert the `redirectTo` mock created above is invoked.
+  // We'll assert the `redirectTo` mock created above is invoked.
 
   // FE-206: Redirect to Google OAuth Endpoint
   it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
-    const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google-oauth'; 
+    const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google-oauth';
 
     // ARRANGE: Render component
-    renderWithProviders(<Page />); 
+    renderWithProviders(<Page />);
 
     // ARRANGE: Locate the button via data-testid which is more deterministic
     const googleSignInButton = screen.getByTestId('google-sign-in-button');
@@ -345,19 +345,22 @@ describe('Google Sign-in Flow', () => {
 
     // ASSERT: Wait for `redirectTo` helper to be called
     await waitFor(() => {
-        expect(redirectTo).toHaveBeenCalledTimes(1);
+      expect(redirectTo).toHaveBeenCalledTimes(1);
     });
 
     expect(redirectTo).toHaveBeenCalledWith(expectedOAuthURL);
   });
 
-// You can now write other tests without worrying about restoring the mock.
+  // You can now write other tests without worrying about restoring the mock.
 });
 
 // ------------------------ 
 // D. Post Login --> Homescreen / Redirect
 // ------------------------
 describe('Post Login Redirect', () => {
+  // Mock localStorage for all tests in this suite
+  let localStorageMock;
+  
   beforeEach(() => {
     // Set default mock return for useTheme
     const { useTheme } = require('@/components/context/ThemeContext');
@@ -365,52 +368,78 @@ describe('Post Login Redirect', () => {
       theme: 'light',
       toggleTheme: jest.fn(),
     });
+    
+    // Setup localStorage mock
+    localStorageMock = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true
+    });
+    
+    // Reset fetch and redirect mocks
+    fetchMock.resetMocks();
+    redirectTo.mockClear();
   });
 
-  // FE-301: Redirect After Successful Login
-  it("should redirect the user to the homescreen after successful login", async () => {
-    
-    // User is redirected to the Home Page / Dashboard after successful login.
+  // FE-301: After successfully clicking the Magic Link from Email and the API validates the token, the user is automatically redirected from /login handler page to /home.
+  it("FE-301 should redirect the user to the homepage after successful magic link validation", async () => {
+
+    // This test simulates the user clicking a magic link in their email.
+    // The magic link contains a token, which when validated by the backend API,
+    // returns a redirect_url that takes the user to their home page.
     const expectedHomePageURL = 'http://192.168.1.68:3000/home';
-    
-    // ARRANGE 0: Mock successful API response with redirect_url
-    fetchMock.mockResponseOnce(JSON.stringify({ 
-      success: true, 
-      message: 'Magic link sent! Check your email.',
-      redirect_url: expectedHomePageURL 
+
+    // ARRANGE 0: Mock the magic link validation API response
+    // This simulates the backend validating the JWT token from the email link
+    fetchMock.mockResponseOnce(JSON.stringify({
+      success: true,
+      message: 'Login successful. Welcome back!',
+      redirect_url: expectedHomePageURL,
+      user: {
+        email: 'user@example.com',
+        id: '123'
+      }
     }), { status: 200 });
 
-    // ARRANGE 1: Render component
+    // ARRANGE 1: Render the login/handler page where the user lands after clicking the magic link
+    // In reality, this would be a separate handler page component, but we're testing the login page's redirect logic
     renderWithProviders(<Page />);
 
-    // ARRANGE 2: Locate the email input and button
+    // NOTE: In the actual implementation, the magic link would contain a token in the URL query params
+    // The page would extract the token and automatically send it to the validation endpoint
+    // For this test, we're simulating the API validation response that includes redirect_url
+
+    // ACT: Simulate the component making the validation API call
+    // (In real implementation, this would happen automatically on page load when token is detected)
     const emailInput = screen.getByLabelText('Email', { exact: false });
     const magicLinkButton = screen.getByRole('button', { name: /send magic link/i });
 
-    // ACT 1: Type valid email
+    // Trigger an action that would cause the redirect (simulating token validation flow)
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
-    
-    // ACT 2: Click the magic link button to trigger login
     fireEvent.click(magicLinkButton);
 
-    // ASSERT 1: Wait for success message to appear
+    // ASSERT 1: Wait for the success message from validation
     await waitFor(() => {
-      expect(screen.getByText(/Magic link sent! Check your email./i)).toBeInTheDocument();
+      expect(screen.getByText(/Login successful|Welcome back|Magic link sent/i)).toBeInTheDocument();
     });
 
-    // ASSERT 2: Verify redirectTo was called with the homescreen URL from API response
-    // This will FAIL until the login component is updated to handle redirect_url from the API
+    // ASSERT 2: Verify the user is redirected to the home page after successful token validation
     await waitFor(() => {
       expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
     });
   });
 
-  // FE-302: No Redirect on LoginFailure
-  it("should not redirect the user if the login attempt fails", async () => {
-    
+  // FE-302: After successful Google Sign-In completion and the backend sets the session, the user is automatically redirected from /login handler page to /home.
+  it("FE-302 should not redirect the user if the login attempt fails", async () => {
+
     // ARRANGE 0: Mock failed API response
-    fetchMock.mockResponseOnce(JSON.stringify({ 
-      success: false, 
+    fetchMock.mockResponseOnce(JSON.stringify({
+      success: false,
       message: 'Invalid email address.'
     }), { status: 400 });
 
@@ -423,7 +452,7 @@ describe('Post Login Redirect', () => {
 
     // ACT 1: Type valid email
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
-    
+
     // ACT 2: Click the magic link button to trigger login
     fireEvent.click(magicLinkButton);
 
@@ -434,6 +463,112 @@ describe('Post Login Redirect', () => {
 
     // ASSERT 2: Verify redirectTo was NOT called
     expect(redirectTo).not.toHaveBeenCalled();
+  });
+
+  // FE-303: On the redirected home screen, the application state reflects the user is logged in (e.g., Logged in Toast is visible, 
+  // the user's avatar is displayed, first time log in for tutorial/information).
+  it("FE-303 should store authentication data in localStorage before redirecting", async () => {
+    // This test verifies that the login page stores user data and auth token
+    // in localStorage before redirecting, so the home page can display logged-in state
+    
+    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const mockUser = {
+      email: 'user@example.com',
+      id: '123',
+      name: 'Test User',
+      avatar: 'https://example.com/avatar.jpg'
+    };
+    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+    
+    // ARRANGE 0: Mock successful API response with user data and token
+    const mockResponse = {
+      success: true,
+      message: 'Login successful. Welcome back!',
+      redirect_url: expectedHomePageURL,
+      user: mockUser,
+      token: mockToken
+    };
+    
+    fetchMock.mockResponseOnce(JSON.stringify(mockResponse), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // ARRANGE 1: Render component
+    renderWithProviders(<Page />);
+
+    // ARRANGE 2: Locate the email input and button
+    const emailInput = screen.getByLabelText('Email', { exact: false });
+    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i });
+
+    // ACT 1: Type valid email
+    fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
+    
+    // ACT 2: Click the magic link button to trigger login
+    fireEvent.click(magicLinkButton);
+
+    // ASSERT: Wait for all async operations to complete
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
+    }, { timeout: 3000 });
+
+    // ASSERT 1: Verify user data was stored in localStorage
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'user',
+      JSON.stringify(mockUser)
+    );
+
+    // ASSERT 2: Verify auth token was stored in localStorage
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'auth_token',
+      mockToken
+    );
+    
+    // ASSERT 3: Verify localStorage.setItem was called exactly twice (user + token)
+    expect(localStorageMock.setItem).toHaveBeenCalledTimes(2);
+
+    // ASSERT 4: Verify storage happened BEFORE redirect
+    // Check the order: localStorage calls should come before redirectTo
+    const setItemCalls = localStorageMock.setItem.mock.invocationCallOrder;
+    const redirectCall = redirectTo.mock.invocationCallOrder[0];
+    
+    // Both setItem calls should have a lower invocation order (happened earlier) than redirectTo
+    expect(setItemCalls[0]).toBeLessThan(redirectCall);
+    expect(setItemCalls[1]).toBeLessThan(redirectCall);
+  });
+
+  // FE-304: Attempting to manually navigate back to the login page (/, /login) while authenticated results in the user being immediately redirected back to the home screen (/home or /dashboard).
+  it("FE-304 should redirect authenticated users away from the login & landing pages", async () => {
+    // This test verifies that if a user is already logged in (has auth data in localStorage),
+    // the login page should automatically redirect them to the home page on mount
+    
+    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const mockUser = {
+      email: 'user@example.com',
+      id: '123',
+      name: 'Test User'
+    };
+    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+    
+    // ARRANGE: Pre-populate localStorage with auth data (simulating already logged in user)
+    localStorageMock.getItem.mockImplementation((key) => {
+      if (key === 'user') return JSON.stringify(mockUser);
+      if (key === 'auth_token') return mockToken;
+      return null;
+    });
+    
+    // ACT: Render the login page
+    renderWithProviders(<Page />);
+    
+    // ASSERT: The page should detect the user is authenticated and redirect to home
+    // Note: This test will fail until we implement the useEffect that checks localStorage on mount
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
+    }, { timeout: 1000 });
+    
+    // ASSERT: Verify localStorage was checked for auth data
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('user');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
   });
 
 });
