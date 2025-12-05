@@ -81,10 +81,19 @@ export default function LoginPage() {
             });
 
             if (response.ok) {
-                // Success: Update success message
+                // Success: Parse response data
+                const data = await response.json().catch(() => ({}));
+                
+                // Update success message
                 setSuccessMessage(
-                    `Magic link sent! Check your email.`
+                    data.message || `Magic link sent! Check your email.`
                 );
+                
+                // If redirect_url is provided, redirect the user
+                if (data.redirect_url) {
+                    log(`Redirecting to: ${data.redirect_url}`);
+                    redirectTo(data.redirect_url);
+                }
             } else {
                 // Error: Handle non-200 responses
                 const errorData = await response.json().catch(() => ({ message: 'Server error' }));
