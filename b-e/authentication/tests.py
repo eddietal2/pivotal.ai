@@ -252,3 +252,30 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-302: Test for magic link URL construction passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-401: Verify that Django's email service (django.core.mail.send_mail) is called exactly once.
+    @patch('authentication.views.send_mail')  # Mock the send_mail function
+    def test_send_magic_link_email_successful(self, mock_send_mail):
+        """
+        GIVEN a valid email in the request body
+        WHEN a POST request is made to the send_magic_link_email endpoint
+        THEN it should call Django's email service exactly once to send the magic link email.
+        """
+        # ARRANGE
+        mock_send_mail.return_value = 1  # Simulate successful email sending
+
+        # ACT: Make the POST request
+        response = self.client.post(
+            reverse('send_magic_link'),
+            data=self.valid_data,
+            content_type='application/json'
+        )
+
+        # ASSERT 1: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify that send_mail was called exactly once
+        mock_send_mail.assert_called_once()
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-401: Test for email service call passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")

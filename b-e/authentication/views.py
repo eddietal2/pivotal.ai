@@ -1,6 +1,7 @@
 from django.http import HttpResponse, JsonResponse # New import for API responses
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.core.mail import send_mail
 import json
 from .models import User
 import custom_console
@@ -79,6 +80,65 @@ def save_user(request):
     }, status=405) # HTTP 405 Method Not Allowed
 
 @csrf_exempt
+def get_user(request):
+    print(f"{custom_console.COLOR_YELLOW}get_user view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "POST":
+        email = None
+        
+        # 1. Try to get email from request.POST (form-urlencoded/form-data)
+        data = request.POST
+        if data:
+            email = data.get("email")
+        
+        # 2. If email is missing, manually parse request.body as JSON
+        if not email and request.body:
+            try:
+                json_data = json.loads(request.body.decode('utf-8'))
+                email = json_data.get("email")
+            except json.JSONDecodeError:
+                pass
+        
+        # Validation: Ensure email is provided
+        if not email:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Required field missing: "email".'
+            }, status=400)  # HTTP 400 Bad Request
+        
+        try:
+            # Query the user by email using filter() instead of all()
+            user = User.objects.filter(email=email).first()
+            
+            if user:
+                # User found: return user details
+                return JsonResponse({
+                    'status': 'success',
+                    'user_id': user.pk,
+                    'email': user.email,
+                    'first_name': user.first_name
+                }, status=200)  # HTTP 200 OK
+            else:
+                # User not found
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'User with email "{email}" not found.'
+                }, status=404)  # HTTP 404 Not Found
+                
+        except Exception as e:
+            print(f"Error retrieving user: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)  # HTTP 500 Internal Server Error
+    
+    # Handle non-POST requests
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed. Use POST to retrieve a user.'
+    }, status=405)  # HTTP 405 Method Not Allowed
+
+@csrf_exempt
 def send_magic_link_email(request):
     print(f"{custom_console.COLOR_YELLOW}send_magic_link_email view {custom_console.RESET_COLOR}")
     # return HttpResponse("This is a placeholder response for send_magic_link_email view.") 
@@ -128,12 +188,33 @@ def send_magic_link_email(request):
                     'message': f'User with email "{email}" not found.'
                 }, status=404)  # HTTP 404 Not Found
             
-            # Here you would implement the logic to send the magic link email.
-            # For demonstration, we'll just print to console.
-            print(f"Sending magic link to {email}")
+            # Build a magic link token and send via email
+            token = MagicLinkToken()
+            token['user_id'] = user.id
+            token['email'] = user.email
+
+            magic_link_url = f"http://127.0.0.1:8000/auth/magic-link?token={str(token)}"
+            subject = "Your magic sign-in link"
+            message = (
+                "Use the link below to sign in. This link expires in 10 minutes.\n\n"
+                f"{magic_link_url}\n\n"
+                "If you did not request this, you can ignore this email."
+            )
+            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
+
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            
+            print(f"Sent magic link email to {email}")
             
             return JsonResponse({
                 'status': 'success',
+                'magic_link_url': magic_link_url,
                 'message': f'Magic link sent to {email}.'
             }, status=200) # HTTP 200 OK
             
@@ -220,61 +301,3 @@ def google_oauth_redirect(request):
     print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")
     return HttpResponse("This is a placeholder response for google_oauth_redirect view.")
 
-@csrf_exempt
-def get_user(request):
-    print(f"{custom_console.COLOR_YELLOW}get_user view called {custom_console.RESET_COLOR}")
-    
-    if request.method == "POST":
-        email = None
-        
-        # 1. Try to get email from request.POST (form-urlencoded/form-data)
-        data = request.POST
-        if data:
-            email = data.get("email")
-        
-        # 2. If email is missing, manually parse request.body as JSON
-        if not email and request.body:
-            try:
-                json_data = json.loads(request.body.decode('utf-8'))
-                email = json_data.get("email")
-            except json.JSONDecodeError:
-                pass
-        
-        # Validation: Ensure email is provided
-        if not email:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Required field missing: "email".'
-            }, status=400)  # HTTP 400 Bad Request
-        
-        try:
-            # Query the user by email using filter() instead of all()
-            user = User.objects.filter(email=email).first()
-            
-            if user:
-                # User found: return user details
-                return JsonResponse({
-                    'status': 'success',
-                    'user_id': user.pk,
-                    'email': user.email,
-                    'first_name': user.first_name
-                }, status=200)  # HTTP 200 OK
-            else:
-                # User not found
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'User with email "{email}" not found.'
-                }, status=404)  # HTTP 404 Not Found
-                
-        except Exception as e:
-            print(f"Error retrieving user: {e}")
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Server error: {e}'
-            }, status=500)  # HTTP 500 Internal Server Error
-    
-    # Handle non-POST requests
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Method not allowed. Use POST to retrieve a user.'
-    }, status=405)  # HTTP 405 Method Not Allowed
