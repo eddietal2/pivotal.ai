@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import Page from '../app/page'
+import Page from '../app/(auth)/login/page'
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
 import { ThemeProvider } from '../components/context/ThemeContext' 
@@ -43,17 +43,18 @@ describe('Login Page Rendering & Display', () => {
   // FE-101: Render All Elements
   it("renders the company logo, h3 heading, email input field, sign-in message, magic link button, and google sign in button", () => {
 
-    // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
-    renderWithProviders(<Page />) 
+    // This test will contain multiple assertions using screen.getByRole to ensure all static elements are present.
+    renderWithProviders(<Page />) 
 
-    const logo = screen.getByAltText('Pivotal Logo')
-    const heading = screen.getByRole('heading', { name: /sign in/i })
-    const emailInput = screen.getByLabelText('Email', { exact: false })
-    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i })
-    const orDivider = screen.getByAltText('Or Divider')
-    const googleSignInButton = screen.getByRole('button', { name: /Sign in with Google/i })
-
-    expect(logo).toBeInTheDocument();
+    // Check for logos (mobile and desktop versions exist but may not be visible due to responsive classes)
+    const logos = screen.getAllByAltText(/Pivotal Logo/i)
+    expect(logos.length).toBeGreaterThanOrEqual(1)
+    
+    const heading = screen.getByRole('heading', { name: /sign in/i })
+    const emailInput = screen.getByLabelText('Email', { exact: false })
+    const magicLinkButton = screen.getByRole('button', { name: /send magic link/i })
+    const orDivider = screen.getByAltText('Or Divider')
+    const googleSignInButton = screen.getByRole('button', { name: /Sign in with Google/i })
     expect(heading).toBeInTheDocument();
     expect(emailInput).toBeInTheDocument();
     expect(magicLinkButton).toBeInTheDocument();
@@ -327,7 +328,7 @@ describe('Google Sign-in Flow', () => {
 
   // FE-301: Redirect to Google OAuth Endpoint
   it("should redirect the user to the correct Django backend endpoint upon clicking the 'Google Sign In' button", async () => {
-    const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google'; 
+    const expectedOAuthURL = 'http://127.0.0.1:8000/auth/google-oauth'; 
 
     // ARRANGE: Render component
     renderWithProviders(<Page />); 

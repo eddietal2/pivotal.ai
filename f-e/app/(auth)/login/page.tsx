@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <div className="w-full relative mx-auto my-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
                     <Image 
                         src={logoSrc} 
-                        alt="Pivotal Logo Desktop Message"
+                        alt="Pivotal Logo"
                         fill={true} 
                         className="object-contain"
                     />
@@ -135,7 +135,7 @@ export default function LoginPage() {
             </div>
 
             {/* Mobile & Tablet Login Card */}
-            <div className="md:block lg:hidden w-full max-w-sm mx-auto p-6 bg-transparent"> 
+            <div className="w-full max-w-sm mx-auto p-6 bg-transparent lg:hidden"> 
 
                 {/* Theme Toggle Button */}
                 <div className="flex justify-end mb-4">
@@ -152,6 +152,7 @@ export default function LoginPage() {
                         alt="Pivotal Logo"
                         fill={true} 
                         className="object-contain"
+                        priority
                     />
                 </div>
 
