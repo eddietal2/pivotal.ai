@@ -390,3 +390,34 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-501: Test for token validation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-502: A request with an expired token fails validation and returns an HTTP 401 or 403 status code.
+    def test_magic_link_token_expiration(self):
+        """
+        GIVEN an expired token
+        WHEN the token is validated
+        THEN it should fail validation and raise an InvalidToken exception.
+        """
+        # ARRANGE
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+        from datetime import timedelta
+        import time
+
+        # Create a token with a very short lifespan (1 second)
+        refresh = RefreshToken.for_user(self.user)
+        access_token = refresh.access_token
+        access_token.set_exp(lifetime=timedelta(seconds=1))  # Set token to expire in 1 second
+        token_str = str(access_token)
+
+        # Wait for the token to expire
+        time.sleep(2)  # Sleep for 2 seconds to ensure expiration
+
+        # ASSERT: Attempt to validate the expired token
+        from rest_framework_simplejwt.tokens import UntypedToken
+        
+        with self.assertRaises((InvalidToken, TokenError)) as context:
+            UntypedToken(token_str)
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-502: Test for expired token validation passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
