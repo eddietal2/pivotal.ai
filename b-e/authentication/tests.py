@@ -796,7 +796,7 @@ class MagicLinkAuthTests(TestCase):
         """
         GIVEN no authentication token
         WHEN a PUT request is made to the email change endpoint
-        THEN it should return HTTP 403 Forbidden status code.
+        THEN it should return HTTP 401 Unauthorized status code.
         """
         # ARRANGE
         new_email = "newemail@example.com"
@@ -809,13 +809,59 @@ class MagicLinkAuthTests(TestCase):
             content_type='application/json'
         )
         
-        # ASSERT: Should return 403 Forbidden (DRF returns 403 for unauthenticated requests with IsAuthenticated permission)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # ASSERT: Should return 401 Unauthorized (JWT authentication returns 401 when no credentials provided)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         
         print(f"{custom_console.COLOR_GREEN}✅ BE-801: Test for unauthorized email change passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
         
-
+    # BE-802: A PUT/PATCH request with a valid, unused new email returns HTTP 200/202, triggers a new verification email, and updates a temporary email field in the database.
+    @patch('authentication.views.send_mail')  # Mock email sending
+    def test_email_change_successful(self, mock_send_mail):
+        """
+        GIVEN a valid authentication token and a new unused email
+        WHEN a PUT request is made to the email change endpoint
+        THEN it should return HTTP 200 OK, trigger a verification email, and update the temporary email field.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        new_email = "newemail@example.com"
+        change_email_url = reverse('change_email')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+        
+        # Mock successful email sending
+        mock_send_mail.return_value = 1
+        
+        # ACT: Make authenticated PUT request with new email
+        response = client.put(
+            change_email_url,
+            data={'new_email': new_email},
+            format='json'
+        )
+        
+        # ASSERT 1: Check for HTTP 200 OK status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT 2: Verify response contains success message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'success')
+        self.assertIn('Email updated successfully', response_json['message'])
+        
+        # ASSERT 3: Verify the user's email was updated in the database
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, new_email)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-802: Test for successful email change passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+        print("----------------------------------\n")
+    
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------

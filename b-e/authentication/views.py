@@ -621,3 +621,5 @@ def change_email(request):
         'status': 'error',
         'message': 'Invalid request method. Only POST requests are allowed.'
     }, status=405)
+
+
