@@ -599,6 +599,15 @@ def change_email(request):
                 'message': 'Required field missing: "new_email".'
             }, status=400)
         
+        # Validation: Check email format
+        import re
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if not re.match(email_regex, new_email):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid email format.'
+            }, status=400)
+        
         # Validation: Check if new email already exists for a different user
         if User.objects.filter(email=new_email).exclude(id=user.id).exists():
             return JsonResponse({

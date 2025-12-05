@@ -902,6 +902,44 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-803: Test for email change conflict passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # BE-804: A PUT/PATCH request with an invalid new email format returns HTTP 400 Bad Request.
+    def test_email_change_invalid_format(self):
+        """
+        GIVEN a valid authentication token and an invalid email format
+        WHEN a PUT request is made to the email change endpoint
+        THEN it should return HTTP 400 Bad Request status code.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        invalid_email = "invalid-email-format"
+        change_email_url = reverse('change_email')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+        
+        # ACT: Make authenticated PUT request with invalid email
+        response = client.put(
+            change_email_url,
+            data={'new_email': invalid_email},
+            format='json'
+        )
+        
+        # ASSERT: Should return 400 Bad Request status
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # ASSERT: Verify error message mentions invalid email format
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('Invalid email format', response_json['message'])
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-804: Test for invalid email format passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------
