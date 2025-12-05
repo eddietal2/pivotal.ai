@@ -200,7 +200,7 @@ def send_magic_link_email(request):
                 f"{magic_link_url}\n\n"
                 "If you did not request this, you can ignore this email."
             )
-            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
+            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "eddie@finalbossxr.com")
 
             send_mail(
                 subject=subject,
