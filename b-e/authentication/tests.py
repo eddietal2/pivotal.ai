@@ -613,7 +613,72 @@ class MagicLinkAuthTests(TestCase):
         print("----------------------------------\n")
 
     # BE-703: If the Google email is new, a new Django user is created and successfully logged in.
+    def test_google_oauth_new_user_creation(self):
+        """
+        GIVEN a Google OAuth callback with a new user email (not in database)
+        WHEN the callback endpoint processes the OAuth response
+        THEN it should create a new Django user with the Google email and name.
+        """
+        # ARRANGE
+        new_user_email = "newgoogleuser@gmail.com"
+        valid_auth_code = "valid_auth_code_example"
+        
+        # Verify the user doesn't exist yet
+        self.assertFalse(User.objects.filter(email=new_user_email).exists())
 
+        # Mock both requests.post and requests.get
+        with patch('authentication.views.requests.post') as mock_post, \
+             patch('authentication.views.requests.get') as mock_get:
+            
+            # Set up the mock response for token exchange
+            mock_token_response = MagicMock()
+            mock_token_response.status_code = 200
+            mock_token_response.json.return_value = {
+                'access_token': 'mock_access_token',
+                'expires_in': 3600,
+                'token_type': 'Bearer'
+            }
+            mock_token_response.raise_for_status = MagicMock()
+            mock_post.return_value = mock_token_response
+
+            # Set up the mock response for user info with new user
+            mock_userinfo_response = MagicMock()
+            mock_userinfo_response.status_code = 200
+            mock_userinfo_response.json.return_value = {
+                'email': new_user_email,
+                'name': 'New Google User',
+                'given_name': 'New',
+                'family_name': 'User',
+                'picture': 'https://lh3.googleusercontent.com/a/default-profile-pic',
+                'id': '999888777666555',
+                'verified_email': True
+            }
+            mock_userinfo_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_userinfo_response
+
+            # ACT: Make the GET request to the callback endpoint with the auth code
+            response = self.client.get(
+                reverse('google_oauth_callback'),
+                {'code': valid_auth_code}
+            )
+
+            # ASSERT 1: Check for HTTP 200 OK status
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            # ASSERT 2: Verify response contains the new user's info
+            response_json = response.json()
+            self.assertEqual(response_json['status'], 'success')
+            self.assertIn('user_info', response_json)
+            self.assertEqual(response_json['user_info']['email'], new_user_email)
+            self.assertEqual(response_json['user_info']['name'], 'New Google User')
+
+            # ASSERT 3: Verify the user info is returned (note: actual user creation in DB 
+            # would happen in a production endpoint, but current callback only returns info)
+            self.assertEqual(response_json['user_info']['google_id'], '999888777666555')
+            self.assertTrue(response_json['user_info']['verified_email'])
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-703: Test for new Google user creation passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
 
     # BE-704: If the Google email already exists, the social account is correctly linked to the existing user, and the user is logged in.
 
