@@ -635,7 +635,82 @@ def change_email(request):
     
     return JsonResponse({
         'status': 'error',
-        'message': 'Invalid request method. Only POST requests are allowed.'
+        'message': 'Invalid request method. Only PUT requests are allowed.'
+    }, status=405)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verify_email_change(request):
+    """
+    Verify email change using a time-limited token.
+    Expected query parameter: token
+    """
+    print(f"{custom_console.COLOR_YELLOW}verify_email_change view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "GET":
+        # Get the authenticated user
+        user = request.user
+        
+        # Get token from query parameters
+        token = request.GET.get('token')
+        
+        if not token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Verification token is required.'
+            }, status=400)
+        
+        try:
+            # Validate and decode the token
+            from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+            serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+            
+            # Decode token with max age of 1 hour (3600 seconds)
+            data = serializer.loads(token, salt='email-change', max_age=3600)
+            
+            # Extract user_id and new_email from token
+            token_user_id = data.get('user_id')
+            new_email = data.get('new_email')
+            
+            # Verify token belongs to the authenticated user
+            if token_user_id != user.id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid verification token.'
+                }, status=403)
+            
+            # Check if new email is already taken by another user
+            if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Email "{new_email}" is already in use by another account.'
+                }, status=409)
+            
+            # Update user's email
+            user.email = new_email
+            user.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Email updated successfully to {new_email}.',
+                'new_email': new_email
+            }, status=200)
+            
+        except SignatureExpired:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Verification token has expired. Please request a new email change.'
+            }, status=400)
+        except (BadSignature, Exception) as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid or malformed verification token.'
+            }, status=400)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only GET requests are allowed.'
     }, status=405)
 
 

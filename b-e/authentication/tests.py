@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch, MagicMock
 from django.test import TestCase
 from django.urls import reverse
+from django.conf import settings
 from rest_framework import status
 from authentication.models import User
 import custom_console
@@ -938,6 +939,49 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('Invalid email format', response_json['message'])
         
         print(f"{custom_console.COLOR_GREEN}✅ BE-804: Test for invalid email format passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-805: A GET request to the verification endpoint with a valid token changes the user's primary email in the database and invalidates the token.
+    def test_email_change_verification(self):
+        """
+        GIVEN a valid verification token for email change
+        WHEN a GET request is made to the verification endpoint
+        THEN it should update the user's primary email and invalidate the token.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        from itsdangerous import URLSafeTimedSerializer
+
+        new_email = "newemail@example.com"
+        change_email_url = reverse('change_email_verification')
+
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+
+        # Generate a valid token for the new email
+        serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+        token = serializer.dumps({'user_id': self.user.id, 'new_email': new_email}, salt='email-change')
+
+        # ACT: Make GET request to verification endpoint with token
+        response = client.get(f"{change_email_url}?token={token}")
+
+        # ASSERT: Should return 200 OK status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT: Verify user's email has been updated
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, new_email)
+
+        # ASSERT: Verify response message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'success')
+        self.assertIn('Email updated successfully', response_json['message'])
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-805: Test for email change verification passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
     # // ----------------------------------
