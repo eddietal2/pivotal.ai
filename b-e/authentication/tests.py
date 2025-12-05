@@ -517,3 +517,140 @@ class MagicLinkAuthTests(TestCase):
         
         print(f"{custom_console.COLOR_GREEN}✅ BE-601: Test for token revocation with blacklisting passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # // ----------------------------------
+    # // OAuth Flow
+    # // ----------------------------------
+    # BE-701: Accessing the initial Google sign-in URL redirects the user to the correct Google OAuth authorization URL.
+    def test_google_oauth_initial_redirect(self):
+        """
+        GIVEN a request to the Google OAuth initiation endpoint
+        WHEN the request is made
+        THEN it should redirect the user to the correct Google OAuth authorization URL.
+        """
+        # ACT: Make the GET request to initiate Google OAuth
+        response = self.client.get(reverse('google_oauth_redirect'))
+
+        # ASSERT 1: Check for HTTP 302 Redirect status
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+        # ASSERT 2: Verify the redirect URL is Google's OAuth URL
+        redirect_url = response['Location']
+        self.assertIn('accounts.google.com/o/oauth2/auth', redirect_url)
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-701: Test for Google OAuth initial redirect passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-702: The callback endpoint successfully exchanges the authorization code for user info and returns the Google user data.
+    @patch('authentication.views.requests.post')
+    @patch('authentication.views.requests.get')
+    def test_google_oauth_callback_success(self, mock_requests_get, mock_requests_post):
+        """
+        GIVEN a callback request with a valid authorization code from Google
+        WHEN the callback endpoint processes the code
+        THEN it should return the user's Google profile information.
+        """
+        # ARRANGE: Mock the token exchange response
+        mock_token_response = MagicMock()
+        mock_token_response.status_code = 200
+        mock_token_response.json.return_value = {
+            'access_token': 'mock_access_token_12345',
+            'token_type': 'Bearer',
+            'expires_in': 3600
+        }
+        mock_token_response.raise_for_status = MagicMock()
+        mock_requests_post.return_value = mock_token_response
+
+        # ARRANGE: Mock the user info response
+        mock_userinfo_response = MagicMock()
+        mock_userinfo_response.status_code = 200
+        mock_userinfo_response.json.return_value = {
+            'email': 'eddielacrosse2@gmail.com',
+            'name': 'Eddie Taliaferro',
+            'given_name': 'Eddie',
+            'family_name': 'Taliaferro',
+            'picture': 'https://lh3.googleusercontent.com/a/ACg8ocLYn7qYHOrc6esfKzZzw7jqN-kRRwQROrLu-YCHmV8Tx9ZcIFC-=s96-c',
+            'id': '103537052942083007886',
+            'verified_email': True
+        }
+        mock_userinfo_response.raise_for_status = MagicMock()
+        mock_requests_get.return_value = mock_userinfo_response
+
+        # ACT: Make the GET request to the callback with authorization code
+        response = self.client.get(reverse('google_oauth_callback'), {'code': 'mock_auth_code_xyz'})
+
+        # ASSERT 1: Check for HTTP 200 OK status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT 2: Verify response structure
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'success')
+        self.assertEqual(response_json['message'], 'Google OAuth authentication successful')
+
+        # ASSERT 3: Verify user_info is present and contains expected fields
+        self.assertIn('user_info', response_json)
+        user_info = response_json['user_info']
+        
+        self.assertEqual(user_info['email'], 'eddielacrosse2@gmail.com')
+        self.assertEqual(user_info['name'], 'Eddie Taliaferro')
+        self.assertEqual(user_info['given_name'], 'Eddie')
+        self.assertEqual(user_info['family_name'], 'Taliaferro')
+        self.assertEqual(user_info['google_id'], '103537052942083007886')
+        self.assertEqual(user_info['verified_email'], True)
+        self.assertIn('picture', user_info)
+
+        # ASSERT 4: Verify the token exchange was called correctly
+        mock_requests_post.assert_called_once()
+        call_args = mock_requests_post.call_args
+        self.assertEqual(call_args[0][0], 'https://oauth2.googleapis.com/token')
+
+        # ASSERT 5: Verify the user info endpoint was called with access token
+        mock_requests_get.assert_called_once()
+        call_args = mock_requests_get.call_args
+        self.assertEqual(call_args[0][0], 'https://www.googleapis.com/oauth2/v2/userinfo')
+        self.assertEqual(call_args[1]['headers']['Authorization'], 'Bearer mock_access_token_12345')
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-702: Test for Google OAuth callback with user info passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-703: The callback endpoint returns an error when the authorization code is missing.
+    def test_google_oauth_callback_missing_code(self):
+        """
+        GIVEN a callback request without an authorization code
+        WHEN the callback endpoint is accessed
+        THEN it should return a 400 error.
+        """
+        # ACT: Make the GET request to the callback without a code parameter
+        response = self.client.get(reverse('google_oauth_callback'))
+
+        # ASSERT 1: Check for HTTP 400 Bad Request status
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # ASSERT 2: Verify error message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('Authorization code missing', response_json['message'])
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-703: Test for missing authorization code passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # BE-704: The callback endpoint handles OAuth errors from Google.
+    def test_google_oauth_callback_with_error(self):
+        """
+        GIVEN a callback request with an error parameter from Google
+        WHEN the callback endpoint is accessed
+        THEN it should return a 400 error with the error description.
+        """
+        # ACT: Make the GET request to the callback with an error parameter
+        response = self.client.get(reverse('google_oauth_callback'), {'error': 'access_denied'})
+
+        # ASSERT 1: Check for HTTP 400 Bad Request status
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # ASSERT 2: Verify error message
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('access_denied', response_json['message'])
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-704: Test for OAuth error handling passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")

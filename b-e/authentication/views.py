@@ -299,5 +299,117 @@ def generate_magic_link_token(request):
 @csrf_exempt
 def google_oauth_redirect(request):
     print(f"{custom_console.COLOR_YELLOW}google_oauth_redirect view called {custom_console.RESET_COLOR}")
-    return HttpResponse("This is a placeholder response for google_oauth_redirect view.")
+    
+    # Get Google OAuth credentials from settings/environment
+    from os import getenv
+    from urllib.parse import urlencode
+    from django.shortcuts import redirect
+    
+    client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
+    
+    if not client_id:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Google OAuth not configured. GOOGLE_OAUTH_CLIENT_ID missing.'
+        }, status=500)
+    
+    # Build Google OAuth authorization URL
+    google_auth_url = 'https://accounts.google.com/o/oauth2/auth'
+    params = {
+        'client_id': client_id,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'access_type': 'offline',
+        'prompt': 'consent'
+    }
+    
+    authorization_url = f"{google_auth_url}?{urlencode(params)}"
+    
+    print(f"Redirecting to Google OAuth: {authorization_url}")
+    
+    return redirect(authorization_url)
+
+@csrf_exempt
+def google_oauth_callback(request):
+    print(f"{custom_console.COLOR_YELLOW}google_oauth_callback view called {custom_console.RESET_COLOR}")
+    
+    # Get the authorization code from the callback URL
+    code = request.GET.get('code')
+    error = request.GET.get('error')
+    
+    if error:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'OAuth authorization failed: {error}'
+        }, status=400)
+    
+    if not code:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Authorization code missing from callback'
+        }, status=400)
+    
+    # Get credentials from environment
+    from os import getenv
+    import requests
+    
+    client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+    client_secret = getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
+    
+    # Exchange authorization code for access token
+    token_url = 'https://oauth2.googleapis.com/token'
+    token_data = {
+        'code': code,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code'
+    }
+    
+    try:
+        # Get access token
+        token_response = requests.post(token_url, data=token_data)
+        token_response.raise_for_status()
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        
+        if not access_token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to obtain access token'
+            }, status=500)
+        
+        # Get user info from Google
+        userinfo_url = 'https://www.googleapis.com/oauth2/v2/userinfo'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        userinfo_response = requests.get(userinfo_url, headers=headers)
+        userinfo_response.raise_for_status()
+        user_info = userinfo_response.json()
+        
+        print(f"Google user info retrieved: {user_info.get('email')}")
+        
+        # Return user info to the client
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Google OAuth authentication successful',
+            'user_info': {
+                'email': user_info.get('email'),
+                'name': user_info.get('name'),
+                'given_name': user_info.get('given_name'),
+                'family_name': user_info.get('family_name'),
+                'picture': user_info.get('picture'),
+                'google_id': user_info.get('id'),
+                'verified_email': user_info.get('verified_email')
+            }
+        }, status=200)
+        
+    except requests.RequestException as e:
+        print(f"Error during Google OAuth: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'OAuth request failed: {str(e)}'
+        }, status=500)   
 
