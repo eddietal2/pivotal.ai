@@ -599,6 +599,13 @@ def change_email(request):
                 'message': 'Required field missing: "new_email".'
             }, status=400)
         
+        # Validation: Check if new email already exists for a different user
+        if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Email "{new_email}" is already in use by another account.'
+            }, status=409)
+        
         try:
             # Update user's email
             user.email = new_email

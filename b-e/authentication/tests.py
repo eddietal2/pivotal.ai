@@ -862,6 +862,46 @@ class MagicLinkAuthTests(TestCase):
         print("----------------------------------\n")
         print("----------------------------------\n")
     
+    # BE803: A PUT/PATCH request where the new email is already associated with an existing account returns HTTP 409 Conflict or HTTP 400 Bad Request.
+    def test_email_change_conflict(self):
+        """
+        GIVEN a valid authentication token and a new email that already exists
+        WHEN a PUT request is made to the email change endpoint
+        THEN it should return HTTP 409 Conflict status code.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        # Create a second user with a different email
+        other_user = User.objects.create(email="otheruser@example.com", first_name="Other")
+        
+        change_email_url = reverse('change_email')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user (self.user)
+        client.force_authenticate(user=self.user)
+        
+        # ACT: Try to change email to the other user's email (should conflict)
+        response = client.put(
+            change_email_url,
+            data={'new_email': other_user.email},
+            format='json'
+        )
+        
+        # ASSERT: Should return 409 Conflict status
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        
+        # ASSERT: Verify error message mentions the conflict
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'error')
+        self.assertIn('already in use', response_json['message'])
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-803: Test for email change conflict passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
     # // ----------------------------------
     # // Settings: Account Deletion API
     # // ----------------------------------
