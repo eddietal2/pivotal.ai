@@ -738,7 +738,7 @@ def delete_account(request):
             return JsonResponse({
                 'status': 'success',
                 'message': f'Account for user ID {user_id} ({user_email}) has been successfully deleted.'
-            }, status=200)
+            }, status=204)
             
         except Exception as e:
             print(f"Error deleting account: {e}")

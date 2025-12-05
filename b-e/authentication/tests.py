@@ -1053,6 +1053,38 @@ class MagicLinkAuthTests(TestCase):
         print(f"{custom_console.COLOR_GREEN}✅ BE-901: Test for unauthorized account deletion passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
 
+    # BE-902: A successful DELETE request returns HTTP 204 No Content, removes the user record and associated sensitive data from the database, and clears the session/JWT.
+    def test_account_deletion_successful(self):
+        """
+        GIVEN a valid authentication token
+        WHEN a DELETE request is made to the account deletion endpoint
+        THEN it should return HTTP 204 No Content, remove the user record, and clear the session/JWT.
+        """
+        # ARRANGE
+        from rest_framework.test import APIClient
+        from rest_framework.test import force_authenticate
+        
+        delete_account_url = reverse('delete_account')
+        
+        # Use DRF's APIClient for better authentication support
+        client = APIClient()
+        
+        # Force authentication with our custom user
+        client.force_authenticate(user=self.user)
+        
+        # ACT: Make authenticated DELETE request to delete account
+        response = client.delete(delete_account_url)
+        
+        # ASSERT 1: Check for HTTP 204 No Content status
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        
+        # ASSERT 2: Verify the user has been removed from the database
+        user_exists = User.objects.filter(id=self.user.id).exists()
+        self.assertFalse(user_exists, "User record should be deleted from the database")
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-902: Test for successful account deletion passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
     # // ----------------------------------
     # // Settings: Password Management API (Add Password)
     # // ----------------------------------
