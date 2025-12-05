@@ -171,12 +171,14 @@ export default function Home() {
                 >
                     {(showError || successMessage) && (
                         <Alert variant={alertVariant} className="flex items-start space-x-3 rounded-lg shadow-md">
-                            <div className="flex-shrink-0 mt-0.5 text-green-800 dark:text-green-200">{alertIcon}</div>
+                            <div className={`flex-shrink-0 mt-0.5 ${successMessage ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                                {alertIcon}
+                            </div>
                             <div className="flex-grow">
-                                <AlertTitle className="text-base font-semibold text-green-800 dark:text-green-200">
+                                <AlertTitle className={`text-base font-semibold ${successMessage ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
                                     {successMessage ? 'Login Link Sent' : 'Validation Error'}
                                 </AlertTitle>
-                                <AlertDescription className="text-sm text-yellow-900 dark:text-yellow-100">
+                                <AlertDescription className={`text-sm ${successMessage ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
                                     {displayMessage}
                                 </AlertDescription>
                             </div>
