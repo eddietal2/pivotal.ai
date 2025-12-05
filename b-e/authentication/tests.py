@@ -399,16 +399,21 @@ class MagicLinkAuthTests(TestCase):
         THEN it should fail validation and raise an InvalidToken exception.
         """
         # ARRANGE
-        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.tokens import Token
         from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
         from datetime import timedelta
         import time
 
-        # Create a token with a very short lifespan (1 second)
-        refresh = RefreshToken.for_user(self.user)
-        access_token = refresh.access_token
-        access_token.set_exp(lifetime=timedelta(seconds=1))  # Set token to expire in 1 second
-        token_str = str(access_token)
+        # Create a custom token class with 1 second lifetime
+        class ShortLivedToken(Token):
+            token_type = 'magic_link'
+            lifetime = timedelta(seconds=1)
+        
+        # Create the token with user info
+        token = ShortLivedToken()
+        token['user_id'] = self.user.id
+        token['email'] = self.user.email
+        token_str = str(token)
 
         # Wait for the token to expire
         time.sleep(2)  # Sleep for 2 seconds to ensure expiration
