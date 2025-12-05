@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.shortcuts import redirect
 from os import getenv
 from urllib.parse import urlencode
+from smtplib import SMTPException
 import json
 import requests
 from .models import User
@@ -199,22 +200,163 @@ def send_magic_link_email(request):
 
             magic_link_url = f"http://127.0.0.1:8000/auth/magic-link?token={str(token)}"
             subject = "Your magic sign-in link"
+            
+            # Plain text version (fallback)
             message = (
                 "Use the link below to sign in. This link expires in 10 minutes.\n\n"
                 f"{magic_link_url}\n\n"
                 "If you did not request this, you can ignore this email."
             )
-            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "eddie@finalbossxr.com")
-
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=from_email,
-                recipient_list=[email],
-                fail_silently=False,
-            )
             
-            print(f"Sent magic link email to {email}")
+            # HTML version with light/dark mode support
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="color-scheme" content="light dark">
+                <meta name="supported-color-schemes" content="light dark">
+                <style>
+                    :root {{
+                        color-scheme: light dark;
+                        supported-color-schemes: light dark;
+                    }}
+                    body {{
+                        margin: 0;
+                        padding: 0;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    }}
+                    .email-container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 40px 20px;
+                    }}
+                    .logo {{
+                        text-align: center;
+                        margin-bottom: 32px;
+                    }}
+                    .logo-light {{
+                        display: block;
+                    }}
+                    .logo-dark {{
+                        display: none;
+                    }}
+                    .content {{
+                        background: #ffffff;
+                        border-radius: 12px;
+                        padding: 32px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    }}
+                    h1 {{
+                        color: #1a1a1a;
+                        font-size: 24px;
+                        font-weight: 600;
+                        margin: 0 0 16px 0;
+                    }}
+                    p {{
+                        color: #4a4a4a;
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 0 0 24px 0;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #0070f3;
+                        color: #ffffff !important;
+                        text-decoration: none;
+                        padding: 14px 32px;
+                        border-radius: 8px;
+                        font-weight: 500;
+                        font-size: 16px;
+                        text-align: center;
+                    }}
+                    .button:hover {{
+                        background: #0051cc;
+                    }}
+                    .footer {{
+                        color: #8a8a8a;
+                        font-size: 14px;
+                        margin-top: 24px;
+                        text-align: center;
+                    }}
+                    .expiry {{
+                        color: #666;
+                        font-size: 14px;
+                        margin-top: 16px;
+                    }}
+                    
+                    /* Dark mode styles */
+                    @media (prefers-color-scheme: dark) {{
+                        .logo-light {{
+                            display: none;
+                        }}
+                        .logo-dark {{
+                            display: block;
+                        }}
+                        .content {{
+                            background: #1a1a1a;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                        }}
+                        h1 {{
+                            color: #ffffff;
+                        }}
+                        p {{
+                            color: #b4b4b4;
+                        }}
+                        .expiry {{
+                            color: #8a8a8a;
+                        }}
+                        .footer {{
+                            color: #666;
+                        }}
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="logo">
+                        <img src="https://s3.us-east-2.amazonaws.com/pivotal.ai/logo-v1.png" alt="Logo" width="320" class="logo-light">
+                        <img src="https://s3.us-east-2.amazonaws.com/pivotal.ai/logo-v1-white.png" alt="Logo" width="320" class="logo-dark">
+                    </div>
+                    <div class="content">
+                        <h1>Your Magic Sign-In Link</h1>
+                        <p>Click the button below to securely sign in to your account. No password needed!</p>
+                        <p style="text-align: center;">
+                            <a href="{magic_link_url}" class="button">Sign In Now</a>
+                        </p>
+                        <p class="expiry">⏱️ This link expires in 10 minutes for your security.</p>
+                        <p class="footer">
+                            If you didn't request this link, you can safely ignore this email.
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            from_email = getattr(settings, "eddie@finalbossxr.com", "eddie@finalbossxr.com")
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=[email],
+                    fail_silently=False,
+                    html_message=html_message,
+                )
+                print(f"Sent magic link email to {email}")
+            except SMTPException as smtp_error:
+                print(f"SMTP Error: {smtp_error}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Email sending failed: {str(smtp_error)}'
+                }, status=500)
+            except Exception as email_error:
+                print(f"Email Error: {email_error}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Email error: {str(email_error)}'
+                }, status=500)
             
             return JsonResponse({
                 'status': 'success',
