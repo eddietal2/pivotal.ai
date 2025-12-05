@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # third-party apps
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',  # for handling CORS
 
     # custom apps

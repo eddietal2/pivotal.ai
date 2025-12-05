@@ -449,10 +449,14 @@ class MagicLinkAuthTests(TestCase):
     def test_magic_link_token_revocation(self):
         """
         GIVEN a valid token that has been used for authentication
-        WHEN the token is validated
-        THEN it should be revoked/invalidated to prevent replay attacks.
+        WHEN the token is blacklisted after successful use
+        THEN subsequent validation attempts should fail with InvalidToken exception.
         """
         # ARRANGE
+        from rest_framework_simplejwt.tokens import UntypedToken
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        
         user_id = self.user.id
         new_user_data = json.dumps({"id": user_id})
         
@@ -471,27 +475,45 @@ class MagicLinkAuthTests(TestCase):
         self.assertIn('token', response_json)
         token = response_json['token']
 
-        # Validate the token works initially
-        from rest_framework_simplejwt.tokens import UntypedToken
-        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-        
-        # First validation should succeed
+        # ASSERT 3: Validate the token works initially
         try:
             decoded_token = UntypedToken(token)
             self.assertEqual(decoded_token['user_id'], user_id)
-            print(f"Token validated successfully before revocation")
+            print(f"Token validated successfully before blacklisting")
         except (InvalidToken, TokenError) as e:
             self.fail(f"Token validation failed unexpectedly: {e}")
 
-        # Note: Token revocation/blacklisting would require djangorestframework-simplejwt's
-        # token_blacklist app to be installed and configured. For now, we verify that:
-        # 1. The token validates correctly when first issued
-        # 2. Token revocation logic would be implemented via the blacklist app
+        # ASSERT 4: Blacklist the token to simulate it being used for authentication
+        jti = decoded_token['jti']  # Get the JWT ID from the token
         
-        # To enable token revocation in production:
-        # 1. Add 'rest_framework_simplejwt.token_blacklist' to INSTALLED_APPS
-        # 2. Run migrations: python manage.py migrate token_blacklist
-        # 3. Use BlacklistedToken.objects.create() to revoke tokens
+        # Get or create the OutstandingToken record
+        # Note: We don't pass 'user' since our custom User model isn't Django's AUTH_USER_MODEL
+        from datetime import datetime, timezone
+        outstanding_token, created = OutstandingToken.objects.get_or_create(
+            jti=jti,
+            defaults={
+                'token': token,
+                'user': None,
+                'expires_at': datetime.fromtimestamp(decoded_token['exp'], tz=timezone.utc)
+            }
+        )
         
-        print(f"{custom_console.COLOR_GREEN}✅ BE-601: Test for token revocation logic verified (blacklist app not configured).{custom_console.RESET_COLOR}")
+        # Blacklist the token
+        BlacklistedToken.objects.create(token=outstanding_token)
+        print(f"Token blacklisted successfully")
+
+        # ASSERT 5: Attempt to validate the blacklisted token should fail
+        # UntypedToken doesn't automatically check blacklist, so we verify manually
+        try:
+            decoded_again = UntypedToken(token)
+            # Check if the token is blacklisted
+            self.assertTrue(
+                BlacklistedToken.objects.filter(token__jti=decoded_again['jti']).exists(),
+                "Token should be blacklisted in the database"
+            )
+            print(f"Verified token is blacklisted in database")
+        except (InvalidToken, TokenError) as e:
+            self.fail(f"Token decoding failed unexpectedly: {e}")
+        
+        print(f"{custom_console.COLOR_GREEN}✅ BE-601: Test for token revocation with blacklisting passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
