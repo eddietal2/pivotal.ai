@@ -26,7 +26,9 @@ const renderWithProviders = (ui, options) => {
   return render(ui, { wrapper: ThemeProvider, ...options })
 }
 
-// Rendering & Display
+// ----------------------- 
+// A. Rendering & Display
+// -----------------------
 describe('Login Page Rendering & Display', () => {
 
   beforeEach(() => {
@@ -80,6 +82,7 @@ describe('Login Page Rendering & Display', () => {
     expect(alertBox).toHaveClass('opacity-0');
   })
 })
+
 
 // Toggle Button Functionality Tests
 describe("Theme Toggle Button Functionality", () => {
@@ -140,7 +143,9 @@ describe("Theme Toggle Button Functionality", () => {
   });
 });
 
-// Magic Link Flow
+// ----------------------- 
+// B. Magic Link Login & Sign-up Flow
+// -----------------------
 describe('Magic Link Sign-in Flow', () => {
 
     beforeEach(() => {
@@ -304,7 +309,9 @@ describe('Magic Link Sign-in Flow', () => {
   })
 })
 
-// Google Sign-In Flow
+// ------------------------
+// C. Google Sign-in Flow
+// ------------------------
 describe('Google Sign-in Flow', () => {
 
   beforeEach(() => {
