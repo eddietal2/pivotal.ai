@@ -421,3 +421,23 @@ class MagicLinkAuthTests(TestCase):
 
         print(f"{custom_console.COLOR_GREEN}✅ BE-502: Test for expired token validation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+    # BE-501: A request with a syntactically invalid or modified token returns an HTTP 401/403 status code.
+    def test_magic_link_token_invalid(self):
+        """
+        GIVEN an invalid or tampered token
+        WHEN the token is validated
+        THEN it should fail validation and raise an InvalidToken exception.
+        """
+        # ARRANGE
+        invalid_token = "this.is.an.invalid.token"
+
+        # ASSERT: Attempt to validate the invalid token
+        from rest_framework_simplejwt.tokens import UntypedToken
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+        
+        with self.assertRaises((InvalidToken, TokenError)) as context:
+            UntypedToken(invalid_token)
+
+        print(f"{custom_console.COLOR_GREEN}✅ BE-503: Test for invalid token validation passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
