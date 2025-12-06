@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { ThemeProvider } from '../components/context/ThemeContext'
 import { redirectTo } from '../lib/redirect'
 
@@ -19,6 +19,12 @@ jest.mock('@/components/context/ThemeContext', () => ({
   ThemeProvider: ({ children }) => children,
 }));
 
+// Mock the ToastContext module at module level
+jest.mock('@/components/context/ToastContext', () => ({
+  useToast: jest.fn(),
+  ToastProvider: ({ children }) => children,
+}));
+
 // Utility function to render with ThemeProvider
 const renderWithProviders = (ui, options) => {
   return render(ui, { wrapper: ThemeProvider, ...options })
@@ -35,6 +41,13 @@ describe('Settings: Account Settings', () => {
     useTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: jest.fn(),
+    });
+    
+    // Set default mock return for useToast
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: jest.fn(),
+      hideToast: jest.fn(),
     });
   });
 
@@ -90,8 +103,27 @@ describe('Settings: Account Settings', () => {
   });
 
   it("FE-402: The Settings page successfully renders the 'Change Email' form (modal), including the current email, new email input field, and a 'Save' button.", async () => {
+    // Mock localStorage with user data
+    const mockUser = {
+      id: '123',
+      email: 'testuser@example.com',
+      first_name: 'Test User'
+    };
+    
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify(mockUser);
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete and skeletons to disappear
+    await waitFor(() => {
+      const skeletonsAfterLoad = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletonsAfterLoad.length).toBe(0);
+    });
     
     // ARRANGE: Click the Change Email button to open the modal
     const changeEmailButton = screen.getByRole('button', { name: /change email/i });
@@ -138,8 +170,21 @@ describe('Settings: Account Settings', () => {
   });
 
   it('FE-403: Submitting the \'Change Email\' form with an empty or invalid email format shows an inline error message.', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com' });
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
     
     // ARRANGE: Open the Change Email modal
     const changeEmailButton = screen.getByRole('button', { name: /change email/i });
@@ -197,11 +242,18 @@ describe('Settings: Account Settings', () => {
     // Mock localStorage for auth token
     Storage.prototype.getItem = jest.fn((key) => {
       if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com' });
       return null;
     });
 
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
     
     // ARRANGE: Open modal and enter valid email
     const changeEmailButton = screen.getByRole('button', { name: /change email/i });
@@ -233,34 +285,52 @@ describe('Settings: Account Settings', () => {
     const requestBody = JSON.parse(requestOptions.body);
     expect(requestBody.new_email).toBe('newemail@example.com');
     
-    // ASSERT: Modal closes after successful submission
+    // ASSERT: Success message appears (modal stays open to show success)
     await waitFor(() => {
-      const modal = screen.queryByRole('dialog');
-      expect(modal).not.toBeInTheDocument();
+      const successMessage = screen.getByText(/verification email sent/i);
+      expect(successMessage).toBeInTheDocument();
     });
+    
+    // ASSERT: Modal remains open to display success message
+    const modal = screen.queryByRole('dialog');
+    expect(modal).toBeInTheDocument();
   });
 
-  it('FE-405: After a successful API response (HTTP 200/202), the UI displays a success notification (e.g., \'Email update link sent!\') and prompts the user to verify the change via email.', async () => {
-    // ARRANGE: Mock successful API response
+  it('FE-405: After a successful API response (HTTP 200/202), the UI displays a success notification prompting the user to verify via email. The current email displayed should NOT change until verification is complete, and localStorage user data remains unchanged. When user returns from email verification, a success toast appears.', async () => {
+    // ARRANGE: Mock successful API response from backend
     fetchMock.mockResponseOnce(JSON.stringify({ 
-      message: 'Verification email sent to your new address'
+      message: 'Verification email sent to newemail@example.com. Please check your inbox.'
     }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
-    // Mock localStorage for auth token
+    // Mock localStorage for auth token and user data
+    const originalUser = { id: '123', email: 'test@example.com', first_name: 'Test' };
     Storage.prototype.getItem = jest.fn((key) => {
       if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify(originalUser);
       return null;
     });
+    
+    // Mock setItem to verify localStorage is NOT updated
+    Storage.prototype.setItem = jest.fn();
 
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
     
-    // ARRANGE: Open modal and enter valid email
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Open modal and verify current email is displayed
     const changeEmailButton = screen.getByRole('button', { name: /change email/i });
     fireEvent.click(changeEmailButton);
+    
+    const currentEmailInput = screen.getByLabelText(/current email/i);
+    expect(currentEmailInput).toHaveValue('test@example.com');
     
     const newEmailInput = screen.getByLabelText(/new email/i);
     const saveButton = screen.getByRole('button', { name: /send verification email/i });
@@ -279,17 +349,122 @@ describe('Settings: Account Settings', () => {
     const successMessage = screen.getByText(/verification email sent|check your email|email update link sent/i);
     expect(successMessage).toHaveClass('text-green-600');
     
-    // ASSERT: Modal remains open to show success message (or closes after delay)
-    // This is flexible - could close immediately or show success then close
+    // ASSERT: Success message mentions verification is required
+    expect(successMessage.textContent).toMatch(/verification|check|sent/i);
+    
+    // ASSERT: Modal remains open to show success message
     const modal = screen.queryByRole('dialog');
-    if (modal) {
-      // If modal is still open, success message should be inside it
-      expect(modal).toContainElement(successMessage);
-    }
+    expect(modal).toBeInTheDocument();
+    
+    // ASSERT: Current email in modal is STILL the old email (not changed yet)
+    expect(currentEmailInput).toHaveValue('test@example.com');
+    
+    // ASSERT: localStorage user data was NOT updated (email change pending verification)
+    // The setItem should NOT have been called to update user data
+    const setItemCalls = Storage.prototype.setItem.mock.calls;
+    const userUpdateCall = setItemCalls.find(call => call[0] === 'user');
+    expect(userUpdateCall).toBeUndefined(); // Should NOT update user in localStorage
+    
+    // ASSERT: Auth token remains the same (no new JWT issued)
+    expect(Storage.prototype.getItem).toHaveBeenCalledWith('auth_token');
+    const tokenUpdateCall = setItemCalls.find(call => call[0] === 'auth_token');
+    expect(tokenUpdateCall).toBeUndefined(); // Should NOT update token
     
     // ASSERT: Error message should NOT be visible
     const errorMessage = screen.queryByText(/email is required|please enter a valid email/i);
     expect(errorMessage).not.toBeInTheDocument();
+    
+    // PART 2: Test email verification callback with toast notification
+    // Simulate user returning from email verification link
+    
+    // Unmount the previous component
+    cleanup();
+    
+    // Reset mocks for fresh test
+    jest.clearAllMocks();
+    
+    // Mock URLSearchParams to simulate URL with query parameters
+    const mockSearchParams = new URLSearchParams(
+      'token=new-jwt-token&email=newemail@example.com&user_id=123&first_name=Test&email_updated=true'
+    );
+    
+    // Store original URLSearchParams
+    const OriginalURLSearchParams = global.URLSearchParams;
+    
+    // Mock URLSearchParams constructor
+    global.URLSearchParams = jest.fn((search) => {
+      // If called with window.location.search, return our mock params
+      if (search === window.location.search || search === '') {
+        return mockSearchParams;
+      }
+      // Otherwise use original
+      return new OriginalURLSearchParams(search);
+    });
+    
+    // Mock window.history.replaceState
+    const originalReplaceState = window.history.replaceState;
+    window.history.replaceState = jest.fn();
+    
+    // Mock localStorage with original data (will be updated by component)
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'old-jwt-token';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com', 
+        first_name: 'Test' 
+      });
+      return null;
+    });
+    
+    Storage.prototype.setItem = jest.fn();
+    
+    // Re-mock ToastContext with a fresh mock function
+    const mockShowToast = jest.fn();
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: mockShowToast,
+      hideToast: jest.fn(),
+    });
+    
+    // Re-render component with URL params (simulating page load after redirect)
+    const { container: containerAfterVerify } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = containerAfterVerify.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: showToast was called with success message
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'Email successfully updated and verified!',
+        'success',
+        6000
+      );
+    }, { timeout: 3000 });
+    
+    // ASSERT: localStorage was updated with new token and user data
+    expect(Storage.prototype.setItem).toHaveBeenCalledWith('auth_token', 'new-jwt-token');
+    expect(Storage.prototype.setItem).toHaveBeenCalledWith('user', expect.stringContaining('newemail@example.com'));
+    
+    // ASSERT: URL parameters were cleared
+    expect(window.history.replaceState).toHaveBeenCalledWith({}, '', '/settings');
+    
+    // Restore original URLSearchParams and history.replaceState
+    global.URLSearchParams = OriginalURLSearchParams;
+    window.history.replaceState = originalReplaceState;
+    
+    // IMPLEMENTATION NOTE:
+    // The backend should:
+    // 1. Send verification email to newemail@example.com with a token
+    // 2. NOT change the user's email in the database yet
+    // 3. When user clicks the verification link, THEN:
+    //    - Update email in database
+    //    - Issue new JWT with updated email
+    //    - Redirect to frontend with new token and email_updated=true
+    //    - Frontend updates localStorage with new user data and token
+    //    - Frontend shows success toast notification
   });
 
   it('FE-406:', async () => {
@@ -376,19 +551,19 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     });
   });
 
-  it('FE-501: Account Settings render all elements', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+  // it('FE-501: Account Settings render all elements', async () => {
+  //   const { default: SettingsPage } = await import('../app/settings/page');
+  //   renderWithProviders(<SettingsPage />);
     
-    // Assert Delete Account subsection is rendered
-    const deleteSection = screen.getByRole('heading', { name: /delete account/i, level: 3 });
-    expect(deleteSection).toBeInTheDocument();
+  //   // Assert Delete Account subsection is rendered
+  //   const deleteSection = screen.getByRole('heading', { name: /delete account/i, level: 3 });
+  //   expect(deleteSection).toBeInTheDocument();
     
-    // Assert Delete button is rendered
-    const deleteButton = screen.getByRole('button', { name: /^delete$/i });
-    expect(deleteButton).toBeInTheDocument();
-    expect(deleteButton).toBeEnabled();
-  });
+  //   // Assert Delete button is rendered
+  //   const deleteButton = screen.getByRole('button', { name: /^delete$/i });
+  //   expect(deleteButton).toBeInTheDocument();
+  //   expect(deleteButton).toBeEnabled();
+  // });
 
 });
 

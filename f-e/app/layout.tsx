@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/context/ThemeContext";
+import { ToastProvider } from "@/components/context/ToastContext";
 import TopNav from "@/components/navigation/TopNav";
 import BottomNav from "@/components/navigation/BottomNav";
 
@@ -31,18 +32,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <div className="min-h-screen flex flex-col">
-            {/* Top Navigation - Desktop Only */}
-            <TopNav />
-            
-            {/* Main Content Area */}
-            <main className="flex-1 pb-16 md:pb-0">
-              {children}
-            </main>
-            
-            {/* Bottom Navigation - Mobile Only */}
-            <BottomNav />
-          </div>
+          <ToastProvider>
+            <div className="min-h-screen flex flex-col">
+              {/* Top Navigation - Desktop Only */}
+              <TopNav />
+              
+              {/* Main Content Area */}
+              <main className="flex-1 pb-16 md:pb-0">
+                {children}
+              </main>
+              
+              {/* Bottom Navigation - Mobile Only */}
+              <BottomNav />
+            </div>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

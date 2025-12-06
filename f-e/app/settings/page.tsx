@@ -1,12 +1,14 @@
 'use client';
 
 import { useTheme } from '@/components/context/ThemeContext';
+import { useToast } from '@/components/context/ToastContext';
 import { Sun, Moon, Bell, BellOff, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { redirectTo } from '@/lib/redirect';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const { showToast } = useToast();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -23,6 +25,32 @@ export default function SettingsPage() {
       setLoadError('');
       
       try {
+        // Check if user is returning from email verification
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        const emailFromUrl = urlParams.get('email');
+        const userIdFromUrl = urlParams.get('user_id');
+        const firstNameFromUrl = urlParams.get('first_name');
+        const emailUpdated = urlParams.get('email_updated');
+        
+        if (tokenFromUrl && emailFromUrl && userIdFromUrl) {
+          // User just verified email change - update localStorage with new data
+          localStorage.setItem('auth_token', tokenFromUrl);
+          localStorage.setItem('user', JSON.stringify({
+            id: userIdFromUrl,
+            email: emailFromUrl,
+            first_name: firstNameFromUrl || ''
+          }));
+          
+          // Show success toast notification
+          if (emailUpdated === 'true') {
+            showToast('Email successfully updated and verified!', 'success', 6000);
+          }
+          
+          // Clear URL parameters
+          window.history.replaceState({}, '', '/settings');
+        }
+        
         const userString = localStorage.getItem('user');
         const token = localStorage.getItem('auth_token');
         
@@ -84,6 +112,11 @@ export default function SettingsPage() {
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
       
+      if (!token) {
+        setEmailError('Authentication token not found. Please log in again.');
+        return;
+      }
+      
       // Make API call to change email
       const response = await fetch('http://127.0.0.1:8000/auth/settings/email', {
         method: 'PUT',
@@ -106,6 +139,16 @@ export default function SettingsPage() {
         //   setNewEmail('');
         //   setSuccessMessage('');
         // }, 3000);
+      } else if (response.status === 401) {
+        // Handle unauthorized - token expired or invalid
+        setEmailError('Your session has expired. Please log in again.');
+        setSuccessMessage('');
+        // Optionally redirect to login after a delay
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          redirectTo('http://192.168.1.68:3000/login');
+        }, 2000);
       } else {
         // Handle error responses
         const errorData = await response.json();
