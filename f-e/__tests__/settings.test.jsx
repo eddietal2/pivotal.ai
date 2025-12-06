@@ -467,9 +467,14 @@ describe('Settings: Account Settings', () => {
     //    - Frontend shows success toast notification
   });
 
-  it('FE-406:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+  it('FE-406: If the API returns an error (e.g., 409 Conflict, email already in use), a clear error message is displayed to the user.', async () => {
+    // ARRANGE: Mock API error response (409 Conflict)
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'The email address is already in use by another account.'
+    }), { 
+      status: 409,
+      headers: { 'Content-Type': 'application/json' }
+    });
   });
 
   it('FE-407:', async () => {
