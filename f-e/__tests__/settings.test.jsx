@@ -802,9 +802,49 @@ describe('Settings: Account Settings', () => {
     //    - Frontend shows success toast notification
   });
 
-  it('FE-410:', async () => {
+  it('FE-410: The Settings page displays a prominent \'Delete Account\' button and section.', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Delete Account heading is visible
+    const deleteAccountHeading = screen.getByRole('heading', { name: /delete account/i, level: 3 });
+    expect(deleteAccountHeading).toBeInTheDocument();
+    
+    // ASSERT: Delete Account heading has red styling to indicate danger
+    expect(deleteAccountHeading).toHaveClass('text-red-600');
+    
+    // ASSERT: Descriptive text is present explaining the action
+    const descriptionText = screen.getByText(/permanently delete your account and all data/i);
+    expect(descriptionText).toBeInTheDocument();
+    
+    // ASSERT: Delete button is rendered and enabled
+    const deleteButton = screen.getByRole('button', { name: /^delete$/i });
+    expect(deleteButton).toBeInTheDocument();
+    expect(deleteButton).toBeEnabled();
+    
+    // ASSERT: Delete button has red/danger styling
+    expect(deleteButton).toHaveClass('bg-red-600');
+    
+    // ASSERT: Delete Account section is within Account Settings section
+    const accountSettingsSection = screen.getByRole('heading', { name: /account settings/i, level: 2 });
+    expect(accountSettingsSection).toBeInTheDocument();
   });
 
   it('FE-411:', async () => {
