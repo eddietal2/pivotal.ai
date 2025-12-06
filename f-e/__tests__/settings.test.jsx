@@ -938,13 +938,10 @@ describe('Settings: Account Settings', () => {
     });
   });
 
-  it('FE-412: Confirming deletion triggers a DELETE request to the correct API endpoint (/settings/account/delete). Success Toast should appear, as well as a redirect to the Landing Page.', async () => {
-    // ARRANGE: Mock successful API response
-    fetchMock.mockResponseOnce(JSON.stringify({ 
-      message: 'Account successfully deleted' 
-    }), { 
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+  it('FE-412: Confirming deletion triggers a DELETE request to the correct API endpoint (/settings/account/delete). Success Toast should appear, as well as a redirect to the Landing Page. The session cookie/JWT should be cleared.', async () => {
+    // ARRANGE: Mock successful API response (204 No Content for soft delete)
+    fetchMock.mockResponseOnce('', { 
+      status: 204
     });
 
     // Mock localStorage with user data
