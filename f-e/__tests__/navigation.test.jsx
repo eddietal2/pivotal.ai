@@ -33,6 +33,7 @@ jest.mock('next/navigation', () => ({
 
 // Import components after mocks are set up
 import TopNav from '../components/navigation/TopNav';
+import BottomNav from '../components/navigation/BottomNav';
 import NavigationWrapper from '../components/navigation/NavigationWrapper';
 
 describe('Top Navigation Bar (Header)', () => {
@@ -300,8 +301,34 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
     });
     });
 
-    it('FE-801: ', async () => {
-   
+    it('FE-801: The Bottom Navigation Bar component is rendered and visible only when the viewport width is below a specific mobile breakpoint (e.g., below 768px).', async () => {
+        // Mock localStorage with auth token (simulating logged-in user)
+        Storage.prototype.getItem = jest.fn((key) => {
+            if (key === 'auth_token') return 'mock-jwt-token-123';
+            if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com' });
+            if (key === 'theme') return 'light';
+            return null;
+        });
+
+        mockUsePathname.mockReturnValue('/home');
+
+        const { container } = render(<BottomNav />);
+
+        // BottomNav should be in the document
+        const nav = container.querySelector('nav');
+        expect(nav).toBeInTheDocument();
+        
+        // Verify BottomNav has mobile-only class (md:hidden)
+        expect(nav).toHaveClass('md:hidden');
+        
+        // Verify BottomNav is fixed at the bottom
+        expect(nav).toHaveClass('fixed', 'bottom-0');
+        
+        // Verify all navigation links are present
+        expect(screen.getByText('Home')).toBeInTheDocument();
+        expect(screen.getByText('Watchlist')).toBeInTheDocument();
+        expect(screen.getByText('News')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
     it('FE-802: ', async () => {
