@@ -76,7 +76,7 @@ describe('Top Navigation Bar (Header)', () => {
         
         // Verify TopNav contains expected navigation links
         expect(screen.getByText('Home')).toBeInTheDocument();
-        expect(screen.getByText('Trading')).toBeInTheDocument();
+        expect(screen.getByText('Watchlist')).toBeInTheDocument();
         expect(screen.getByText('News')).toBeInTheDocument();
         expect(screen.getByText('Settings')).toBeInTheDocument();
         
@@ -95,7 +95,7 @@ describe('Top Navigation Bar (Header)', () => {
         
         // Navigation links should NOT be present
         expect(screen.queryByText('Home')).not.toBeInTheDocument();
-        expect(screen.queryByText('Trading')).not.toBeInTheDocument();
+        expect(screen.queryByText('Watchlist')).not.toBeInTheDocument();
         expect(screen.queryByAltText('Pivotal Logo')).not.toBeInTheDocument();
     });
 
@@ -136,8 +136,35 @@ describe('Top Navigation Bar (Header)', () => {
         expect(profileButton).not.toBeDisabled();
     });
 
-    it('FE-704: ', async () => {
-   
+    it('FE-704: Home, Watchlist, News, and Settings links all are clickable, and navigate to their respective pages.', async () => {
+        // Mock localStorage with auth token (simulating logged-in user)
+        Storage.prototype.getItem = jest.fn((key) => {
+            if (key === 'auth_token') return 'mock-jwt-token-123';
+            if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com', username: 'testuser' });
+            if (key === 'theme') return 'light';
+            return null;
+        });
+
+        mockUsePathname.mockReturnValue('/settings');
+
+        render(<TopNav />);
+
+        // Find navigation links
+        const homeLink = screen.getByRole('link', { name: /home/i });
+        const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
+        const newsLink = screen.getByRole('link', { name: /news/i });
+        const settingsLink = screen.getByRole('link', { name: /settings/i });
+
+        expect(homeLink).toBeInTheDocument();
+        expect(watchlistLink).toBeInTheDocument();
+        expect(newsLink).toBeInTheDocument();
+        expect(settingsLink).toBeInTheDocument();
+
+        // Verify links have correct href attributes
+        expect(homeLink).toHaveAttribute('href', '/home');
+        expect(watchlistLink).toHaveAttribute('href', '/watchlist');
+        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
     it('FE-705: ', async () => {
