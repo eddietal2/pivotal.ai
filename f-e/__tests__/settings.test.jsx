@@ -1080,8 +1080,67 @@ describe('Settings: Account Settings', () => {
   });
 
   it('FE-414: Clicking the Logout button displays a confirmation modal with Cancel and Confirm Logout options', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Find and click the Logout button
+    const logoutButton = screen.getByRole('button', { name: /^logout$|log out|sign out/i });
+    expect(logoutButton).toBeInTheDocument();
+    
+    // ACT: Click the Logout button
+    fireEvent.click(logoutButton);
+    
+    // ASSERT: Confirmation modal opens
+    await waitFor(() => {
+      const modal = screen.getByRole('dialog');
+      expect(modal).toBeInTheDocument();
+    });
+    
+    // ASSERT: Modal has proper title (use more specific match)
+    const modalTitle = screen.getByRole('heading', { name: /^confirm logout$/i });
+    expect(modalTitle).toBeInTheDocument();
+    
+    // ASSERT: Modal contains warning or confirmation text
+    const confirmationText = screen.getByText(/are you sure you want to log out/i);
+    expect(confirmationText).toBeInTheDocument();
+    
+    // ASSERT: Modal has Cancel button
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    expect(cancelButton).toBeInTheDocument();
+    
+    // ASSERT: Modal has Confirm Logout button
+    const confirmLogoutButton = screen.getByRole('button', { name: /^confirm logout$/i });
+    expect(confirmLogoutButton).toBeInTheDocument();
+    
+    // ACT: Click Cancel button
+    fireEvent.click(cancelButton);
+    
+    // ASSERT: Modal closes
+    await waitFor(() => {
+      const modal = screen.queryByRole('dialog');
+      expect(modal).not.toBeInTheDocument();
+    });
+    
+    // ASSERT: User remains on settings page (not redirected)
+    const settingsHeading = screen.getByRole('heading', { name: /^settings$/i, level: 1 });
+    expect(settingsHeading).toBeInTheDocument();
   });
 
   it('FE-415: After confirming logout, the application clears localStorage auth data and redirects to the login page', async () => {
@@ -1093,20 +1152,6 @@ describe('Settings: Account Settings', () => {
     
   });
 
-  it('FE-414:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
-  });
-
-  it('FE-415:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
-  });
-
-  it('FE-416:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
-  });
 });
 
 // ----------------------- 

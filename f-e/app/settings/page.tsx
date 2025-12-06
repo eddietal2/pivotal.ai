@@ -29,6 +29,9 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  
+  // Logout state
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Check authentication and load user data on mount
   useEffect(() => {
@@ -456,6 +459,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">End your current session and sign out of your account</p>
               </div>
               <button 
+                onClick={() => setShowLogoutModal(true)}
                 className="w-32 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Logout
@@ -634,6 +638,53 @@ export default function SettingsPage() {
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
               >
                 Update Username
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div 
+            role="dialog" 
+            aria-labelledby="logout-modal-title"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 animate-slide-up"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 id="logout-modal-title" className="text-xl font-semibold">
+                Confirm Logout
+              </h2>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                aria-label="Close"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Are you sure you want to log out? You will need to sign in again to access your account.
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Confirm Logout
               </button>
             </div>
           </div>
