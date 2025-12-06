@@ -33,15 +33,42 @@ export default function SettingsPage() {
   };
 
   // Handle save button click
-  const handleSaveEmail = () => {
+  const handleSaveEmail = async () => {
     const error = validateEmail(newEmail);
     setEmailError(error);
     if (error) {
       return;
     }
-    // TODO: Implement email change API call
-    console.log('Sending verification email to:', newEmail);
-    setShowEmailModal(false);
+
+    try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      
+      // Make API call to change email
+      const response = await fetch('http://127.0.0.1:8000/auth/settings/email', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ new_email: newEmail })
+      });
+
+      if (response.ok) {
+        // Success - close modal and reset form
+        setShowEmailModal(false);
+        setNewEmail('');
+        setEmailError('');
+        // TODO: Show success toast notification
+      } else {
+        // Handle error responses
+        const errorData = await response.json();
+        setEmailError(errorData.message || 'Failed to send verification email');
+      }
+    } catch (error) {
+      console.error('Error changing email:', error);
+      setEmailError('Network error. Please try again.');
+    }
   };
 
   return (

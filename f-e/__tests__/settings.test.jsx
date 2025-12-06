@@ -134,9 +134,59 @@ describe('Settings: Account Settings', () => {
     expect(saveButton).toBeEnabled();
   });
 
-  it('FE-403:', async () => {
+  it('FE-403: Submitting a valid new email triggers a PUT/PATCH request to the correct API endpoint (/api/user/email) with the new email data.', async () => {
+    // ARRANGE: Mock successful API response
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Verification email sent successfully' 
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Mock localStorage for auth token
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
+    
+    // ARRANGE: Open modal and enter valid email
+    const changeEmailButton = screen.getByRole('button', { name: /change email/i });
+    fireEvent.click(changeEmailButton);
+    
+    const newEmailInput = screen.getByLabelText(/new email/i);
+    const saveButton = screen.getByRole('button', { name: /send verification email/i });
+    
+    // ACT: Enter valid email and submit
+    fireEvent.change(newEmailInput, { target: { value: 'newemail@example.com' } });
+    fireEvent.click(saveButton);
+    
+    // ASSERT: API was called with correct endpoint
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: Request method is PUT
+    const callArgs = fetchMock.mock.calls[0];
+    expect(callArgs[0]).toBe('http://127.0.0.1:8000/auth/settings/email');
+    
+    // ASSERT: Request includes proper headers and body
+    const requestOptions = callArgs[1];
+    expect(requestOptions.method).toBe('PUT');
+    expect(requestOptions.headers['Content-Type']).toBe('application/json');
+    expect(requestOptions.headers['Authorization']).toBe('Bearer mock-jwt-token-123');
+    
+    // ASSERT: Request body contains new email
+    const requestBody = JSON.parse(requestOptions.body);
+    expect(requestBody.new_email).toBe('newemail@example.com');
+    
+    // ASSERT: Modal closes after successful submission
+    await waitFor(() => {
+      const modal = screen.queryByRole('dialog');
+      expect(modal).not.toBeInTheDocument();
+    });
   });
 
   it('FE-404:', async () => {
