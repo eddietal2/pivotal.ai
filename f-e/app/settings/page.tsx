@@ -2,7 +2,8 @@
 
 import { useTheme } from '@/components/context/ThemeContext';
 import { Sun, Moon, Bell, BellOff, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { redirectTo } from '@/lib/redirect';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -11,6 +12,17 @@ export default function SettingsPage() {
   const [currentEmail] = useState('user@example.com'); // TODO: Get from user context
   const [newEmail, setNewEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+
+  // Check authentication on mount
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    const token = localStorage.getItem('auth_token');
+    
+    if (!user || !token) {
+      // User is not authenticated, redirect to login
+      redirectTo('http://192.168.1.68:3000/login');
+    }
+  }, []);
 
   // Email validation function
   const validateEmail = (email: string) => {

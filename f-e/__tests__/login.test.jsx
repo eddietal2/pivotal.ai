@@ -570,4 +570,27 @@ describe('Post Login Redirect', () => {
     expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
   });
 
+  // FE-305: Attempting to access a protected route (e.g., /settings) when unauthenticated results in a redirect back to the login page (/) or displays a 'Sign In Required' message.
+  it("FE-305 should redirect unauthenticated users away from protected routes to the login page", async () => {
+    // This test verifies that if a user is not logged in (no auth data in localStorage),
+    // attempting to access a protected route results in a redirect to the login page
+    
+    const expectedLoginPageURL = 'http://192.168.1.68:3000/login';
+    
+    // ARRANGE: Ensure localStorage returns null for auth data (simulating unauthenticated user)
+    localStorageMock.getItem.mockReturnValue(null);
+    
+    // ACT: Import and render a protected route (Settings page)
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+    
+    // ASSERT: The page should detect the user is unauthenticated and redirect to login
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expectedLoginPageURL);
+    }, { timeout: 1000 });
+
+    // ASSERT: Verify localStorage was checked for auth data
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('user');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');    
+  });
 });
