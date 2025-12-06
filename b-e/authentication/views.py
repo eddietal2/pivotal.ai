@@ -91,13 +91,13 @@ def save_user(request):
 
     if request.method == "POST":
         email = None
-        first_name = None
+        username = None
         # 1. Default data source is request.POST (for form-urlencoded/form-data)
         data = request.POST
         
         if data:
             email = data.get("email")
-            first_name = data.get("first_name")
+            username = data.get("username")
         
         # 2. If data is still missing, manually parse request.body as JSON
         # This handles Postman requests set to 'raw' and JSON type
@@ -106,21 +106,21 @@ def save_user(request):
                 # Decode the request body from bytes, then parse the JSON string
                 json_data = json.loads(request.body.decode('utf-8'))
                 email = json_data.get("email")
-                first_name = json_data.get("first_name")
+                username = json_data.get("username")
             except json.JSONDecodeError:
                 # If JSON parsing fails, we continue with the None values
                 pass 
 
         # Validation Check: Ensure required data is present
-        if not email or not first_name:
+        if not email or not username:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Required fields missing: "email" and "first_name". Ensure Postman body is correctly configured (x-www-form-urlencoded or raw JSON).'
+                'message': 'Required fields missing: "email" and "username". Ensure Postman body is correctly configured (x-www-form-urlencoded or raw JSON).'
             }, status=400) # HTTP 400 Bad Request
         
         try:
             # Create and save the user
-            user = User(email=email, first_name=first_name)
+            user = User(email=email, username=username)
             user.save()
             
             # Respond with success and the created object data
@@ -129,7 +129,7 @@ def save_user(request):
                 'message': 'User created successfully.',
                 'user_id': user.pk,
                 'email': user.email,
-                'first_name': user.first_name
+                'username': user.username
             }, status=201) # HTTP 201 Created
             
         except Exception as e:
@@ -183,7 +183,7 @@ def get_user(request):
                     'status': 'success',
                     'user_id': user.pk,
                     'email': user.email,
-                    'first_name': user.first_name
+                    'username': user.username
                 }, status=200)  # HTTP 200 OK
             else:
                 # User not found
@@ -270,7 +270,7 @@ def send_magic_link_email(request):
                 f"token={str(session_token)}&"
                 f"email={email}&"
                 f"user_id={user.id}&"
-                f"first_name={user.first_name or ''}"
+                f"username={user.username or ''}"
             )
             
             # Redirect user to frontend
@@ -784,7 +784,7 @@ def change_email(request):
             # Send verification email to the NEW email address
             email_subject = 'Verify Your Email Change'
             email_body = f"""
-            Hi {user.first_name or 'there'},
+            Hi {user.username or 'there'},
             
             You requested to change your email address from {user.email} to {new_email}.
             
@@ -907,7 +907,7 @@ def verify_email_change(request):
                 f"token={str(session_token)}&"
                 f"email={user.email}&"
                 f"user_id={user.id}&"
-                f"first_name={user.first_name or ''}&"
+                f"username={user.username or ''}&"
                 f"email_updated=true"
             )
             
@@ -932,18 +932,31 @@ def verify_email_change(request):
 
 @csrf_exempt
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
 def delete_account(request):
     """
     Delete the authenticated user's account.
     Requires authentication.
     """
+    # Manually authenticate using our custom authentication class
+    auth = CustomJWTAuthentication()
+    
+    try:
+        user_auth_tuple = auth.authenticate(request)
+        
+        if user_auth_tuple is None:
+            print(f"{custom_console.COLOR_RED}Authentication returned None{custom_console.RESET_COLOR}")
+            return JsonResponse({'status': 'error', 'message': 'Authentication failed'}, status=401)
+        
+        user, token = user_auth_tuple
+        print(f"{custom_console.COLOR_GREEN}Authentication successful: {user}{custom_console.RESET_COLOR}")
+        
+    except Exception as e:
+        print(f"{custom_console.COLOR_RED}Authentication error: {e}{custom_console.RESET_COLOR}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=401)
+    
     print(f"{custom_console.COLOR_YELLOW}delete_account view called {custom_console.RESET_COLOR}")
     
     if request.method == "DELETE":
-        # Get the authenticated user
-        user = request.user
-        
         try:
             # Store user email for response message
             user_email = user.email

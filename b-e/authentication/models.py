@@ -2,7 +2,7 @@ from django.db import models
 
 class User(models.Model):
     email = models.TextField(max_length=255, unique=True)
-    first_name = models.TextField(max_length=255)
+    username = models.TextField(max_length=255)
     is_deleted = models.BooleanField(default=False)
     
     @property
