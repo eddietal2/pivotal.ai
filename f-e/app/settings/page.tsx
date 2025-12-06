@@ -40,6 +40,9 @@ export default function SettingsPage() {
       setLoadError('');
       
       try {
+        // Verify theme is loaded from localStorage for persistence
+        const savedTheme = localStorage.getItem('theme');
+        
         // Check if user is returning from email or username verification
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');

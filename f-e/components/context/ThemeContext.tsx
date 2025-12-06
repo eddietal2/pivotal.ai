@@ -29,16 +29,30 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Effect runs only once after component mounts on the client
   useEffect(() => {
-    // Check if the user has a dark mode preference
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    // Check localStorage for saved theme preference first
+    const savedTheme = localStorage.getItem('theme');
     
-    // Set initial theme
-    const initialTheme: 'light' | 'dark' = mediaQuery.matches ? 'dark' : 'light';
-    setTheme(initialTheme);
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      // Use saved theme preference
+      setTheme(savedTheme);
+    } else {
+      // Check if the user has a dark mode preference
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Set initial theme based on system preference
+      const initialTheme: 'light' | 'dark' = mediaQuery.matches ? 'dark' : 'light';
+      setTheme(initialTheme);
+      
+      // Save to localStorage
+      localStorage.setItem('theme', initialTheme);
+    }
     
     // Listen for changes in system preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const listener = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? 'dark' : 'light');
+      const newTheme = e.matches ? 'dark' : 'light';
+      setTheme(newTheme);
+      localStorage.setItem('theme', newTheme);
     };
 
     mediaQuery.addEventListener('change', listener);
@@ -48,7 +62,12 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Function to manually toggle the theme
   const toggleTheme = () => {
-    setTheme(currentTheme => (currentTheme === 'light' ? 'dark' : 'light'));
+    setTheme(currentTheme => {
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      // Save to localStorage when theme is toggled
+      localStorage.setItem('theme', newTheme);
+      return newTheme;
+    });
   };
 
   // Memoize the context value to prevent unnecessary re-renders

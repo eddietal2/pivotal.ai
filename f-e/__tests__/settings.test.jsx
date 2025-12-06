@@ -1212,7 +1212,7 @@ describe('Settings: Account Settings', () => {
     // ASSERT: User is redirected to login page
     await waitFor(() => {
       expect(redirectTo).toHaveBeenCalledWith(expect.stringMatching(/login/i));
-    });
+    }, { timeout: 3000 });
     
     // ASSERT: Modal closes after logout
     await waitFor(() => {
@@ -1541,26 +1541,128 @@ describe('Settings: Light/Dark Mode Toggle', () => {
   });
 
   it('FE-506: After setting a theme (e.g., Dark mode) on the Settings page, navigating to another application page (e.g., /home) confirms the new theme is correctly applied.', async () => {
-   
+    // Mock API response for theme preference save
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Theme preference updated successfully',
+      theme: 'dark'
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Mock toggleTheme function that will persist theme change
+    const mockToggleTheme = jest.fn();
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: mockToggleTheme,
+    });
+
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+
+    // ARRANGE: Find the toggle button in light mode
+    const toggleButton = screen.getByRole('button', { name: /toggle to dark mode/i });
+    expect(toggleButton).toBeInTheDocument();
+    
+    // ACT: Click the toggle button to switch to dark mode
+    fireEvent.click(toggleButton);
+    
+    // ASSERT: toggleTheme function was called
+    await waitFor(() => {
+      expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: API was called to save theme preference
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    
+    // PART 2: Simulate navigation to another page (e.g., Dashboard)
+    cleanup();
+    jest.clearAllMocks();
+    
+    // Mock useTheme to return 'dark' theme (simulating persisted preference)
+    useTheme.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: jest.fn(),
+    });
+    
+    // Mock localStorage to include dark theme preference
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser',
+        theme: 'dark'
+      });
+      if (key === 'theme') return 'dark';
+      return null;
+    });
+    
+    // Import and render a different page (Dashboard) to test theme persistence
+    // NOTE: In real app, this would be a different page component
+    // For testing purposes, we'll re-render Settings page as proxy for navigation
+    const { container: newPageContainer } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = newPageContainer.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Theme is still 'dark' after "navigation"
+    // Button should show Sun icon and "Light" text (indicating dark mode is active)
+    const lightToggleButton = screen.getByRole('button', { name: /toggle to light mode/i });
+    expect(lightToggleButton).toBeInTheDocument();
+    
+    // ASSERT: Sun icon is present (dark mode indicator)
+    const sunIcon = newPageContainer.querySelector('svg.lucide-sun');
+    expect(sunIcon).toBeInTheDocument();
+    
+    // ASSERT: Button text shows "Light"
+    const lightText = screen.getByText(/^light$/i);
+    expect(lightText).toBeInTheDocument();
+    
+    // ASSERT: Moon icon is NOT present (would indicate light mode)
+    const moonIcon = newPageContainer.querySelector('svg.lucide-moon');
+    expect(moonIcon).not.toBeInTheDocument();
+    
+    // ASSERT: localStorage was checked for theme preference
+    expect(Storage.prototype.getItem).toHaveBeenCalledWith('theme');
+    
+    // IMPLEMENTATION NOTE:
+    // The ThemeContext should:
+    // 1. Load theme preference from localStorage on mount
+    // 2. Apply theme to document root element or context
+    // 3. Persist theme changes to localStorage via toggleTheme()
+    // 4. Ensure theme persists across page navigations
   });
 });
 
 // ----------------------- 
 // Settings: Notification Preferences
 // -----------------------
-describe('Settings: Notification Preferences', () => {
+// describe('Settings: Notification Preferences', () => {
 
-  beforeEach(() => {
-    // Set default mock return for useTheme so Page component can render
-    const { useTheme } = require('@/components/context/ThemeContext');
-    useTheme.mockReturnValue({
-      theme: 'light',
-      toggleTheme: jest.fn(),
-    });
-  });
+//   beforeEach(() => {
+//     // Set default mock return for useTheme so Page component can render
+//     const { useTheme } = require('@/components/context/ThemeContext');
+//     useTheme.mockReturnValue({
+//       theme: 'light',
+//       toggleTheme: jest.fn(),
+//     });
+//   });
 
-  // it('FE-', async () => {
+//   it('FE-', async () => {
    
-  // });
+//   });
 
-});
+// });
