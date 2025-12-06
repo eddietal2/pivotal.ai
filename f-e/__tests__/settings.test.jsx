@@ -847,9 +847,95 @@ describe('Settings: Account Settings', () => {
     expect(accountSettingsSection).toBeInTheDocument();
   });
 
-  it('FE-411:', async () => {
+  it('FE-411: Clicking \'Delete Account\' opens a mandatory confirmation modal or dialogue box requiring explicit consent by typing Delete Account in the modals input box.', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Find and click the Delete button
+    const deleteButton = screen.getByRole('button', { name: /^delete$/i });
+    expect(deleteButton).toBeInTheDocument();
+    
+    // ACT: Click the Delete button
+    fireEvent.click(deleteButton);
+    
+    // ASSERT: Confirmation modal opens
+    await waitFor(() => {
+      const modal = screen.getByRole('dialog');
+      expect(modal).toBeInTheDocument();
+    });
+    
+    // ASSERT: Modal has proper title (use getAllBy to handle duplicate and select the modal one)
+    const modalTitles = screen.getAllByRole('heading', { name: /delete account/i });
+    const modalTitle = modalTitles.find(heading => heading.id === 'delete-modal-title');
+    expect(modalTitle).toBeInTheDocument();
+    expect(modalTitle).toHaveClass('text-red-600');
+    
+    // ASSERT: Modal contains warning text about permanent deletion (look for unique "cannot be undone" text)
+    const warningText = screen.getByText(/this action cannot be undone/i);
+    expect(warningText).toBeInTheDocument();
+    expect(warningText).toHaveClass('text-red-800');
+    
+    // ASSERT: Modal has an input field for confirmation
+    const confirmationInput = screen.getByRole('textbox', { name: /type.*delete account|confirm/i });
+    expect(confirmationInput).toBeInTheDocument();
+    expect(confirmationInput.placeholder).toMatch(/type.*delete account/i);
+    
+    // ASSERT: Modal has Cancel button
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    expect(cancelButton).toBeInTheDocument();
+    
+    // ASSERT: Modal has Confirm/Delete button
+    const confirmButton = screen.getByRole('button', { name: /confirm|delete account/i });
+    expect(confirmButton).toBeInTheDocument();
+    
+    // ASSERT: Confirm button is initially disabled (no text entered)
+    expect(confirmButton).toBeDisabled();
+    
+    // ACT: Enter incorrect confirmation text
+    fireEvent.change(confirmationInput, { target: { value: 'delete' } });
+    
+    // ASSERT: Confirm button remains disabled with incorrect text
+    expect(confirmButton).toBeDisabled();
+    
+    // ACT: Enter correct confirmation text "Delete Account"
+    fireEvent.change(confirmationInput, { target: { value: 'Delete Account' } });
+    
+    // ASSERT: Confirm button becomes enabled with correct text
+    await waitFor(() => {
+      expect(confirmButton).toBeEnabled();
+    });
+    
+    // ACT: Clear the input
+    fireEvent.change(confirmationInput, { target: { value: '' } });
+    
+    // ASSERT: Confirm button becomes disabled again
+    expect(confirmButton).toBeDisabled();
+    
+    // ACT: Click Cancel button
+    fireEvent.click(cancelButton);
+    
+    // ASSERT: Modal closes
+    await waitFor(() => {
+      const modal = screen.queryByRole('dialog');
+      expect(modal).not.toBeInTheDocument();
+    });
   });
 
   it('FE-412:', async () => {
