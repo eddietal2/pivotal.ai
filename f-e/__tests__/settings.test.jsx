@@ -1277,7 +1277,7 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     expect(toggleButton).toBeVisible();
   });
 
-  it('FE-502: When the component is first mounted, the UI correctly applies the theme setting stored in local storage or the user\'s profile state (e.g., renders with the \'light\' theme if no preference is saved).', async () => {
+  it('FE-502: When the component is first mounted, the UI correctly applies the theme setting stored in local storage or the user\'s profile state.', async () => {
     // SCENARIO 1: No theme preference saved - should default to 'light'
     const { useTheme } = require('@/components/context/ThemeContext');
     useTheme.mockReturnValue({
@@ -1338,7 +1338,74 @@ describe('Settings: Light/Dark Mode Toggle', () => {
   });
 
   it('FE-503: (Light to Dark) Clicking the toggle button changes the application theme from Light to Dark, and the toggle\'s icon/state changes to reflect the \'Dark\' mode status.', async () => {
+    // Mock toggleTheme function to track when it's called
+    const mockToggleTheme = jest.fn();
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: mockToggleTheme,
+    });
 
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+
+    // ASSERT: Initial state - Light theme with Moon icon and "Dark" text
+    const toggleButton = screen.getByRole('button', { name: /toggle to dark mode/i });
+    expect(toggleButton).toBeInTheDocument();
+    
+    const moonIcon = container.querySelector('svg.lucide-moon');
+    expect(moonIcon).toBeInTheDocument();
+    
+    const darkText = screen.getByText(/^dark$/i);
+    expect(darkText).toBeInTheDocument();
+    
+    // ACT: Click the toggle button to switch to dark mode
+    fireEvent.click(toggleButton);
+    
+    // ASSERT: toggleTheme function was called
+    await waitFor(() => {
+      expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+    });
+    
+    // SCENARIO 2: Simulate theme change by re-rendering with dark theme
+    cleanup();
+    jest.clearAllMocks();
+    
+    // Mock theme as 'dark' after toggle
+    useTheme.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: jest.fn(),
+    });
+    
+    const { container: darkContainer } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = darkContainer.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Theme has changed to dark - button now shows Sun icon and "Light" text
+    const lightToggleButton = screen.getByRole('button', { name: /toggle to light mode/i });
+    expect(lightToggleButton).toBeInTheDocument();
+    
+    // ASSERT: Button contains Sun icon (for switching back to light mode)
+    const sunIcon = darkContainer.querySelector('svg.lucide-sun');
+    expect(sunIcon).toBeInTheDocument();
+    
+    // ASSERT: Button text shows "Light"
+    const lightText = screen.getByText(/^light$/i);
+    expect(lightText).toBeInTheDocument();
+    
+    // ASSERT: Moon icon is no longer present
+    const moonIconAfterToggle = darkContainer.querySelector('svg.lucide-moon');
+    expect(moonIconAfterToggle).not.toBeInTheDocument();
   });
 
   it('FE-504: (Dark to Light) Clicking the toggle button changes the application theme from Dark back to Light, and the toggle\'s icon/state changes to reflect the \'Light\' mode status.', async () => {
