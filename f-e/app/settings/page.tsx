@@ -258,6 +258,24 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    
+    // Close modal
+    setShowLogoutModal(false);
+    
+    // Show success toast
+    showToast('Successfully logged out', 'success', 3000);
+    
+    // Redirect to login page after toast is visible
+    setTimeout(() => {
+      redirectTo('http://192.168.1.68:3000/login');
+    }, 1500);
+  };
+
   // Handle save button click
   const handleSaveEmail = async () => {
     const error = validateEmail(newEmail);
@@ -682,6 +700,7 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
+                onClick={handleLogout}
                 className="px-4 py-2 text-sm font-medium text-white bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Confirm Logout

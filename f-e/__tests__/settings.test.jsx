@@ -1143,9 +1143,82 @@ describe('Settings: Account Settings', () => {
     expect(settingsHeading).toBeInTheDocument();
   });
 
-  it('FE-415: After confirming logout, the application clears localStorage auth data and redirects to the login page', async () => {
+  it('FE-415: After confirming logout, the application clears localStorage auth data and redirects to the login page, ending with a Success Toast.', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+    
+    // Mock removeItem to verify localStorage is cleared
+    Storage.prototype.removeItem = jest.fn();
+    
+    // Mock showToast to verify success message
+    const mockShowToast = jest.fn();
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: mockShowToast,
+      hideToast: jest.fn(),
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Find and click the Logout button
+    const logoutButton = screen.getByRole('button', { name: /^logout$|log out|sign out/i });
+    fireEvent.click(logoutButton);
+    
+    // Wait for modal to open
+    await waitFor(() => {
+      const modal = screen.getByRole('dialog');
+      expect(modal).toBeInTheDocument();
+    });
+    
+    // ARRANGE: Find the Confirm Logout button in the modal
+    const confirmLogoutButton = screen.getByRole('button', { name: /^confirm logout$/i });
+    expect(confirmLogoutButton).toBeInTheDocument();
+    
+    // ACT: Click the Confirm Logout button
+    fireEvent.click(confirmLogoutButton);
+    
+    // ASSERT: localStorage auth_token is removed
+    await waitFor(() => {
+      expect(Storage.prototype.removeItem).toHaveBeenCalledWith('auth_token');
+    });
+    
+    // ASSERT: localStorage user data is removed
+    expect(Storage.prototype.removeItem).toHaveBeenCalledWith('user');
+    
+    // ASSERT: Success toast is displayed
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'Successfully logged out',
+        'success',
+        3000
+      );
+    });
+    
+    // ASSERT: User is redirected to login page
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expect.stringMatching(/login/i));
+    });
+    
+    // ASSERT: Modal closes after logout
+    await waitFor(() => {
+      const modal = screen.queryByRole('dialog');
+      expect(modal).not.toBeInTheDocument();
+    });
   });
 
   it('FE-416: The Settings page loads and displays the authenticated user\'s information from localStorage', async () => {
