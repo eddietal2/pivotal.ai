@@ -374,7 +374,7 @@ export default function SettingsPage() {
 
   // Skeleton loader component
   const SkeletonLoader = () => (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Account Settings Skeleton */}
       <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
         <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" data-testid="skeleton" />
@@ -430,9 +430,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Page Header */}
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+    <div className="container mx-auto px-4 py-8 md:pt-24">
       
       {/* Error Message */}
       {loadError && (
@@ -447,9 +445,9 @@ export default function SettingsPage() {
       {isLoading ? (
         <SkeletonLoader />
       ) : (
-        <div className="space-y-6">
-          {/* Account Settings */}
-        <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="max-w-2xl mx-auto space-y-6">
+            {/* Account Settings */}
+          <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Account Settings</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Manage your account preferences
@@ -518,10 +516,10 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
 
-        {/* Display Settings */}
-        <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+          {/* Display Settings */}
+          <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Display Settings</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Customize the appearance of the application
@@ -555,17 +553,16 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
 
-        {/* Notification Settings */}
-        <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+          {/* Notification Settings */}
+          {/* <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Notifications</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Configure your notification preferences
           </p>
           
           <div className="space-y-4">
-            {/* Email Notifications Toggle */}
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium">Email Notifications</h3>
@@ -592,9 +589,9 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+          </div> */}
         </div>
-        </div>
-      )}
+    )}
 
       {/* Change Username Modal */}
       {showUsernameModal && (
