@@ -1220,11 +1220,6 @@ describe('Settings: Account Settings', () => {
       expect(modal).not.toBeInTheDocument();
     });
   });
-
-  it('FE-416: The Settings page loads and displays the authenticated user\'s information from localStorage', async () => {
-    
-  });
-
 });
 
 // ----------------------- 
@@ -1233,27 +1228,54 @@ describe('Settings: Account Settings', () => {
 describe('Settings: Light/Dark Mode Toggle', () => {
 
   beforeEach(() => {
+    // Reset fetch mocks before each test
+    fetchMock.resetMocks();
+    
     // Set default mock return for useTheme so Page component can render
     const { useTheme } = require('@/components/context/ThemeContext');
     useTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: jest.fn(),
     });
+    
+    // Set default mock return for useToast
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: jest.fn(),
+      hideToast: jest.fn(),
+    });
+    
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
   });
 
-  // it('FE-501: Account Settings render all elements', async () => {
-  //   const { default: SettingsPage } = await import('../app/settings/page');
-  //   renderWithProviders(<SettingsPage />);
-    
-  //   // Assert Delete Account subsection is rendered
-  //   const deleteSection = screen.getByRole('heading', { name: /delete account/i, level: 3 });
-  //   expect(deleteSection).toBeInTheDocument();
-    
-  //   // Assert Delete button is rendered
-  //   const deleteButton = screen.getByRole('button', { name: /^delete$/i });
-  //   expect(deleteButton).toBeInTheDocument();
-  //   expect(deleteButton).toBeEnabled();
-  // });
+  it('FE-501: The Display Section, and The light/dark mode toggle button and icon is rendered and visible on the Settings page.', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+
+    // Assert Display section is rendered
+    const displaySection = screen.getByRole('heading', { name: /display settings/i, level: 2 });
+    expect(displaySection).toBeInTheDocument();
+
+    // Assert light/dark mode toggle button is rendered and visible
+    const toggleButton = screen.getByRole('button', { name: /toggle to dark mode|toggle to light mode/i });
+    expect(toggleButton).toBeInTheDocument();
+    expect(toggleButton).toBeVisible();
+  });
 
 });
 
@@ -1271,8 +1293,8 @@ describe('Settings: Notification Preferences', () => {
     });
   });
 
-  it('FE-', async () => {
+  // it('FE-', async () => {
    
-  });
+  // });
 
 });
