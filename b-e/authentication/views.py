@@ -944,7 +944,7 @@ def delete_account(request):
         user_auth_tuple = auth.authenticate(request)
         
         if user_auth_tuple is None:
-            print(f"{custom_console.COLOR_RED}Authentication returned None{custom_console.RESET_COLOR}")
+            print(f"{custom_console.COLOR_YELLOW}Authentication returned None (no token provided){custom_console.RESET_COLOR}")
             return JsonResponse({'status': 'error', 'message': 'Authentication failed'}, status=401)
         
         user, token = user_auth_tuple
