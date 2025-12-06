@@ -36,6 +36,9 @@ const renderWithProviders = (ui, options) => {
 describe('Settings: Account Settings', () => {
 
   beforeEach(() => {
+    // Reset fetch mocks before each test
+    fetchMock.resetMocks();
+    
     // Set default mock return for useTheme so Page component can render
     const { useTheme } = require('@/components/context/ThemeContext');
     useTheme.mockReturnValue({
@@ -608,6 +611,195 @@ describe('Settings: Account Settings', () => {
     
     // ASSERT: Save button is enabled again
     expect(saveButton).toBeEnabled();
+  });
+
+  it('FE-409: Submitting a valid new username triggers a PUT request to the backend API. A verification email is sent to the user. The username is NOT updated until the user clicks the verification link in the email. After verification, the username is updated in localStorage and reflected throughout the application.', async () => {
+    // ARRANGE: Mock successful API response from backend
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Verification email sent. Please check your inbox to confirm username change.'
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Mock localStorage for auth token and user data
+    const originalUser = { id: '123', email: 'test@example.com', username: 'oldusername' };
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify(originalUser);
+      return null;
+    });
+    
+    // Mock setItem to verify localStorage is NOT updated
+    Storage.prototype.setItem = jest.fn();
+
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Open modal and verify current username is displayed
+    const changeUsernameButton = screen.getByRole('button', { name: /change username/i });
+    fireEvent.click(changeUsernameButton);
+    
+    const currentUsernameInput = screen.getByLabelText(/current username/i);
+    expect(currentUsernameInput).toHaveValue('oldusername');
+    
+    const newUsernameInput = screen.getByLabelText(/new username/i);
+    const saveButton = screen.getByRole('button', { name: /update username/i });
+    
+    // ACT: Enter valid username and submit
+    fireEvent.change(newUsernameInput, { target: { value: 'newusername' } });
+    fireEvent.click(saveButton);
+    
+    // ASSERT: API was called with correct endpoint
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: Request method is PUT
+    const callArgs = fetchMock.mock.calls[0];
+    expect(callArgs[0]).toBe('http://127.0.0.1:8000/auth/settings/username');
+    
+    // ASSERT: Request includes proper headers and body
+    const requestOptions = callArgs[1];
+    expect(requestOptions.method).toBe('PUT');
+    expect(requestOptions.headers['Content-Type']).toBe('application/json');
+    expect(requestOptions.headers['Authorization']).toBe('Bearer mock-jwt-token-123');
+    
+    // ASSERT: Request body contains new username
+    const requestBody = JSON.parse(requestOptions.body);
+    expect(requestBody.new_username).toBe('newusername');
+    
+    // ASSERT: Success message appears after API call
+    await waitFor(() => {
+      const successMessage = screen.getByText(/verification email sent|check your email|username update link sent/i);
+      expect(successMessage).toBeInTheDocument();
+    });
+    
+    // ASSERT: Success message has proper styling (should be visible with green/success color)
+    const successMessage = screen.getByText(/verification email sent|check your email|username update link sent/i);
+    expect(successMessage).toHaveClass('text-green-600');
+    
+    // ASSERT: Success message mentions verification is required
+    expect(successMessage.textContent).toMatch(/verification|check|sent/i);
+    
+    // ASSERT: Modal remains open to show success message
+    const modal = screen.queryByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    
+    // ASSERT: Current username in modal is STILL the old username (not changed yet)
+    expect(currentUsernameInput).toHaveValue('oldusername');
+    
+    // ASSERT: localStorage user data was NOT updated (username change pending verification)
+    const setItemCalls = Storage.prototype.setItem.mock.calls;
+    const userUpdateCall = setItemCalls.find(call => call[0] === 'user');
+    expect(userUpdateCall).toBeUndefined(); // Should NOT update user in localStorage
+    
+    // ASSERT: Auth token remains the same (no new JWT issued)
+    expect(Storage.prototype.getItem).toHaveBeenCalledWith('auth_token');
+    const tokenUpdateCall = setItemCalls.find(call => call[0] === 'auth_token');
+    expect(tokenUpdateCall).toBeUndefined(); // Should NOT update token
+    
+    // ASSERT: Error message should NOT be visible
+    const errorMessage = screen.queryByText(/username is required|invalid username/i);
+    expect(errorMessage).not.toBeInTheDocument();
+    
+    // PART 2: Test username verification callback with toast notification
+    // Simulate user returning from username verification link
+    
+    // Unmount the previous component
+    cleanup();
+    
+    // Reset mocks for fresh test
+    jest.clearAllMocks();
+    
+    // Mock URLSearchParams to simulate URL with query parameters
+    const mockSearchParams = new URLSearchParams(
+      'token=new-jwt-token&username=newusername&user_id=123&email=test@example.com&username_updated=true'
+    );
+    
+    // Store original URLSearchParams
+    const OriginalURLSearchParams = global.URLSearchParams;
+    
+    // Mock URLSearchParams constructor
+    global.URLSearchParams = jest.fn((search) => {
+      // If called with window.location.search, return our mock params
+      if (search === window.location.search || search === '') {
+        return mockSearchParams;
+      }
+      // Otherwise use original
+      return new OriginalURLSearchParams(search);
+    });
+    
+    // Mock window.history.replaceState
+    const originalReplaceState = window.history.replaceState;
+    window.history.replaceState = jest.fn();
+    
+    // Mock localStorage with original data (will be updated by component)
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'old-jwt-token';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com', 
+        username: 'oldusername'
+      });
+      return null;
+    });
+    
+    Storage.prototype.setItem = jest.fn();
+    
+    // Re-mock ToastContext with a fresh mock function
+    const mockShowToast = jest.fn();
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: mockShowToast,
+      hideToast: jest.fn(),
+    });
+    
+    // Re-render component with URL params (simulating page load after redirect)
+    const { container: containerAfterVerify } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = containerAfterVerify.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: showToast was called with success message
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'Username successfully updated and verified!',
+        'success',
+        6000
+      );
+    }, { timeout: 3000 });
+    
+    // ASSERT: localStorage was updated with new token and user data
+    expect(Storage.prototype.setItem).toHaveBeenCalledWith('auth_token', 'new-jwt-token');
+    expect(Storage.prototype.setItem).toHaveBeenCalledWith('user', expect.stringContaining('newusername'));
+    
+    // ASSERT: URL parameters were cleared
+    expect(window.history.replaceState).toHaveBeenCalledWith({}, '', '/settings');
+    
+    // Restore original URLSearchParams and history.replaceState
+    global.URLSearchParams = OriginalURLSearchParams;
+    window.history.replaceState = originalReplaceState;
+    
+    // IMPLEMENTATION NOTE:
+    // The backend should:
+    // 1. Send verification email with a token containing user_id, old_username, new_username
+    // 2. NOT change the user's username in the database yet
+    // 3. When user clicks the verification link, THEN:
+    //    - Update username in database
+    //    - Issue new JWT with updated username
+    //    - Redirect to frontend with new token and username_updated=true
+    //    - Frontend updates localStorage with new user data and token
+    //    - Frontend shows success toast notification
   });
 
   it('FE-410:', async () => {

@@ -931,6 +931,236 @@ def verify_email_change(request):
     }, status=405)
 
 @csrf_exempt
+@api_view(['PUT'])
+def change_username(request):
+    # Manually authenticate using our custom authentication class
+    auth = CustomJWTAuthentication()
+    
+    try:
+        # This will print debug info from our custom auth class
+        user_auth_tuple = auth.authenticate(request)
+        
+        if user_auth_tuple is None:
+            print(f"{custom_console.COLOR_RED}Authentication returned None{custom_console.RESET_COLOR}")
+            return JsonResponse({'status': 'error', 'message': 'Authentication failed'}, status=401)
+        
+        user, token = user_auth_tuple
+        print(f"{custom_console.COLOR_GREEN}Authentication successful: {user}{custom_console.RESET_COLOR}")
+        
+    except Exception as e:
+        print(f"{custom_console.COLOR_RED}Authentication error: {e}{custom_console.RESET_COLOR}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=401)
+    
+    print(f"{custom_console.COLOR_YELLOW}change_username view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "PUT":
+        # Use the authenticated user from our custom auth (not request.user which is AnonymousUser)
+        # 'user' variable is already set from the authentication above
+        
+        # Parse request data
+        new_username = None
+        
+        # Try to get new_username from request.data (DRF handles this)
+        if hasattr(request, 'data'):
+            new_username = request.data.get("new_username")
+        
+        # Fallback: manually parse request.body as JSON
+        if not new_username and request.body:
+            try:
+                json_data = json.loads(request.body.decode('utf-8'))
+                new_username = json_data.get("new_username")
+            except json.JSONDecodeError:
+                pass
+        
+        # Validation: Ensure new_username is provided
+        if not new_username:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Required field missing: "new_username".'
+            }, status=400)
+        
+        # Validation: Check username format (3-25 characters, alphanumeric + underscore/hyphen)
+        import re
+        username_regex = r'^[a-zA-Z0-9_-]{3,25}$'
+        if not re.match(username_regex, new_username):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Username must be 3-25 characters and contain only letters, numbers, underscores, and hyphens.'
+            }, status=400)
+        
+        # Validation: Check if new username already exists for a different user
+        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Username "{new_username}" is already taken.'
+            }, status=409)
+        
+        try:
+            # Generate verification token with user_id, old_username, and new_username
+            from itsdangerous import URLSafeTimedSerializer
+            serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+            
+            verification_data = {
+                'user_id': user.id,
+                'old_username': user.username,
+                'new_username': new_username
+            }
+            
+            verification_token = serializer.dumps(verification_data, salt='username-change')
+            
+            # Build verification URL
+            verification_url = f"http://127.0.0.1:8000/auth/settings/username/verify?token={verification_token}"
+            
+            # Send verification email to user's email address
+            email_subject = 'Verify Your Username Change'
+            email_body = f"""
+            Hi {user.username or 'there'},
+            
+            You requested to change your username from "{user.username}" to "{new_username}".
+            
+            Please click the link below to verify your username change:
+            {verification_url}
+            
+            This link will expire in 1 hour.
+            
+            If you didn't request this change, please ignore this email.
+            
+            Best regards,
+            The Pivotal AI Team
+            """
+            
+            # Send the email
+            send_mail(
+                subject=email_subject,
+                message=email_body,
+                from_email=getenv('EMAIL_HOST_USER'),
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            
+            print(f"{custom_console.COLOR_GREEN}Verification email sent to {user.email} for username change{custom_console.RESET_COLOR}")
+            
+            # DO NOT update the username yet - wait for verification
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Verification email sent. Please check your inbox and click the verification link.'
+            }, status=200)
+        
+        except SMTPException as e:
+            print(f"{custom_console.COLOR_RED}Failed to send verification email: {e}{custom_console.RESET_COLOR}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to send verification email. Please try again later.'
+            }, status=500)
+        
+        except Exception as e:
+            print(f"Error initiating username change: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only PUT requests are allowed.'
+    }, status=405)
+
+@csrf_exempt
+@api_view(['GET'])
+def verify_username_change(request):
+    """
+    Verify username change using a time-limited token from email link.
+    Expected query parameter: token
+    After verification, issues new JWT and redirects to frontend.
+    """
+    print(f"{custom_console.COLOR_YELLOW}verify_username_change view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "GET":
+        # Get token from query parameters
+        token = request.GET.get('token')
+        
+        if not token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Verification token is required.'
+            }, status=400)
+        
+        try:
+            # Validate and decode the token
+            from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+            serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+            
+            # Decode token with max age of 1 hour (3600 seconds)
+            data = serializer.loads(token, salt='username-change', max_age=3600)
+            
+            # Extract data from token
+            user_id = data.get('user_id')
+            old_username = data.get('old_username')
+            new_username = data.get('new_username')
+            
+            if not user_id or not new_username:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid token data.'
+                }, status=400)
+            
+            # Get user by ID and verify old username matches
+            user = User.objects.filter(id=user_id, username=old_username, is_deleted=False).first()
+            
+            if not user:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'User not found or username already changed.'
+                }, status=404)
+            
+            # Check if new username is already taken by another user
+            if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Username "{new_username}" is already taken.'
+                }, status=409)
+            
+            # Update user's username in database
+            user.username = new_username
+            user.save()
+            
+            print(f"{custom_console.COLOR_GREEN}Username changed from {old_username} to {new_username}{custom_console.RESET_COLOR}")
+            
+            # Generate NEW session token with updated username
+            session_token = SessionToken()
+            session_token['user_id'] = user.id
+            session_token['email'] = user.email
+            
+            # Redirect to frontend with new token and updated user data
+            frontend_url = (
+                f"http://192.168.1.68:3000/settings?"
+                f"token={str(session_token)}&"
+                f"email={user.email}&"
+                f"user_id={user.id}&"
+                f"username={user.username}&"
+                f"username_updated=true"
+            )
+            
+            return redirect(frontend_url)
+            
+        except SignatureExpired:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Verification token has expired. Please request a new username change.'
+            }, status=400)
+        except (BadSignature, Exception) as e:
+            print(f"{custom_console.COLOR_RED}Error verifying username change: {e}{custom_console.RESET_COLOR}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid or malformed verification token.'
+            }, status=400)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only GET requests are allowed.'
+    }, status=405)
+
+@csrf_exempt
 @api_view(['DELETE'])
 def delete_account(request):
     """

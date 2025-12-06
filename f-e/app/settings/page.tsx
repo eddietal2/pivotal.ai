@@ -32,16 +32,17 @@ export default function SettingsPage() {
       setLoadError('');
       
       try {
-        // Check if user is returning from email verification
+        // Check if user is returning from email or username verification
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
         const emailFromUrl = urlParams.get('email');
         const userIdFromUrl = urlParams.get('user_id');
         const usernameFromUrl = urlParams.get('username');
         const emailUpdated = urlParams.get('email_updated');
+        const usernameUpdated = urlParams.get('username_updated');
         
         if (tokenFromUrl && emailFromUrl && userIdFromUrl) {
-          // User just verified email change - update localStorage with new data
+          // User just verified email or username change - update localStorage with new data
           localStorage.setItem('auth_token', tokenFromUrl);
           localStorage.setItem('user', JSON.stringify({
             id: userIdFromUrl,
@@ -52,6 +53,8 @@ export default function SettingsPage() {
           // Show success toast notification
           if (emailUpdated === 'true') {
             showToast('Email successfully updated and verified!', 'success', 6000);
+          } else if (usernameUpdated === 'true') {
+            showToast('Username successfully updated and verified!', 'success', 6000);
           }
           
           // Clear URL parameters
@@ -145,8 +148,52 @@ export default function SettingsPage() {
       return;
     }
 
-    // TODO: Implement API call to update username
-    console.log('Update username to:', newUsername);
+    try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        setUsernameError('Authentication token not found. Please log in again.');
+        return;
+      }
+      
+      // Make API call to change username
+      const response = await fetch('http://127.0.0.1:8000/auth/settings/username', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ new_username: newUsername })
+      });
+
+      if (response.ok) {
+        // Success - show success message
+        const data = await response.json();
+        setUsernameSuccessMessage(data.message || 'Verification email sent! Check your email to confirm the change.');
+        setUsernameError('');
+        // Keep modal open to show success message
+      } else if (response.status === 401) {
+        // Handle unauthorized - token expired or invalid
+        setUsernameError('Your session has expired. Please log in again.');
+        setUsernameSuccessMessage('');
+        // Optionally redirect to login after a delay
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          redirectTo('http://192.168.1.68:3000/login');
+        }, 2000);
+      } else {
+        // Handle error responses
+        const errorData = await response.json();
+        setUsernameError(errorData.message || 'Failed to send verification email');
+        setUsernameSuccessMessage('');
+      }
+    } catch (error) {
+      console.error('Error changing username:', error);
+      setUsernameError('Network error. Please try again.');
+      setUsernameSuccessMessage('');
+    }
   };
 
   // Handle save button click
