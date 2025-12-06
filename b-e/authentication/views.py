@@ -155,7 +155,74 @@ def get_user(request):
 @csrf_exempt
 def send_magic_link_email(request):
     print(f"{custom_console.COLOR_YELLOW}send_magic_link_email view {custom_console.RESET_COLOR}")
-    # return HttpResponse("This is a placeholder response for send_magic_link_email view.") 
+    
+    # Handle GET request - Verify magic link token
+    if request.method == "GET":
+        token_string = request.GET.get('token')
+        
+        if not token_string:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Token parameter is missing'
+            }, status=400)
+        
+        try:
+            # Decode and validate the token
+            from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+            
+            token = MagicLinkToken(token_string)
+            
+            # Extract user info from token
+            user_id = token.get('user_id')
+            email = token.get('email')
+            
+            if not user_id or not email:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid token payload'
+                }, status=400)
+            
+            # Verify user exists
+            user = User.objects.filter(id=user_id, email=email).first()
+            
+            if not user:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'User not found'
+                }, status=404)
+            
+            # Generate a new access token for the authenticated session
+            # Using our custom MagicLinkToken class but with longer expiry for session
+            from rest_framework_simplejwt.tokens import AccessToken
+            session_token = AccessToken()
+            session_token['user_id'] = user.id
+            session_token['email'] = user.email
+            
+            # Redirect to frontend with tokens in URL (will be stored by frontend)
+            frontend_url = (
+                f"http://192.168.1.68:3000/login?"
+                f"token={str(session_token)}&"
+                f"email={email}&"
+                f"user_id={user.id}&"
+                f"first_name={user.first_name or ''}"
+            )
+            
+            # Redirect user to frontend
+            return redirect(frontend_url)
+            
+        except (TokenError, InvalidToken) as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Invalid or expired token: {str(e)}'
+            }, status=401)
+        except Exception as e:
+            print(f"Error verifying magic link: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {str(e)}'
+            }, status=500)
+    
+    # Handle POST request - Send magic link email
     if request.method == "POST":
         email = None
         
