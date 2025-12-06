@@ -1041,8 +1041,42 @@ describe('Settings: Account Settings', () => {
   });
 
   it('FE-413: The Settings page successfully renders the Logout section with a heading, descriptive text, and an enabled Logout button', async () => {
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Logout section heading is visible
+    const logoutHeading = screen.getByRole('heading', { name: /^logout$/i, level: 3 });
+    expect(logoutHeading).toBeInTheDocument();
+    
+    // ASSERT: Descriptive text is present explaining the logout action
+    const descriptionText = screen.getByText(/end your current session|sign out of your account|log out of the application/i);
+    expect(descriptionText).toBeInTheDocument();
+    
+    // ASSERT: Logout button is rendered and enabled
+    const logoutButton = screen.getByRole('button', { name: /^logout$|log out|sign out/i });
+    expect(logoutButton).toBeInTheDocument();
+    expect(logoutButton).toBeEnabled();
+    
+    // ASSERT: Logout section is within Account Settings or a separate section
+    const accountSettingsSection = screen.getByRole('heading', { name: /account settings/i, level: 2 });
+    expect(accountSettingsSection).toBeInTheDocument();
   });
 
   it('FE-414: Clicking the Logout button displays a confirmation modal with Cancel and Confirm Logout options', async () => {
