@@ -13,15 +13,71 @@ import custom_console
 
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime, timedelta
+import jwt
 
 # Custom Magic Link Token
 class MagicLinkToken(Token):
     """Custom JWT token for magic link authentication"""
     token_type = 'magic_link'
     lifetime = timedelta(minutes=10)
+
+# Custom Session Token with longer lifetime
+class SessionToken(Token):
+    """Custom JWT token for authenticated sessions"""
+    token_type = 'access'
+    lifetime = timedelta(hours=24)  # 24 hour session
+
+# Custom JWT Authentication that accepts our SessionToken
+class CustomJWTAuthentication(JWTAuthentication):
+    """Custom JWT authentication that works with SessionToken"""
+    
+    def get_validated_token(self, raw_token):
+        """Override to add debug logging and handle custom token types"""
+        print(f"{custom_console.COLOR_CYAN}CustomJWTAuthentication validating token{custom_console.RESET_COLOR}")
+        
+        try:
+            # Decode without verification first to see what's in it
+            unverified = jwt.decode(raw_token, options={'verify_signature': False})
+            print(f"  Token claims (unverified): {unverified}")
+            
+            # Now validate properly
+            validated_token = super().get_validated_token(raw_token)
+            print(f"  Token validation: SUCCESS")
+            return validated_token
+            
+        except TokenError as e:
+            print(f"  Token validation: FAILED - {e}")
+            raise
+        except Exception as e:
+            print(f"  Token validation: ERROR - {e}")
+            raise InvalidToken(str(e))
+    
+    def get_user(self, validated_token):
+        """Override to use our custom User model"""
+        try:
+            user_id = validated_token.get('user_id')
+            if user_id is None:
+                raise InvalidToken('Token has no user_id claim')
+            
+            # Use our custom User model from authentication app
+            user = User.objects.filter(id=user_id, is_deleted=False).first()
+            
+            if user is None:
+                raise InvalidToken('User not found or deleted')
+            
+            print(f"  User found: {user.email}")
+            return user
+            
+        except User.DoesNotExist:
+            raise InvalidToken('User not found')
+        except Exception as e:
+            print(f"  Error getting user: {e}")
+            raise InvalidToken(str(e))
 
 # The @csrf_exempt decorator tells Django to skip the CSRF check for this specific view.
 # This is being used with POSTMAN requests for testing purposes.
@@ -192,11 +248,21 @@ def send_magic_link_email(request):
                 }, status=404)
             
             # Generate a new access token for the authenticated session
-            # Using our custom MagicLinkToken class but with longer expiry for session
-            from rest_framework_simplejwt.tokens import AccessToken
-            session_token = AccessToken()
+            # Using our custom SessionToken class with 24 hour expiry
+            session_token = SessionToken()
             session_token['user_id'] = user.id
             session_token['email'] = user.email
+            
+            # Debug: Print token expiry
+            import time
+            current_timestamp = int(time.time())
+            token_exp = session_token['exp']
+            print(f"{custom_console.COLOR_GREEN}Session token created:{custom_console.RESET_COLOR}")
+            print(f"  Token type: {session_token.token_type}")
+            print(f"  Lifetime: {session_token.lifetime}")
+            print(f"  Expires at (timestamp): {token_exp}")
+            print(f"  Current time (timestamp): {current_timestamp}")
+            print(f"  Time until expiry: {token_exp - current_timestamp} seconds ({(token_exp - current_timestamp) / 3600} hours)")
             
             # Redirect to frontend with tokens in URL (will be stored by frontend)
             frontend_url = (
@@ -636,13 +702,30 @@ def google_oauth_callback(request):
 # // ----------------------------   
 @csrf_exempt
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
 def change_email(request):
+    # Manually authenticate using our custom authentication class
+    auth = CustomJWTAuthentication()
+    
+    try:
+        # This will print debug info from our custom auth class
+        user_auth_tuple = auth.authenticate(request)
+        
+        if user_auth_tuple is None:
+            print(f"{custom_console.COLOR_RED}Authentication returned None{custom_console.RESET_COLOR}")
+            return JsonResponse({'status': 'error', 'message': 'Authentication failed'}, status=401)
+        
+        user, token = user_auth_tuple
+        print(f"{custom_console.COLOR_GREEN}Authentication successful: {user}{custom_console.RESET_COLOR}")
+        
+    except Exception as e:
+        print(f"{custom_console.COLOR_RED}Authentication error: {e}{custom_console.RESET_COLOR}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=401)
+    
     print(f"{custom_console.COLOR_YELLOW}change_email view called {custom_console.RESET_COLOR}")
     
     if request.method == "PUT":
-        # Get the authenticated user from the request
-        user = request.user
+        # Use the authenticated user from our custom auth (not request.user which is AnonymousUser)
+        # 'user' variable is already set from the authentication above
         
         # Parse request data
         new_email = None
@@ -683,18 +766,65 @@ def change_email(request):
             }, status=409)
         
         try:
-            # Update user's email
-            user.email = new_email
-            user.save()
+            # Generate verification token with user_id and new_email
+            from itsdangerous import URLSafeTimedSerializer
+            serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
             
+            verification_data = {
+                'user_id': user.id,
+                'old_email': user.email,
+                'new_email': new_email
+            }
+            
+            verification_token = serializer.dumps(verification_data, salt='email-change')
+            
+            # Build verification URL
+            verification_url = f"http://127.0.0.1:8000/auth/settings/email/verify?token={verification_token}"
+            
+            # Send verification email to the NEW email address
+            email_subject = 'Verify Your Email Change'
+            email_body = f"""
+            Hi {user.first_name or 'there'},
+            
+            You requested to change your email address from {user.email} to {new_email}.
+            
+            Please click the link below to verify your new email address:
+            {verification_url}
+            
+            This link will expire in 1 hour.
+            
+            If you didn't request this change, please ignore this email.
+            
+            Best regards,
+            The Pivotal AI Team
+            """
+            
+            # Send the email
+            send_mail(
+                subject=email_subject,
+                message=email_body,
+                from_email=getenv('EMAIL_HOST_USER'),
+                recipient_list=[new_email],  # Send to NEW email
+                fail_silently=False,
+            )
+            
+            print(f"{custom_console.COLOR_GREEN}Verification email sent to {new_email}{custom_console.RESET_COLOR}")
+            
+            # DO NOT update the email yet - wait for verification
             return JsonResponse({
                 'status': 'success',
-                'message': f'Email updated successfully for user ID {user.id}.',
-                'new_email': user.email
+                'message': f'Verification email sent to {new_email}. Please check your inbox and click the verification link.'
             }, status=200)
         
+        except SMTPException as e:
+            print(f"{custom_console.COLOR_RED}Failed to send verification email: {e}{custom_console.RESET_COLOR}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to send verification email. Please try again later.'
+            }, status=500)
+        
         except Exception as e:
-            print(f"Error changing email: {e}")
+            print(f"Error initiating email change: {e}")
             return JsonResponse({
                 'status': 'error',
                 'message': f'Server error: {e}'
@@ -707,18 +837,15 @@ def change_email(request):
 
 @csrf_exempt
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def verify_email_change(request):
     """
-    Verify email change using a time-limited token.
+    Verify email change using a time-limited token from email link.
     Expected query parameter: token
+    After verification, issues new JWT and redirects to frontend.
     """
     print(f"{custom_console.COLOR_YELLOW}verify_email_change view called {custom_console.RESET_COLOR}")
     
     if request.method == "GET":
-        # Get the authenticated user
-        user = request.user
-        
         # Get token from query parameters
         token = request.GET.get('token')
         
@@ -736,16 +863,25 @@ def verify_email_change(request):
             # Decode token with max age of 1 hour (3600 seconds)
             data = serializer.loads(token, salt='email-change', max_age=3600)
             
-            # Extract user_id and new_email from token
-            token_user_id = data.get('user_id')
+            # Extract data from token
+            user_id = data.get('user_id')
+            old_email = data.get('old_email')
             new_email = data.get('new_email')
             
-            # Verify token belongs to the authenticated user
-            if token_user_id != user.id:
+            if not user_id or not new_email:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Invalid verification token.'
-                }, status=403)
+                    'message': 'Invalid token data.'
+                }, status=400)
+            
+            # Get user by ID and verify old email matches
+            user = User.objects.filter(id=user_id, email=old_email, is_deleted=False).first()
+            
+            if not user:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'User not found or email already changed.'
+                }, status=404)
             
             # Check if new email is already taken by another user
             if User.objects.filter(email=new_email).exclude(id=user.id).exists():
@@ -754,15 +890,28 @@ def verify_email_change(request):
                     'message': f'Email "{new_email}" is already in use by another account.'
                 }, status=409)
             
-            # Update user's email
+            # Update user's email in database
             user.email = new_email
             user.save()
             
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Email updated successfully to {new_email}.',
-                'new_email': new_email
-            }, status=200)
+            print(f"{custom_console.COLOR_GREEN}Email changed from {old_email} to {new_email}{custom_console.RESET_COLOR}")
+            
+            # Generate NEW session token with updated email
+            session_token = SessionToken()
+            session_token['user_id'] = user.id
+            session_token['email'] = user.email  # Updated email
+            
+            # Redirect to frontend with new token and updated user data
+            frontend_url = (
+                f"http://192.168.1.68:3000/settings?"
+                f"token={str(session_token)}&"
+                f"email={user.email}&"
+                f"user_id={user.id}&"
+                f"first_name={user.first_name or ''}&"
+                f"email_updated=true"
+            )
+            
+            return redirect(frontend_url)
             
         except SignatureExpired:
             return JsonResponse({
@@ -770,6 +919,7 @@ def verify_email_change(request):
                 'message': 'Verification token has expired. Please request a new email change.'
             }, status=400)
         except (BadSignature, Exception) as e:
+            print(f"{custom_console.COLOR_RED}Error verifying email change: {e}{custom_console.RESET_COLOR}")
             return JsonResponse({
                 'status': 'error',
                 'message': 'Invalid or malformed verification token.'
