@@ -102,12 +102,51 @@ export default function SettingsPage() {
     return '';
   };
 
+  // Username validation function
+  const validateUsername = (username: string) => {
+    if (!username.trim()) {
+      return 'Username is required';
+    }
+    if (username.trim().length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (username.trim().length > 25) {
+      return 'Username must be less than 25 characters';
+    }
+    // Allow alphanumeric, underscores, and hyphens
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernameRegex.test(username)) {
+      return 'Username can only contain letters, numbers, underscores, and hyphens';
+    }
+    return '';
+  };
+
   // Handle email input change with validation
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setNewEmail(value);
     const error = validateEmail(value);
     setEmailError(error);
+  };
+
+  // Handle username input change with validation
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewUsername(value);
+    const error = validateUsername(value);
+    setUsernameError(error);
+  };
+
+  // Handle username save button click
+  const handleSaveUsername = async () => {
+    const error = validateUsername(newUsername);
+    setUsernameError(error);
+    if (error) {
+      return;
+    }
+
+    // TODO: Implement API call to update username
+    console.log('Update username to:', newUsername);
   };
 
   // Handle save button click
@@ -431,14 +470,20 @@ export default function SettingsPage() {
                 <input
                   id="new-username"
                   type="text"
+                  maxLength={25}
                   value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
+                  onChange={handleUsernameChange}
                   placeholder="Enter new username"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800"
                 />
                 {usernameError && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                     {usernameError}
+                  </p>
+                )}
+                {!usernameError && newUsername.length === 25 && (
+                  <p className="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
+                    25 characters maximum
                   </p>
                 )}
                 {usernameSuccessMessage && (
@@ -463,7 +508,7 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {/* TODO: Implement username change */}}
+                onClick={handleSaveUsername}
                 disabled={!!usernameError}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
               >
