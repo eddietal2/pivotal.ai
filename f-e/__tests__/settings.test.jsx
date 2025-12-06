@@ -1,0 +1,143 @@
+import '@testing-library/jest-dom'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { ThemeProvider } from '../components/context/ThemeContext'
+import { redirectTo } from '../lib/redirect'
+
+// Mock fetch API
+import fetchMock from 'jest-fetch-mock';
+import { describe } from 'node:test';
+fetchMock.enableMocks();
+
+// Mock the redirect helper so `redirectTo` is a Jest mock function
+jest.mock('../lib/redirect', () => ({
+  redirectTo: jest.fn(),
+}));
+
+// Mock the ThemeContext module at module level so it works in all tests
+jest.mock('@/components/context/ThemeContext', () => ({
+  useTheme: jest.fn(),
+  ThemeProvider: ({ children }) => children,
+}));
+
+// Utility function to render with ThemeProvider
+const renderWithProviders = (ui, options) => {
+  return render(ui, { wrapper: ThemeProvider, ...options })
+}
+
+// ----------------------- 
+// Settings: Account Settings
+// -----------------------
+describe('Settings: Account Settings', () => {
+
+  beforeEach(() => {
+    // Set default mock return for useTheme so Page component can render
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
+  it("FE-401: The Settings page successfully renders the 'Change Email' form (modal), including the current email, new email input field, and a 'Save' button.", async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+    
+    // ARRANGE: Click the Change Email button to open the modal
+    const changeEmailButton = screen.getByRole('button', { name: /change email/i });
+    expect(changeEmailButton).toBeInTheDocument();
+    
+    fireEvent.click(changeEmailButton);
+    
+    // ASSERT: Modal is now visible
+    const modal = screen.getByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    
+    // ASSERT: Modal has proper title
+    const modalTitle = screen.getByRole('heading', { name: /change email address/i });
+    expect(modalTitle).toBeInTheDocument();
+    
+    // ASSERT: Current email is displayed (readonly/disabled)
+    const currentEmailInput = screen.getByLabelText(/current email/i);
+    expect(currentEmailInput).toBeInTheDocument();
+    expect(currentEmailInput).toBeDisabled();
+    
+    // ASSERT: New email input field is present and enabled
+    const newEmailInput = screen.getByLabelText(/new email/i);
+    expect(newEmailInput).toBeInTheDocument();
+    expect(newEmailInput).toBeEnabled();
+    expect(newEmailInput).toHaveAttribute('type', 'email');
+    
+    // ASSERT: Save/Submit button is present
+    const saveButton = screen.getByRole('button', { name: /save|send verification email/i });
+    expect(saveButton).toBeInTheDocument();
+    expect(saveButton).toBeEnabled();
+    
+    // ASSERT: Cancel button is present
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    expect(cancelButton).toBeInTheDocument();
+    expect(cancelButton).toBeEnabled();
+    
+    // ASSERT: Close button (X) is present
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    expect(closeButton).toBeInTheDocument();
+    
+    // ASSERT: Modal has animation classes for upward slide-in effect
+    // This will FAIL until animation is implemented
+    expect(modal).toHaveClass('animate-slide-up');
+  });
+
+  it('FE-402: Change Email button opens the Change Email form', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+});
+
+// ----------------------- 
+// Settings: Light/Dark Mode Toggle
+// -----------------------
+describe('Settings: Light/Dark Mode Toggle', () => {
+
+  beforeEach(() => {
+    // Set default mock return for useTheme so Page component can render
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
+  it('FE-501: Account Settings render all elements', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+    
+    // Assert Delete Account subsection is rendered
+    const deleteSection = screen.getByRole('heading', { name: /delete account/i, level: 3 });
+    expect(deleteSection).toBeInTheDocument();
+    
+    // Assert Delete button is rendered
+    const deleteButton = screen.getByRole('button', { name: /^delete$/i });
+    expect(deleteButton).toBeInTheDocument();
+    expect(deleteButton).toBeEnabled();
+  });
+
+});
+
+// ----------------------- 
+// Settings: Notification Preferences
+// -----------------------
+describe('Settings: Notification Preferences', () => {
+
+  beforeEach(() => {
+    // Set default mock return for useTheme so Page component can render
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+  });
+
+  it('FE-', async () => {
+   
+  });
+
+});

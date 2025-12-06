@@ -1,4 +1,5 @@
 .env
+tests.csv 
 
 # Project-wide ignores (covers all subprojects under this workspace)
 
