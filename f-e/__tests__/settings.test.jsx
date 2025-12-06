@@ -1479,8 +1479,65 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     expect(sunIconAfterToggle).not.toBeInTheDocument();
   });
 
-  it('FE-505: After clicking the toggle, the new theme preference (e.g., \'dark\') is successfully saved to the application\'s local storage or user settings API.', async () => {
+  it('FE-505: After clicking the toggle, the new theme preference (e.g., \'dark\') is successfully saved to the the user\'s settings API.', async () => {
+    // Mock API response for theme preference save
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Theme preference updated successfully',
+      theme: 'dark'
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
 
+    // Mock toggleTheme function to track when it's called
+    const mockToggleTheme = jest.fn();
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: mockToggleTheme,
+    });
+
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+
+    // ARRANGE: Find the toggle button in light mode
+    const toggleButton = screen.getByRole('button', { name: /toggle to dark mode/i });
+    expect(toggleButton).toBeInTheDocument();
+    
+    // ACT: Click the toggle button to switch to dark mode
+    fireEvent.click(toggleButton);
+    
+    // ASSERT: toggleTheme function was called
+    await waitFor(() => {
+      expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: API was called to save theme preference
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: Request was sent to correct endpoint
+    const callArgs = fetchMock.mock.calls[0];
+    expect(callArgs[0]).toBe('http://127.0.0.1:8000/auth/settings/theme');
+    
+    // ASSERT: Request method is PUT or PATCH
+    const requestOptions = callArgs[1];
+    expect(requestOptions.method).toMatch(/PUT|PATCH/i);
+    
+    // ASSERT: Request includes proper headers
+    expect(requestOptions.headers['Content-Type']).toBe('application/json');
+    expect(requestOptions.headers['Authorization']).toBe('Bearer mock-jwt-token-123');
+    
+    // ASSERT: Request body contains new theme preference
+    const requestBody = JSON.parse(requestOptions.body);
+    expect(requestBody.theme).toBe('dark');
   });
 
   it('FE-506: After setting a theme (e.g., Dark mode) on the Settings page, navigating to another application page (e.g., /home) confirms the new theme is correctly applied.', async () => {

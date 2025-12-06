@@ -276,6 +276,37 @@ export default function SettingsPage() {
     }, 1500);
   };
 
+  // Handle theme toggle
+  const handleThemeToggle = async () => {
+    // Get the new theme value (opposite of current)
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    
+    // Toggle theme in context first for immediate UI feedback
+    toggleTheme();
+    
+    // Save theme preference to backend
+    try {
+      const token = localStorage.getItem('auth_token');
+      
+      const response = await fetch('http://127.0.0.1:8000/auth/settings/theme', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          theme: newTheme,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save theme preference');
+      }
+    } catch (error) {
+      console.error('Error saving theme preference:', error);
+    }
+  };
+
   // Handle save button click
   const handleSaveEmail = async () => {
     const error = validateEmail(newEmail);
@@ -503,7 +534,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <button
-                onClick={toggleTheme}
+                onClick={handleThemeToggle}
                 aria-label={theme === 'light' ? 'Toggle to dark mode' : 'Toggle to light mode'}
                 className="w-32 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
