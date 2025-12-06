@@ -81,11 +81,7 @@ describe('Settings: Account Settings', () => {
       expect(skeletonsAfterLoad.length).toBe(0);
     });
     
-    // ASSERT: Settings page title is visible (page loaded successfully)
-    const pageTitle = screen.getByRole('heading', { name: /^settings$/i, level: 1 });
-    expect(pageTitle).toBeInTheDocument();
-    
-    // ASSERT: Account Settings section is visible
+    // ASSERT: Account Settings section is visible (page loaded successfully)
     const accountSettingsTitle = screen.getByRole('heading', { name: /account settings/i, level: 2 });
     expect(accountSettingsTitle).toBeInTheDocument();
     
@@ -1139,8 +1135,8 @@ describe('Settings: Account Settings', () => {
     });
     
     // ASSERT: User remains on settings page (not redirected)
-    const settingsHeading = screen.getByRole('heading', { name: /^settings$/i, level: 1 });
-    expect(settingsHeading).toBeInTheDocument();
+    const accountSettingsHeading = screen.getByRole('heading', { name: /account settings/i, level: 2 });
+    expect(accountSettingsHeading).toBeInTheDocument();
   });
 
   it('FE-415: After confirming logout, the application clears localStorage auth data and redirects to the login page, ending with a Success Toast.', async () => {

@@ -4,6 +4,7 @@ import Page from '../app/(auth)/login/page'
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
 import { ThemeProvider } from '../components/context/ThemeContext'
+import { ToastProvider } from '../components/context/ToastContext'
 import { redirectTo } from '../lib/redirect'
 
 // in your Jest setup (e.g., in setupFilesAfterEnv) or imported here.
@@ -21,9 +22,16 @@ jest.mock('@/components/context/ThemeContext', () => ({
   ThemeProvider: ({ children }) => children,
 }));
 
-// Utility function to render with ThemeProvider
+// Utility function to render with ThemeProvider and ToastProvider
 const renderWithProviders = (ui, options) => {
-  return render(ui, { wrapper: ThemeProvider, ...options })
+  return render(
+    <ThemeProvider>
+      <ToastProvider>
+        {ui}
+      </ToastProvider>
+    </ThemeProvider>,
+    options
+  );
 }
 
 // ----------------------- 
