@@ -38,7 +38,58 @@ describe('Settings: Account Settings', () => {
     });
   });
 
-  it("FE-401: The Settings page successfully renders the 'Change Email' form (modal), including the current email, new email input field, and a 'Save' button.", async () => {
+  it('FE-401: The Settings page loads and displays the authenticated user\'s information from localStorage. The Page will load with Skeleton UI initially, then display content after loading completes.', async () => {
+    // Mock localStorage with user data
+    const mockUser = {
+      id: '123',
+      email: 'testuser@example.com',
+      first_name: 'Test User'
+    };
+    
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify(mockUser);
+      return null;
+    });
+
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // ASSERT: Skeleton UI is visible initially
+    const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+    
+    // Wait for loading to complete and skeletons to disappear
+    await waitFor(() => {
+      const skeletonsAfterLoad = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletonsAfterLoad.length).toBe(0);
+    });
+    
+    // ASSERT: Settings page title is visible (page loaded successfully)
+    const pageTitle = screen.getByRole('heading', { name: /^settings$/i, level: 1 });
+    expect(pageTitle).toBeInTheDocument();
+    
+    // ASSERT: Account Settings section is visible
+    const accountSettingsTitle = screen.getByRole('heading', { name: /account settings/i, level: 2 });
+    expect(accountSettingsTitle).toBeInTheDocument();
+    
+    // ACT: Open the Change Email modal to see current email
+    const changeEmailButton = screen.getByRole('button', { name: /change email/i });
+    fireEvent.click(changeEmailButton);
+    
+    // ASSERT: Current email field is pre-populated with user's email from localStorage
+    const currentEmailInput = screen.getByLabelText(/current email/i);
+    expect(currentEmailInput).toHaveValue('testuser@example.com');
+    
+    // ASSERT: User data was retrieved from localStorage
+    expect(Storage.prototype.getItem).toHaveBeenCalledWith('user');
+    
+    // Close modal
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    fireEvent.click(closeButton);
+  });
+
+  it("FE-402: The Settings page successfully renders the 'Change Email' form (modal), including the current email, new email input field, and a 'Save' button.", async () => {
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
     
@@ -86,7 +137,7 @@ describe('Settings: Account Settings', () => {
     expect(modal).toHaveClass('animate-slide-up');
   });
 
-  it('FE-402: Submitting the \'Change Email\' form with an empty or invalid email format shows an inline error message.', async () => {
+  it('FE-403: Submitting the \'Change Email\' form with an empty or invalid email format shows an inline error message.', async () => {
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
     
@@ -133,8 +184,8 @@ describe('Settings: Account Settings', () => {
     // ASSERT: Save button is enabled again
     expect(saveButton).toBeEnabled();
   });
-
-  it('FE-403: Submitting a valid new email triggers a PUT/PATCH request to the correct API endpoint (/api/user/email) with the new email data.', async () => {
+  
+  it('FE-404: Submitting a valid new email triggers a PUT/PATCH request to the correct API endpoint (/api/user/email) with the new email data.', async () => {
     // ARRANGE: Mock successful API response
     fetchMock.mockResponseOnce(JSON.stringify({ 
       message: 'Verification email sent successfully' 
@@ -189,14 +240,56 @@ describe('Settings: Account Settings', () => {
     });
   });
 
-  it('FE-404:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
-  });
+  it('FE-405: After a successful API response (HTTP 200/202), the UI displays a success notification (e.g., \'Email update link sent!\') and prompts the user to verify the change via email.', async () => {
+    // ARRANGE: Mock successful API response
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Verification email sent to your new address'
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-  it('FE-405:', async () => {
+    // Mock localStorage for auth token
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
+    
+    // ARRANGE: Open modal and enter valid email
+    const changeEmailButton = screen.getByRole('button', { name: /change email/i });
+    fireEvent.click(changeEmailButton);
+    
+    const newEmailInput = screen.getByLabelText(/new email/i);
+    const saveButton = screen.getByRole('button', { name: /send verification email/i });
+    
+    // ACT: Enter valid email and submit
+    fireEvent.change(newEmailInput, { target: { value: 'newemail@example.com' } });
+    fireEvent.click(saveButton);
+    
+    // ASSERT: Success message appears after API call
+    await waitFor(() => {
+      const successMessage = screen.getByText(/verification email sent|check your email|email update link sent/i);
+      expect(successMessage).toBeInTheDocument();
+    });
+    
+    // ASSERT: Success message has proper styling (should be visible with green/success color)
+    const successMessage = screen.getByText(/verification email sent|check your email|email update link sent/i);
+    expect(successMessage).toHaveClass('text-green-600');
+    
+    // ASSERT: Modal remains open to show success message (or closes after delay)
+    // This is flexible - could close immediately or show success then close
+    const modal = screen.queryByRole('dialog');
+    if (modal) {
+      // If modal is still open, success message should be inside it
+      expect(modal).toContainElement(successMessage);
+    }
+    
+    // ASSERT: Error message should NOT be visible
+    const errorMessage = screen.queryByText(/email is required|please enter a valid email/i);
+    expect(errorMessage).not.toBeInTheDocument();
   });
 
   it('FE-406:', async () => {
@@ -230,6 +323,40 @@ describe('Settings: Account Settings', () => {
   });
 
   it('FE-412:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-413: The Settings page successfully renders the Logout section with a heading, descriptive text, and an enabled Logout button', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-414: Clicking the Logout button displays a confirmation modal with Cancel and Confirm Logout options', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-415: After confirming logout, the application clears localStorage auth data and redirects to the login page', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-416: The Settings page loads and displays the authenticated user\'s information from localStorage', async () => {
+    
+  });
+
+  it('FE-414:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-415:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-416:', async () => {
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
   });

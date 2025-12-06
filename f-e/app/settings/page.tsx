@@ -9,19 +9,47 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [currentEmail] = useState('user@example.com'); // TODO: Get from user context
+  const [currentEmail, setCurrentEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // Check authentication on mount
+  // Check authentication and load user data on mount
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    const token = localStorage.getItem('auth_token');
+    const loadUserData = async () => {
+      setIsLoading(true);
+      setLoadError('');
+      
+      try {
+        const userString = localStorage.getItem('user');
+        const token = localStorage.getItem('auth_token');
+        
+        if (!userString || !token) {
+          // User is not authenticated, redirect to login
+          redirectTo('http://192.168.1.68:3000/login');
+          return;
+        }
+        
+        // Simulate slight delay to show skeleton (remove in production if not needed)
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Load user data from localStorage
+        const userData = JSON.parse(userString);
+        if (userData.email) {
+          setCurrentEmail(userData.email);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        setLoadError('Failed to load user data. Please refresh the page.');
+        setIsLoading(false);
+      }
+    };
     
-    if (!user || !token) {
-      // User is not authenticated, redirect to login
-      redirectTo('http://192.168.1.68:3000/login');
-    }
+    loadUserData();
   }, []);
 
   // Email validation function
@@ -67,29 +95,107 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        // Success - close modal and reset form
-        setShowEmailModal(false);
-        setNewEmail('');
+        // Success - show success message
+        const data = await response.json();
+        setSuccessMessage(data.message || 'Verification email sent! Check your email to confirm the change.');
         setEmailError('');
-        // TODO: Show success toast notification
+        // Keep modal open to show success message
+        // Optional: Auto-close after delay
+        // setTimeout(() => {
+        //   setShowEmailModal(false);
+        //   setNewEmail('');
+        //   setSuccessMessage('');
+        // }, 3000);
       } else {
         // Handle error responses
         const errorData = await response.json();
         setEmailError(errorData.message || 'Failed to send verification email');
+        setSuccessMessage('');
       }
     } catch (error) {
       console.error('Error changing email:', error);
       setEmailError('Network error. Please try again.');
+      setSuccessMessage('');
     }
   };
+
+  // Skeleton loader component
+  const SkeletonLoader = () => (
+    <div className="space-y-6">
+      {/* Account Settings Skeleton */}
+      <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" data-testid="skeleton" />
+        <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded mb-6 animate-pulse" data-testid="skeleton" />
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" data-testid="skeleton" />
+              <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+            </div>
+            <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+          </div>
+          <div className="h-px bg-gray-200 dark:bg-gray-700 animate-pulse" data-testid="skeleton" />
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" data-testid="skeleton" />
+              <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+            </div>
+            <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Display Settings Skeleton */}
+      <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" data-testid="skeleton" />
+        <div className="h-4 w-72 bg-gray-200 dark:bg-gray-700 rounded mb-6 animate-pulse" data-testid="skeleton" />
+        
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" data-testid="skeleton" />
+            <div className="h-4 w-52 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+        </div>
+      </div>
+      
+      {/* Notifications Skeleton */}
+      <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" data-testid="skeleton" />
+        <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded mb-6 animate-pulse" data-testid="skeleton" />
+        
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" data-testid="skeleton" />
+            <div className="h-4 w-60 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" data-testid="skeleton" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
-      <div className="space-y-6">
-
-        {/* Account Settings */}
+      
+      {/* Error Message */}
+      {loadError && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-red-600 dark:text-red-400">
+            {loadError}
+          </p>
+        </div>
+      )}
+      
+      {/* Loading State or Content */}
+      {isLoading ? (
+        <SkeletonLoader />
+      ) : (
+        <div className="space-y-6">
+          {/* Account Settings */}
         <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Account Settings</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -202,7 +308,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Change Email Modal */}
       {showEmailModal && (
@@ -218,7 +325,12 @@ export default function SettingsPage() {
                 Change Email Address
               </h2>
               <button
-                onClick={() => setShowEmailModal(false)}
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setSuccessMessage('');
+                  setEmailError('');
+                  setNewEmail('');
+                }}
                 aria-label="Close"
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
@@ -260,13 +372,23 @@ export default function SettingsPage() {
                     {emailError}
                   </p>
                 )}
+                {successMessage && (
+                  <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                    {successMessage}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Modal Actions */}
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setShowEmailModal(false)}
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setSuccessMessage('');
+                  setEmailError('');
+                  setNewEmail('');
+                }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
                 Cancel
