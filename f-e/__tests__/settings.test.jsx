@@ -477,17 +477,66 @@ describe('Settings: Account Settings', () => {
     });
   });
 
-  it('FE-407:', async () => {
+  it('FE-407: The username field is pre-populated with the user\'s current username from localStorage, or displays a default placeholder if no username exists. Clicking the "Change Username" button opens the Change Username modal with current username pre-populated.', async () => {
+    // ARRANGE: Mock localStorage with user data including username
+    const mockUser = {
+      id: '123',
+      email: 'testuser@example.com',
+      username: 'currentusername',
+      first_name: 'Test User'
+    };
+    
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify(mockUser);
+      return null;
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Username is displayed on the page
+    const usernameDisplay = screen.getByText(/currentusername/i);
+    expect(usernameDisplay).toBeInTheDocument();
+    
+    // ACT: Click the "Change Username" button
+    const changeUsernameButton = screen.getByRole('button', { name: /change username/i });
+    expect(changeUsernameButton).toBeInTheDocument();
+    fireEvent.click(changeUsernameButton);
+    
+    // ASSERT: Modal is visible
+    const modal = screen.getByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    
+    // ASSERT: Modal has proper title
+    const modalTitle = screen.getByRole('heading', { name: /change username/i });
+    expect(modalTitle).toBeInTheDocument();
+    
+    // ASSERT: Current username input field is present and pre-populated
+    const currentUsernameInput = screen.getByLabelText(/current username/i);
+    expect(currentUsernameInput).toBeInTheDocument();
+    expect(currentUsernameInput).toHaveValue('currentusername');
+    expect(currentUsernameInput).toBeDisabled();
+    
+    // ASSERT: New username input field is present and enabled
+    const newUsernameInput = screen.getByLabelText(/new username/i);
+    expect(newUsernameInput).toBeInTheDocument();
+    expect(newUsernameInput).toBeEnabled();
+    
+    // ASSERT: Save button is present
+    const saveButton = screen.getByRole('button', { name: /save|update username/i });
+    expect(saveButton).toBeInTheDocument();
+    
+    // TODO: Test scenario with no username (should show placeholder)
   });
 
   it('FE-408:', async () => {
-    const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
-  });
-
-  it('FE-409:', async () => {
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
   });

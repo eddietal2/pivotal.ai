@@ -17,6 +17,13 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  
+  // Username state
+  const [currentUsername, setCurrentUsername] = useState('');
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameSuccessMessage, setUsernameSuccessMessage] = useState('');
 
   // Check authentication and load user data on mount
   useEffect(() => {
@@ -67,6 +74,9 @@ export default function SettingsPage() {
         const userData = JSON.parse(userString);
         if (userData.email) {
           setCurrentEmail(userData.email);
+        }
+        if (userData.username) {
+          setCurrentUsername(userData.username);
         }
         
         setIsLoading(false);
@@ -246,6 +256,22 @@ export default function SettingsPage() {
           </p>
           
           <div className="space-y-4">
+            {/* Username Section */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">Username</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{currentUsername || 'No username set'}</p>
+              </div>
+              <button 
+                className="w-32 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                onClick={() => setShowUsernameModal(true)}
+              >
+                Change Username
+              </button>
+            </div>
+
+            <hr className="border-gray-200 dark:border-gray-700" />
+
             {/* Change Email Button */}
             <div className="flex items-center justify-between">
               <div>
@@ -351,6 +377,100 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+        </div>
+      )}
+
+      {/* Change Username Modal */}
+      {showUsernameModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div 
+            role="dialog" 
+            aria-labelledby="username-modal-title"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 animate-slide-up"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 id="username-modal-title" className="text-xl font-semibold">
+                Change Username
+              </h2>
+              <button
+                onClick={() => {
+                  setShowUsernameModal(false);
+                  setUsernameSuccessMessage('');
+                  setUsernameError('');
+                  setNewUsername('');
+                }}
+                aria-label="Close"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="space-y-4">
+              {/* Current Username */}
+              <div>
+                <label htmlFor="current-username" className="block text-sm font-medium mb-1">
+                  Current Username
+                </label>
+                <input
+                  id="current-username"
+                  type="text"
+                  value={currentUsername}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                />
+              </div>
+
+              {/* New Username */}
+              <div>
+                <label htmlFor="new-username" className="block text-sm font-medium mb-1">
+                  New Username
+                </label>
+                <input
+                  id="new-username"
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Enter new username"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800"
+                />
+                {usernameError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {usernameError}
+                  </p>
+                )}
+                {usernameSuccessMessage && (
+                  <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                    {usernameSuccessMessage}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowUsernameModal(false);
+                  setUsernameSuccessMessage('');
+                  setUsernameError('');
+                  setNewUsername('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {/* TODO: Implement username change */}}
+                disabled={!!usernameError}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+              >
+                Update Username
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
