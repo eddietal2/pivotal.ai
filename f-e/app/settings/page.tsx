@@ -37,7 +37,7 @@ export default function SettingsPage() {
         const tokenFromUrl = urlParams.get('token');
         const emailFromUrl = urlParams.get('email');
         const userIdFromUrl = urlParams.get('user_id');
-        const firstNameFromUrl = urlParams.get('first_name');
+        const usernameFromUrl = urlParams.get('username');
         const emailUpdated = urlParams.get('email_updated');
         
         if (tokenFromUrl && emailFromUrl && userIdFromUrl) {
@@ -46,7 +46,7 @@ export default function SettingsPage() {
           localStorage.setItem('user', JSON.stringify({
             id: userIdFromUrl,
             email: emailFromUrl,
-            first_name: firstNameFromUrl || ''
+            username: usernameFromUrl || ''
           }));
           
           // Show success toast notification

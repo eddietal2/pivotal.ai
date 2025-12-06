@@ -42,7 +42,7 @@ export default function LoginPage() {
         const token = urlParams.get('token');
         const urlEmail = urlParams.get('email');
         const userId = urlParams.get('user_id');
-        const firstName = urlParams.get('first_name');
+        const username = urlParams.get('username');
         
         if (token && urlEmail) {
             // User clicked magic link - store auth data and redirect
@@ -51,7 +51,7 @@ export default function LoginPage() {
             const userData = {
                 id: userId,
                 email: urlEmail,
-                first_name: firstName || ''
+                username: username || ''
             };
             
             localStorage.setItem('auth_token', token);
