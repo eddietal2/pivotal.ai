@@ -1277,6 +1277,81 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     expect(toggleButton).toBeVisible();
   });
 
+  it('FE-502: When the component is first mounted, the UI correctly applies the theme setting stored in local storage or the user\'s profile state (e.g., renders with the \'light\' theme if no preference is saved).', async () => {
+    // SCENARIO 1: No theme preference saved - should default to 'light'
+    const { useTheme } = require('@/components/context/ThemeContext');
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: jest.fn(),
+    });
+
+    const { default: SettingsPage } = await import('../app/settings/page');
+    const { container } = renderWithProviders(<SettingsPage />);
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+
+    // ASSERT: Theme toggle button shows "Dark" (indicating current theme is light)
+    const toggleButton = screen.getByRole('button', { name: /toggle to dark mode/i });
+    expect(toggleButton).toBeInTheDocument();
+    
+    // ASSERT: Button contains Moon icon (for switching to dark mode)
+    const moonIcon = container.querySelector('svg.lucide-moon');
+    expect(moonIcon).toBeInTheDocument();
+    
+    // ASSERT: Button text shows "Dark"
+    const buttonText = screen.getByText(/^dark$/i);
+    expect(buttonText).toBeInTheDocument();
+    
+    // SCENARIO 2: Clean up and test with 'dark' theme preference
+    cleanup();
+    jest.clearAllMocks();
+    
+    // Mock theme as 'dark'
+    useTheme.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: jest.fn(),
+    });
+    
+    const { container: darkContainer } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = darkContainer.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ASSERT: Theme toggle button shows "Light" (indicating current theme is dark)
+    const darkToggleButton = screen.getByRole('button', { name: /toggle to light mode/i });
+    expect(darkToggleButton).toBeInTheDocument();
+    
+    // ASSERT: Button contains Sun icon (for switching to light mode)
+    const sunIcon = darkContainer.querySelector('svg.lucide-sun');
+    expect(sunIcon).toBeInTheDocument();
+    
+    // ASSERT: Button text shows "Light"
+    const darkButtonText = screen.getByText(/^light$/i);
+    expect(darkButtonText).toBeInTheDocument();
+  });
+
+  it('FE-503: (Light to Dark) Clicking the toggle button changes the application theme from Light to Dark, and the toggle\'s icon/state changes to reflect the \'Dark\' mode status.', async () => {
+
+  });
+
+  it('FE-504: (Dark to Light) Clicking the toggle button changes the application theme from Dark back to Light, and the toggle\'s icon/state changes to reflect the \'Light\' mode status.', async () => {
+
+  });
+
+  it('FE-505: After clicking the toggle, the new theme preference (e.g., \'dark\') is successfully saved to the application\'s local storage or user settings API.', async () => {
+
+  });
+
+  it('FE-506: After setting a theme (e.g., Dark mode) on the Settings page, navigating to another application page (e.g., /home) confirms the new theme is correctly applied.', async () => {
+   
+  });
 });
 
 // ----------------------- 
