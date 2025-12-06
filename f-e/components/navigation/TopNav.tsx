@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Home, LineChart, Newspaper, Settings } from 'lucide-react';
+import { Home, LineChart, Newspaper, Settings, Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/components/context/ThemeContext';
 
 const navLinks = [
@@ -16,7 +16,7 @@ const navLinks = [
 
 export default function TopNav() {
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   // Determine logo based on theme (same as login page)
   const logoSrc = theme === 'dark' 
@@ -60,6 +60,21 @@ export default function TopNav() {
 
         {/* User Menu / Profile */}
         <div className="flex items-center gap-2">
+          {/* Theme Toggle Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </Button>
+          
+          {/* Profile Button */}
           <Button variant="outline" size="sm">
             Profile
           </Button>

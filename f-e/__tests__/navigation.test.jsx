@@ -167,8 +167,60 @@ describe('Top Navigation Bar (Header)', () => {
         expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
-    it('FE-705: ', async () => {
-   
+    it('FE-705: Top nav bar should have the toggle button rendered directly to the left of the profile button. The button should be able to switch the theme from light to dark, then back from dark to light', async () => {
+        // Mock localStorage with auth token (simulating logged-in user)
+        Storage.prototype.getItem = jest.fn((key) => {
+            if (key === 'auth_token') return 'mock-jwt-token-123';
+            if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com' });
+            if (key === 'theme') return 'light';
+            return null;
+        });
+
+        const mockToggleTheme = jest.fn();
+        const { useTheme } = require('@/components/context/ThemeContext');
+        
+        // PART 1: Test with light theme
+        useTheme.mockReturnValue({
+            theme: 'light',
+            toggleTheme: mockToggleTheme,
+        });
+
+        mockUsePathname.mockReturnValue('/settings');
+
+        const { rerender } = render(<TopNav />);
+
+        // Find the theme toggle button - should show Moon icon for light mode
+        const themeToggleButton = screen.getByRole('button', { name: /toggle theme|moon|sun/i });
+        expect(themeToggleButton).toBeInTheDocument();
+        expect(themeToggleButton).toBeVisible();
+
+        // Verify it's positioned with the profile button (in the same container)
+        const profileButton = screen.getByRole('button', { name: /profile/i });
+        expect(profileButton).toBeInTheDocument();
+        
+        // Click the theme toggle button
+        fireEvent.click(themeToggleButton);
+        
+        // Verify toggleTheme was called
+        expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+
+        // PART 2: Test with dark theme (after toggle)
+        useTheme.mockReturnValue({
+            theme: 'dark',
+            toggleTheme: mockToggleTheme,
+        });
+
+        rerender(<TopNav />);
+
+        // Find the theme toggle button - should show Sun icon for dark mode
+        const themeToggleButtonDark = screen.getByRole('button', { name: /toggle theme|moon|sun/i });
+        expect(themeToggleButtonDark).toBeInTheDocument();
+        
+        // Click to toggle back to light
+        fireEvent.click(themeToggleButtonDark);
+        
+        // Verify toggleTheme was called again
+        expect(mockToggleTheme).toHaveBeenCalledTimes(2);
     });
 
     it('FE-706: ', async () => {
