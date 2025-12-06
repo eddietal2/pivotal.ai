@@ -10,6 +10,39 @@ export default function SettingsPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [currentEmail] = useState('user@example.com'); // TODO: Get from user context
   const [newEmail, setNewEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  // Email validation function
+  const validateEmail = (email: string) => {
+    if (!email.trim()) {
+      return 'Email is required';
+    }
+    const emailRegex = /^[\w\.-]+@[\w\.-]+\.\w+$/;
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address';
+    }
+    return '';
+  };
+
+  // Handle email input change with validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewEmail(value);
+    const error = validateEmail(value);
+    setEmailError(error);
+  };
+
+  // Handle save button click
+  const handleSaveEmail = () => {
+    const error = validateEmail(newEmail);
+    setEmailError(error);
+    if (error) {
+      return;
+    }
+    // TODO: Implement email change API call
+    console.log('Sending verification email to:', newEmail);
+    setShowEmailModal(false);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -179,10 +212,15 @@ export default function SettingsPage() {
                   id="new-email"
                   type="email"
                   value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   placeholder="Enter new email address"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800"
                 />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {emailError}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -195,12 +233,9 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Implement email change API call
-                  console.log('Sending verification email to:', newEmail);
-                  setShowEmailModal(false);
-                }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                onClick={handleSaveEmail}
+                disabled={!!emailError}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
               >
                 Send Verification Email
               </button>

@@ -86,7 +86,100 @@ describe('Settings: Account Settings', () => {
     expect(modal).toHaveClass('animate-slide-up');
   });
 
-  it('FE-402: Change Email button opens the Change Email form', async () => {
+  it('FE-402: Submitting the \'Change Email\' form with an empty or invalid email format shows an inline error message.', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+    
+    // ARRANGE: Open the Change Email modal
+    const changeEmailButton = screen.getByRole('button', { name: /change email/i });
+    fireEvent.click(changeEmailButton);
+    
+    const newEmailInput = screen.getByLabelText(/new email/i);
+    const saveButton = screen.getByRole('button', { name: /send verification email/i });
+    
+    // ACT: Test 1 - Leave email empty and click save
+    fireEvent.click(saveButton);
+    
+    // ASSERT: Error message appears for empty email
+    await waitFor(() => {
+      const errorMessage = screen.getByText(/email is required/i);
+      expect(errorMessage).toBeInTheDocument();
+    });
+    
+    // ASSERT: Save button is disabled when error exists
+    expect(saveButton).toBeDisabled();
+    
+    // ACT: Test 2 - Enter invalid email format
+    fireEvent.change(newEmailInput, { target: { value: 'invalid-email' } });
+    
+    // ASSERT: Error message updates to show invalid format
+    await waitFor(() => {
+      const errorMessage = screen.getByText(/please enter a valid email address/i);
+      expect(errorMessage).toBeInTheDocument();
+    });
+    
+    // ASSERT: Save button remains disabled
+    expect(saveButton).toBeDisabled();
+    
+    // ACT: Test 3 - Enter valid email format
+    fireEvent.change(newEmailInput, { target: { value: 'newemail@example.com' } });
+    
+    // ASSERT: Error message disappears
+    await waitFor(() => {
+      const errorMessage = screen.queryByText(/please enter a valid email address/i);
+      expect(errorMessage).not.toBeInTheDocument();
+    });
+    
+    // ASSERT: Save button is enabled again
+    expect(saveButton).toBeEnabled();
+  });
+
+  it('FE-403:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-404:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-405:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-406:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-407:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-408:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-409:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-410:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-411:', async () => {
+    const { default: SettingsPage } = await import('../app/settings/page');
+    renderWithProviders(<SettingsPage />);
+  });
+
+  it('FE-412:', async () => {
     const { default: SettingsPage } = await import('../app/settings/page');
     renderWithProviders(<SettingsPage />);
   });
