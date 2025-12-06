@@ -223,8 +223,64 @@ describe('Top Navigation Bar (Header)', () => {
         expect(mockToggleTheme).toHaveBeenCalledTimes(2);
     });
 
-    it('FE-706: ', async () => {
-   
+    it('FE-706: Each button\'s Active link states should work.', async () => {
+        // Mock localStorage with auth token (simulating logged-in user)
+        Storage.prototype.getItem = jest.fn((key) => {
+            if (key === 'auth_token') return 'mock-jwt-token-123';
+            if (key === 'user') return JSON.stringify({ id: '123', email: 'test@example.com' });
+            if (key === 'theme') return 'light';
+            return null;
+        });
+
+        // PART 1: Test Settings page - Settings button should be active
+        mockUsePathname.mockReturnValue('/settings');
+        
+        const { rerender } = render(<TopNav />);
+
+        // Get all navigation buttons
+        const homeButton = screen.getByRole('button', { name: /^home$/i });
+        const watchlistButton = screen.getByRole('button', { name: /^watchlist$/i });
+        const newsButton = screen.getByRole('button', { name: /^news$/i });
+        const settingsButton = screen.getByRole('button', { name: /^settings$/i });
+
+        // Settings button should have active (primary) variant class
+        expect(settingsButton).toHaveClass('bg-primary');
+        
+        // Other buttons should have ghost variant (no bg-primary)
+        expect(homeButton).not.toHaveClass('bg-primary');
+        expect(watchlistButton).not.toHaveClass('bg-primary');
+        expect(newsButton).not.toHaveClass('bg-primary');
+
+        // PART 2: Test Home page - Home button should be active
+        mockUsePathname.mockReturnValue('/home');
+        rerender(<TopNav />);
+
+        const homeButtonActive = screen.getByRole('button', { name: /^home$/i });
+        const watchlistButtonInactive = screen.getByRole('button', { name: /^watchlist$/i });
+        const newsButtonInactive = screen.getByRole('button', { name: /^news$/i });
+        const settingsButtonInactive = screen.getByRole('button', { name: /^settings$/i });
+
+        // Home button should be active
+        expect(homeButtonActive).toHaveClass('bg-primary');
+        
+        // Other buttons should be inactive
+        expect(watchlistButtonInactive).not.toHaveClass('bg-primary');
+        expect(newsButtonInactive).not.toHaveClass('bg-primary');
+        expect(settingsButtonInactive).not.toHaveClass('bg-primary');
+
+        // PART 3: Test Watchlist page - Watchlist button should be active
+        mockUsePathname.mockReturnValue('/watchlist');
+        rerender(<TopNav />);
+
+        const watchlistButtonActive = screen.getByRole('button', { name: /^watchlist$/i });
+        expect(watchlistButtonActive).toHaveClass('bg-primary');
+
+        // PART 4: Test News page - News button should be active
+        mockUsePathname.mockReturnValue('/news');
+        rerender(<TopNav />);
+
+        const newsButtonActive = screen.getByRole('button', { name: /^news$/i });
+        expect(newsButtonActive).toHaveClass('bg-primary');
     });
  });
 
