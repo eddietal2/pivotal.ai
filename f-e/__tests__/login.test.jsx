@@ -385,7 +385,7 @@ describe('Post Login Redirect', () => {
     redirectTo.mockClear();
   });
 
-  // FE-301: After successfully clicking the Magic Link from Email and the API validates the token, the user is automatically redirected from /login handler page to /home.
+  // FE-301: After successfully clicking the Magic Link and the API validates the token, the user is automatically redirected from the login handler page to /home
   it("FE-301 should redirect the user to the homepage after successful magic link validation", async () => {
 
     // This test simulates the user clicking a magic link in their email.

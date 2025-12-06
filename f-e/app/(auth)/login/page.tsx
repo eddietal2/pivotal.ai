@@ -37,10 +37,36 @@ export default function LoginPage() {
 
     // Check if user is already authenticated on mount
     useEffect(() => {
-        const user = localStorage.getItem('user');
-        const token = localStorage.getItem('auth_token');
+        // First check for magic link callback params in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const urlEmail = urlParams.get('email');
+        const userId = urlParams.get('user_id');
+        const firstName = urlParams.get('first_name');
         
-        if (user && token) {
+        if (token && urlEmail) {
+            // User clicked magic link - store auth data and redirect
+            log('Magic link authentication detected');
+            
+            const userData = {
+                id: userId,
+                email: urlEmail,
+                first_name: firstName || ''
+            };
+            
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            log('Auth data stored, redirecting to home...');
+            redirectTo('http://192.168.1.68:3000/home');
+            return;
+        }
+        
+        // Check if user is already authenticated
+        const user = localStorage.getItem('user');
+        const existingToken = localStorage.getItem('auth_token');
+        
+        if (user && existingToken) {
             log('User already authenticated, redirecting to home...');
             redirectTo('http://192.168.1.68:3000/home');
         }
