@@ -114,7 +114,7 @@ describe('Top Navigation Bar (Header)', () => {
         expect(logoImage).toBeInTheDocument();
     });
 
-    it('FE-703: When the user is signed in, the user\'s profile link is rendered, and clicking it correctly calls the navigation function to the profile page.', async () => {
+    it('FE-703: The Settings button serves as the user profile/account page and is rendered and clickable.', async () => {
         // Mock localStorage with auth token (simulating logged-in user)
         Storage.prototype.getItem = jest.fn((key) => {
             if (key === 'auth_token') return 'mock-jwt-token-123';
@@ -123,17 +123,17 @@ describe('Top Navigation Bar (Header)', () => {
             return null;
         });
 
-        mockUsePathname.mockReturnValue('/settings');
+        mockUsePathname.mockReturnValue('/home');
 
         render(<TopNav />);
 
-        // Find the profile button - currently it's a button, not a link
-        const profileButton = screen.getByRole('button', { name: /profile/i });
-        expect(profileButton).toBeInTheDocument();
-        expect(profileButton).toBeVisible();
+        // Find the Settings button (which now serves as the profile/account page)
+        const settingsButton = screen.getByRole('button', { name: /settings/i });
+        expect(settingsButton).toBeInTheDocument();
+        expect(settingsButton).toBeVisible();
         
         // Verify it's clickable (button is enabled)
-        expect(profileButton).not.toBeDisabled();
+        expect(settingsButton).not.toBeDisabled();
     });
 
     it('FE-704: Home, Watchlist, News, and Settings links all are clickable, and navigate to their respective pages.', async () => {

@@ -58,7 +58,7 @@ export default function TopNav() {
           })}
         </div>
 
-        {/* User Menu / Profile */}
+        {/* Theme Toggle & User Menu */}
         <div className="flex items-center gap-2">
           {/* Theme Toggle Button */}
           <Button
@@ -72,11 +72,6 @@ export default function TopNav() {
             ) : (
               <Sun className="h-4 w-4" />
             )}
-          </Button>
-          
-          {/* Profile Button */}
-          <Button variant="outline" size="sm">
-            Profile
           </Button>
         </div>
       </div>
