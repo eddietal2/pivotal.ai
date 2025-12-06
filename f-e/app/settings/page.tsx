@@ -201,6 +201,60 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle delete account
+  const handleDeleteAccount = async () => {
+    try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        setDeleteError('Authentication token not found. Please log in again.');
+        return;
+      }
+      
+      // Make API call to delete account
+      const response = await fetch('http://127.0.0.1:8000/auth/settings/account/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Success - show success toast
+        showToast('Account successfully deleted', 'success', 3000);
+        
+        // Clear localStorage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        
+        // Close modal
+        setShowDeleteModal(false);
+        
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          redirectTo('http://192.168.1.68:3000/login');
+        }, 1000);
+      } else if (response.status === 401) {
+        // Handle unauthorized - token expired or invalid
+        setDeleteError('Your session has expired. Please log in again.');
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          redirectTo('http://192.168.1.68:3000/login');
+        }, 2000);
+      } else {
+        // Handle error responses
+        const errorData = await response.json();
+        setDeleteError(errorData.message || 'Failed to delete account');
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setDeleteError('Network error. Please try again.');
+    }
+  };
+
   // Handle save button click
   const handleSaveEmail = async () => {
     const error = validateEmail(newEmail);
@@ -641,10 +695,7 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Implement actual account deletion API call
-                  console.log('Delete account confirmed');
-                }}
+                onClick={handleDeleteAccount}
                 disabled={deleteConfirmText !== 'Delete Account'}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600"
               >

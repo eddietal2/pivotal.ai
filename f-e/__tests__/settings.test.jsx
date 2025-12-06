@@ -938,9 +938,109 @@ describe('Settings: Account Settings', () => {
     });
   });
 
-  it('FE-412:', async () => {
+  it('FE-412: Confirming deletion triggers a DELETE request to the correct API endpoint (/settings/account/delete). Success Toast should appear, as well as a redirect to the Landing Page.', async () => {
+    // ARRANGE: Mock successful API response
+    fetchMock.mockResponseOnce(JSON.stringify({ 
+      message: 'Account successfully deleted' 
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Mock localStorage with user data
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === 'auth_token') return 'mock-jwt-token-123';
+      if (key === 'user') return JSON.stringify({ 
+        id: '123', 
+        email: 'test@example.com',
+        username: 'testuser'
+      });
+      return null;
+    });
+    
+    // Mock removeItem to verify localStorage is cleared
+    Storage.prototype.removeItem = jest.fn();
+
+    // Mock showToast
+    const mockShowToast = jest.fn();
+    const { useToast } = require('@/components/context/ToastContext');
+    useToast.mockReturnValue({
+      showToast: mockShowToast,
+      hideToast: jest.fn(),
+    });
+
     const { default: SettingsPage } = await import('../app/settings/page');
-    renderWithProviders(<SettingsPage />);
+    const { container } = renderWithProviders(<SettingsPage />);
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
+      expect(skeletons.length).toBe(0);
+    });
+    
+    // ARRANGE: Open delete confirmation modal
+    const deleteButton = screen.getByRole('button', { name: /^delete$/i });
+    fireEvent.click(deleteButton);
+    
+    // Wait for modal to open
+    await waitFor(() => {
+      const modal = screen.getByRole('dialog');
+      expect(modal).toBeInTheDocument();
+    });
+    
+    // ARRANGE: Enter correct confirmation text to enable the confirm button
+    const confirmationInput = screen.getByRole('textbox', { name: /type.*delete account|confirm/i });
+    fireEvent.change(confirmationInput, { target: { value: 'Delete Account' } });
+    
+    // Wait for confirm button to be enabled
+    const confirmButton = screen.getByRole('button', { name: /confirm|delete account/i });
+    await waitFor(() => {
+      expect(confirmButton).toBeEnabled();
+    });
+    
+    // ACT: Click the Confirm Delete button
+    fireEvent.click(confirmButton);
+    
+    // ASSERT: API was called with correct endpoint
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    
+    // ASSERT: Request method is DELETE
+    const callArgs = fetchMock.mock.calls[0];
+    expect(callArgs[0]).toBe('http://127.0.0.1:8000/auth/settings/account/delete');
+    
+    // ASSERT: Request includes proper headers
+    const requestOptions = callArgs[1];
+    expect(requestOptions.method).toBe('DELETE');
+    expect(requestOptions.headers['Content-Type']).toBe('application/json');
+    expect(requestOptions.headers['Authorization']).toBe('Bearer mock-jwt-token-123');
+    
+    // ASSERT: Success toast is shown
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.stringMatching(/account.*deleted|deletion.*successful/i),
+        'success',
+        expect.any(Number)
+      );
+    });
+    
+    // ASSERT: localStorage is cleared
+    await waitFor(() => {
+      expect(Storage.prototype.removeItem).toHaveBeenCalledWith('auth_token');
+      expect(Storage.prototype.removeItem).toHaveBeenCalledWith('user');
+    });
+    
+    // ASSERT: User is redirected to landing page (login or home)
+    await waitFor(() => {
+      expect(redirectTo).toHaveBeenCalledWith(expect.stringMatching(/login|^\/$|home/i));
+    }, { timeout: 3000 });
+    
+    // ASSERT: Modal closes after successful deletion
+    await waitFor(() => {
+      const modal = screen.queryByRole('dialog');
+      expect(modal).not.toBeInTheDocument();
+    });
   });
 
   it('FE-413: The Settings page successfully renders the Logout section with a heading, descriptive text, and an enabled Logout button', async () => {

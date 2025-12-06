@@ -1188,18 +1188,18 @@ def delete_account(request):
     
     if request.method == "DELETE":
         try:
-            # Store user email for response message
+            # Store user email and ID for logging
             user_email = user.email
             user_id = user.id
             
-            # Soft delete: set is_deleted flag instead of hard delete
+            # Soft delete: Mark user as deleted instead of removing from database
             user.is_deleted = True
             user.save()
             
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Account for user ID {user_id} ({user_email}) has been successfully deleted.'
-            }, status=204)
+            print(f"Account soft deleted for user {user_email} (ID: {user_id})")
+            
+            # Return 204 No Content (no response body for successful DELETE)
+            return HttpResponse(status=204)
             
         except Exception as e:
             print(f"Error deleting account: {e}")
