@@ -3,36 +3,13 @@
 
 import React from 'react';
 import InfoModal from '@/components/modals/InfoModal';
+import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
+import Sparkline from '@/components/ui/Sparkline';
+import MarketOverview from '@/components/ui/MarketOverview';
 
-// CollapsibleSection component (add at the top of the file, after imports)
-function CollapsibleSection({ title, infoButton, children }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(true);
-  return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between gap-2">
-        {/* Collapse toggle button (arrow + title) */}
-        <button
-          type="button"
-          aria-label={open ? 'Collapse section' : 'Expand section'}
-          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800 focus:outline-none"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span className={`transition-transform duration-200 ${open ? '' : 'rotate-180'}`}>▼</span>
-          {title}
-        </button>
-        {/* Info button (separate, does not toggle collapse) */}
-        {infoButton && (
-          <div className="flex-shrink-0">
-            {infoButton}
-          </div>
-        )}
-      </div>
-      {open && <div className="mt-4">{children}</div>}
-    </div>
-  );
-}
+// CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
 // --- MOCK DATA ---
 
@@ -74,25 +51,43 @@ const mockSignals = [
 
 // Mock data for the Global Market Pulse
 const mockPulse = [
-  { index: 'S&P 500', value: 5210.45, change: '+0.82%', color: 'text-green-500' },
-  { index: 'VIX (Fear Index)', value: 13.20, change: '-3.10%', color: 'text-green-500' },
-  { index: '10-Yr Yield', value: 4.15, change: '+0.05%', color: 'text-red-500' },
-  { index: 'Bitcoin', value: 43250.00, change: '+2.15%', color: 'text-green-500' },
+  { index: 'S&P 500', value: 5210.45, change: '+0.82%', color: 'text-green-500', trend: [5180, 5190, 5200, 5205, 5210], timeframe: '1D', afterHours: false },
+  { index: 'VIX (Fear Index)', value: 13.20, change: '-3.10%', color: 'text-green-500', trend: [16.1, 15.2, 14.0, 13.8, 13.2], timeframe: '1D', afterHours: false },
+  { index: '10-Yr Yield', value: 4.15, change: '+0.05%', color: 'text-red-500', trend: [4.05, 4.06, 4.10, 4.12, 4.15], timeframe: '1D', afterHours: false },
+  { index: 'Bitcoin', value: 43250.00, change: '+2.15%', color: 'text-green-500', trend: [41200, 42000, 42500, 43000, 43250], timeframe: '24H', afterHours: true },
 ];
 
 // --- INLINE COMPONENTS ---
 
 // 1. Global Market Pulse Card
-const MarketPulseCard = ({ index, value, change, color, onClick }: { index: string; value: number; change: string; color: string; onClick: () => void }) => (
+const MarketPulseCard = ({ index, value, change, color, onClick, trend, timeframe, afterHours }: { index: string; value: number; change: string; color: string; onClick: () => void; trend?: number[]; timeframe?: string; afterHours?: boolean }) => (
   <button
     className="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
     onClick={onClick}
     type="button"
-    aria-label={`More info about ${index}`}
+    aria-label={`More info about ${index}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
   >
-    <p className="text-sm font-medium text-gray-400">{index}</p>
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-medium text-gray-400">{index}</p>
+      {/* timeframe chip */}
+      {timeframe && (
+        <span
+          title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`}
+          className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-800/70 border border-gray-700 text-gray-300"
+        >{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
+      )}
+    </div>
     <div className="flex items-center justify-between mt-1">
-      <span className="text-xl font-bold text-white">{value}</span>
+      <div className="flex items-center gap-3">
+        {/* Sparkline */}
+        <div className="flex-shrink-0">
+          {/* Will render sparkline if trend data is provided */}
+          {trend && trend.length > 0 && (
+            <Sparkline data={trend} width={72} height={28} stroke={color.includes('green') ? '#34d399' : '#f87171'} className="rounded" gradient={true} fillOpacity={0.12} />
+          )}
+        </div>
+        <span className="text-xl font-bold text-white">{value}</span>
+      </div>
       <span className={`text-sm font-semibold ${color} flex items-center`}>
         {color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
         {change}
@@ -212,7 +207,10 @@ export default function App() {
   const { modalOpen, setModalOpen } = useUI();
   const [selectedPulse, setSelectedPulse] = React.useState<null | typeof mockPulse[0]>(null);
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
-  const [marketPulseInfoOpen, setMarketPulseInfoOpen] = React.useState(false);
+  // Combined info modal (replaces Market Pulse and Market Overview modals)
+  const [infoModalOpen, setInfoModalOpen] = React.useState(false);
+  const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
+  // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
   
   // Example descriptions for each index
@@ -235,21 +233,33 @@ export default function App() {
             title={
               <span className="flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-green-400" />
-                Market Pulse
+                Market Pulse Overview
               </span>
             }
             infoButton={
-              <button
-                type="button"
-                className="p-1 rounded-full hover:bg-gray-800 transition ml-4"
-                title="Learn more about Market Pulse"
-                aria-label="More info about Market Pulse"
-                onClick={() => setMarketPulseInfoOpen(true)}
-              >
-                <Info className="w-5 h-5 text-orange-300" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Overview info button (shows MarketOverview modal even when collapsed) */}
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  title="Learn more about Market Overview"
+                  aria-label="More info about Market Overview"
+                  data-testid="overview-info-btn"
+                  onClick={() => setInfoModalOpen(true)}
+                >
+                  <Info className="w-5 h-5 text-orange-300" />
+                </button>
+              </div>
             }
           >
+            {/* Render MarketOverview inside collapsible */}
+              <div className="mb-4">
+              <MarketOverview
+                pulses={mockPulse}
+                onOpenInfo={() => setInfoModalOpen(true)}
+                onStateChange={(s) => setOverviewCpuState(s)}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {mockPulse.map((pulse, index) => (
                 <MarketPulseCard
@@ -263,16 +273,32 @@ export default function App() {
               ))}
             {/* Market Pulse Info Modal (renders outside the collapsible content so it shows even when collapsed) */}
             </div>
-          </CollapsibleSection>
+              </CollapsibleSection>
           {/* Market Pulse Info Modal (refactored to InfoModal) */}
+          {/* Unified Info Modal: includes both Market Pulse details and Market Overview details */}
           <InfoModal
-            open={marketPulseInfoOpen}
-            onClose={() => setMarketPulseInfoOpen(false)}
-            title={<><TrendingUp className="w-6 h-6 text-green-400" />About Market Pulse</>}
-            ariaLabel="About Market Pulse"
+            open={infoModalOpen}
+            onClose={() => setInfoModalOpen(false)}
+            title={<><Info className="w-5 h-5 text-orange-300" />Market Info</>}
+            ariaLabel="Market Info"
           >
             <div className="w-full max-w-2xl mx-auto space-y-6">
-              <p>Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
+              <div className="mt-6 pb-6 border-b border-gray-700">
+                <h4 className="text-xl font-bold text-orange-300 flex items-center gap-2">
+                  <Cpu
+                    data-testid="modal-cpu-indicator"
+                    data-state={overviewCpuState.loading ? 'loading' : overviewCpuState.isTyping ? 'typing' : 'idle'}
+                    className={`${overviewCpuState.loading ? 'text-gray-400 animate-pulse' : overviewCpuState.isTyping ? 'text-green-300 animate-pulse' : 'text-orange-300'} w-5 h-5`}
+                    aria-hidden
+                  />
+                Market Overview Details</h4>
+                <p className="text-sm text-gray-300 mt-2">Market Overview is generated by an AI engine to summarize the current Market Pulse items. It interprets recent data and highlights potential areas of interest to investigate further using the detailed charts.</p>
+                <p className="text-xs text-gray-400 mt-1">Note: AI output shown is illustrative; use with judgment and confirm with chart analysis. This feature currently uses a simple local heuristic as a placeholder for a real AI endpoint.</p>
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-green-300 flex items-center gap-2"><TrendingUp className="w-5 h-5" />About Market Pulse</h4>
+                <p className="text-sm text-gray-300 mt-2">Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
+              </div>
               <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">S&P 500</h5>
                 <p className="text-sm text-gray-300">The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.</p>
@@ -295,6 +321,7 @@ export default function App() {
               </div>
             </div>
           </InfoModal>
+          {/* Pinned MarketOverview is rendered earlier to keep it above Live Setup Scans */}
 
           {/* Modal for Market Pulse Item Info */}
           {modalOpen && selectedPulse && (
@@ -374,6 +401,7 @@ export default function App() {
               {/* Info Modal for Live Setup Scans - renders outside collapsible content */}
             </div>
           </CollapsibleSection>
+          {/* Pinned MarketOverview removed: MarketOverview always renders inside the Market Pulse CollapsibleSection */}
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal
             open={signalFeedInfoOpen}
