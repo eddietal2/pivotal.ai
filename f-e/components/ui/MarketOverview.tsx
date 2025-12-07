@@ -260,6 +260,13 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         ariaLabel="Full sentiment analysis modal"
       >
         <div className="max-w-4xl mx-auto">
+          {timeframe && (
+            <div className="mb-4 flex justify-start">
+              <span className="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                {timeframe === 'D' ? 'Sentiment of the Last Day' : timeframe === 'W' ? 'Sentiment of the Last Week' : timeframe === 'M' ? 'Sentiment of the Last Month' : 'Sentiment of the Last Year'}
+              </span>
+            </div>
+          )}
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
             {modalDisplayedText || 'No full sentiment analysis available.'}
             {modalTyping && modalDisplayedText.length < (fullSentiment?.length ?? 0) && (
