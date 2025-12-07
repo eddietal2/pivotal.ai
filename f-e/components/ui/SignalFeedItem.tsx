@@ -35,6 +35,18 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
   const { showToast } = useToast();
   const [added, setAdded] = React.useState(false);
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
+  const [modalChartTimeframe, setModalChartTimeframe] = React.useState<'1D'|'1W'|'1M'|'1Y'>('1D');
+
+  const humanTimeframeLabel = (tf?: string) => {
+    if (!tf) return '';
+    const t = tf.toUpperCase();
+    if (t === '24H') return '24H';
+    if (t === '1D') return 'In the Last Day';
+    if (t === '1W') return 'In the Last Week';
+    if (t === '1M') return 'In the Last Month';
+    if (t === '1Y') return 'In the Last Year';
+    return tf;
+  };
   React.useEffect(() => {
     let locked = false;
     if (chartModalOpen) {
@@ -107,16 +119,31 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
               {/* Header with title and top X close button */}
               <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{ticker} Chart</h4>
+                  <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{ticker}</h4>
                 </div>
-                <button
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
-                  onClick={() => setChartModalOpen(false)}
-                  aria-label="Close chart modal"
-                  data-testid="chart-modal-close-top"
-                >
-                  &times;
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium ${added ? 'text-green-800 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700/50' : 'text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50'} rounded-lg transition-colors`}
+                    onClick={() => {
+                      showToast('Added to watchlist', 'success');
+                      setAdded(true);
+                      setTimeout(() => setAdded(false), 2500);
+                    }}
+                    aria-label={`Add ${ticker} to Watchlist`}
+                    data-testid="chart-modal-add-watchlist"
+                  >
+                    <ListChecks className="w-3.5 h-3.5" />
+                    {added ? 'Added' : 'Add to Watchlist'}
+                  </button>
+                  <button
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
+                    onClick={() => setChartModalOpen(false)}
+                    aria-label="Close chart modal"
+                    data-testid="chart-modal-close-top"
+                  >
+                    &times;
+                  </button>
+                </div>
               </div>
 
               {/* Content area */}
@@ -130,7 +157,13 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
+                      <div className="flex items-start gap-3">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
+                        {/* Small timeframe pill near price (header area) */}
+                        <span data-testid="chart-modal-timeframe-pill-header" title={`Last ${modalChartTimeframe}`} className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                          {humanTimeframeLabel(modalChartTimeframe)}
+                        </span>
+                      </div>
                       <span className={`text-sm font-semibold ${color} flex items-center`}>
                         {type === 'Bullish' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : type === 'Bearish' ? <ArrowDownRight className="w-4 h-4 mr-1" /> : null}
                         {type}
@@ -140,8 +173,8 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
                   {/* Chart Placeholder */}
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                    <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
-                      <span className="text-gray-600 dark:text-gray-400 text-lg">[Signal Chart Placeholder]</span>
+                      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
+                          <span className="text-gray-600 dark:text-gray-400 text-lg" data-testid="chart-modal-placeholder">[Signal Chart Placeholder{modalChartTimeframe ? ` - ${modalChartTimeframe}` : ''}]</span>
                     </div>
                   </div>
 
@@ -154,6 +187,23 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
                         </span>
                       ))}
                     </div>
+                  </div>
+                  {/* Timeline Filter (bottom of the modal) */}
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <div className="text-sm text-gray-500 mr-2">Timeline:</div>
+                    {(['1D','1W','1M','1Y'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={modalChartTimeframe === t}
+                        data-testid={`modal-chart-filter-${t}`}
+                        title={`Show ${t} timeframe`}
+                        onClick={() => setModalChartTimeframe(t)}
+                        className={`min-w-[40px] px-2 py-1 text-xs rounded ${modalChartTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

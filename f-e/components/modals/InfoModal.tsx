@@ -121,7 +121,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
               &times;
             </button>
           </div>
-          <div className={`flex-1 flex flex-col ${verticalAlign === 'top' ? 'justify-start items-center' : 'justify-center items-center'} pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen`}
+          <div className={`flex-1 flex flex-col ${verticalAlign === 'top' ? 'justify-start items-start pt-8' : 'justify-center items-center pt-8'} pb-8 px-2 overflow-y-auto w-full max-h-screen`}
             style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>

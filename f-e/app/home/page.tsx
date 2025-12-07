@@ -8,6 +8,8 @@ import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
+import SignalEducationCard from '@/components/ui/SignalEducationCard';
+import signalEducationCards from '@/components/ui/signalEducationData';
 import Sparkline from '@/components/ui/Sparkline';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton } from '@/components/ui/skeletons';
@@ -207,8 +209,6 @@ export default function App() {
     'Bitcoin': 'Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.',
   };
 
-  
-
   // Filter pulses by chosen timeframe
   const filteredPulse = React.useMemo(() => mockPulse.filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe), [pulseTimeframe]);
   // Filter signals by chosen timeframe
@@ -367,7 +367,7 @@ export default function App() {
             title={<><Info className="w-5 h-5 text-gray-900 dark:text-orange-300" />Market Info</>}
             ariaLabel="Market Info"
           >
-            <div className="space-y-6">
+            <div className="w-full max-w-2xl mx-auto space-y-6">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h4 className="text-xl font-bold text-gray-900 dark:text-orange-300 flex items-center gap-2 mb-3">
                   <Cpu
@@ -497,6 +497,7 @@ export default function App() {
           <InfoModal
             open={signalFeedInfoOpen}
             onClose={() => setSignalFeedInfoOpen(false)}
+            verticalAlign="top"
             title={<><Info className="w-6 h-6 text-gray-900 dark:text-orange-300" />About Live Setup Scans</>}
             ariaLabel="About Live Setup Scans"
           >
@@ -509,6 +510,25 @@ export default function App() {
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-gray-900 dark:text-indigo-300 mb-2">How to Use</h5>
                 <p className="text-sm text-gray-700 dark:text-gray-300">Review the confluence factors for each setup to understand why the signal was generated. Add setups to your watchlist or view charts for deeper analysis. The feed updates continuously to reflect the latest market conditions.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-indigo-300 mb-3">Key Patterns & Signals</h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">These signal definitions and setups are the foundations of many of the Live Setup Scans. Use them to better interpret why a signal was raised and how to act on it.</p>
+
+              <div data-testid="education-cards-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {signalEducationCards.map((c, i) => (
+                  <SignalEducationCard
+                    key={i}
+                    title={c.title}
+                    subtitle={c.subtitle}
+                    description={c.description}
+                    examples={c.examples}
+                    badge={c.badge}
+                    Icon={c.Icon}
+                  />
+                ))}
+              </div>
+            
               </div>
             </div>
           </InfoModal>
