@@ -31,7 +31,8 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
           >
             &times;
           </button>
-          <div className="flex-1 flex flex-col justify-center items-center pt-16 pb-8 px-8 overflow-y-auto w-full">
+          <div className="flex-1 flex flex-col justify-start items-center pt-16 pb-8 px-8 overflow-y-auto w-full max-h-screen"
+            style={{ WebkitOverflowScrolling: 'touch' }}>
             <h4 className="text-2xl font-bold mb-6 text-center w-full flex items-center gap-2">{title}</h4>
             {children}
           </div>
