@@ -160,15 +160,16 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
       </div>
       {/* Chart Modal */}
       {chartModalOpen && (
-        <div className="fixed inset-0 z-[101] min-h-screen h-screen w-screen bg-black/70">
+        <div className="fixed inset-0 z-[101] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={`${ticker} Chart Modal`}>
           <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
             <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
-              <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
+              {/* Header with title and top X close button */}
+              <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{ticker} Chart</h4>
                 </div>
                 <button
-                  className="text-gray-400 hover:text-white text-2xl font-bold"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
                   onClick={() => setChartModalOpen(false)}
                   aria-label="Close chart modal"
                   data-testid="chart-modal-close-top"
@@ -176,31 +177,48 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
                   &times;
                 </button>
               </div>
-              <div className="flex-1 flex flex-col justify-center items-center pt-6 pb-8 px-8 overflow-y-auto w-full">
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 text-center max-w-xl w-full">
-                  {signal}
-                </p>
-                <div className="flex items-center justify-between w-full max-w-md mx-auto mb-8">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
-                  <span className={`text-sm font-semibold ${color} flex items-center`}>
-                    {type === 'Bullish' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : type === 'Bearish' ? <ArrowDownRight className="w-4 h-4 mr-1" /> : null}
-                    {type}
-                  </span>
-                </div>
-                {/* Chart Placeholder */}
-                <div className="w-full max-w-md h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center mb-8">
-                  <span className="text-gray-600 dark:text-gray-400 text-lg">[Signal Chart Placeholder]</span>
-                </div>
-                {/* Confluence List */}
-                <div className="flex flex-wrap gap-2 justify-center mb-8">
-                  {confluence.map((c, i) => (
-                    <span key={i} className="text-xs text-indigo-300 bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-700">
-                      {c}
-                    </span>
-                  ))}
+
+              {/* Content area */}
+              <div className="flex-1 flex flex-col justify-start items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen"
+                style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="space-y-6 w-full max-w-2xl mx-auto">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+                      {signal}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
+                      <span className={`text-sm font-semibold ${color} flex items-center`}>
+                        {type === 'Bullish' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : type === 'Bearish' ? <ArrowDownRight className="w-4 h-4 mr-1" /> : null}
+                        {type}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Chart Placeholder */}
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                    <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
+                      <span className="text-gray-600 dark:text-gray-400 text-lg">[Signal Chart Placeholder]</span>
+                    </div>
+                  </div>
+
+                  {/* Confluence List */}
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {confluence.map((c, i) => (
+                        <span key={i} className="text-xs text-indigo-300 bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-700">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
-              {/* Footer close button for Chart Modal */}
+
+              {/* Footer close button */}
               <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
                 <button
                   type="button"
@@ -214,6 +232,7 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
               </div>
             </div>
           </div>
+
           <style jsx>{`
             @keyframes slideUp {
               from { transform: translateY(100%); opacity: 0; }
@@ -437,45 +456,55 @@ export default function App() {
           <InfoModal
             open={infoModalOpen}
             onClose={() => setInfoModalOpen(false)}
-            title={<><Info className="w-5 h-5 text-orange-300" />Market Info</>}
+            title={<><Info className="w-5 h-5 text-gray-900 dark:text-orange-300" />Market Info</>}
             ariaLabel="Market Info"
           >
-            <div className="w-full max-w-2xl mx-auto space-y-6">
-              <div className="mt-6 pb-6 border-b border-gray-700">
-                <h4 className="text-xl font-bold text-orange-300 flex items-center gap-2">
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-orange-300 flex items-center gap-2 mb-3">
                   <Cpu
                     data-testid="modal-cpu-indicator"
                     data-state={overviewCpuState.loading ? 'loading' : overviewCpuState.isTyping ? 'typing' : 'idle'}
-                    className={`${overviewCpuState.loading ? 'text-gray-400 animate-pulse' : overviewCpuState.isTyping ? 'text-green-300 animate-pulse' : 'text-orange-300'} w-5 h-5`}
+                    className={`${overviewCpuState.loading ? 'text-gray-400 animate-pulse' : overviewCpuState.isTyping ? 'text-green-300 animate-pulse' : 'text-gray-900 dark:text-orange-300'} w-5 h-5`}
                     aria-hidden
                   />
-                Market Overview Details</h4>
-                <p className="text-sm text-gray-300 mt-2">Market Overview is generated by an AI engine to summarize the current Market Pulse items. It interprets recent data and highlights potential areas of interest to investigate further using the detailed charts.</p>
-                <p className="text-xs text-gray-400 mt-1">Note: AI output shown is illustrative; use with judgment and confirm with chart analysis. This feature currently uses a simple local heuristic as a placeholder for a real AI endpoint.</p>
+                  Market Overview Details
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">Market Overview is generated by an AI engine to summarize the current Market Pulse items. It interprets recent data and highlights potential areas of interest to investigate further using the detailed charts.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Note: AI output shown is illustrative; use with judgment and confirm with chart analysis. This feature currently uses a simple local heuristic as a placeholder for a real AI endpoint.</p>
               </div>
-              <div>
-                <h4 className="text-xl font-bold text-green-300 flex items-center gap-2"><TrendingUp className="w-5 h-5" />About Market Pulse</h4>
-                <p className="text-sm text-gray-300 mt-2">Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
-              </div>
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-green-300 mb-2">S&P 500</h5>
-                <p className="text-sm text-gray-300">The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.</p>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-green-300 flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-5 h-5" />
+                  About Market Pulse
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
               </div>
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-green-300 mb-2">VIX (Fear Index)</h5>
-                <p className="text-sm text-gray-300">The VIX, or Volatility Index, measures the market’s expectation of volatility over the next 30 days. It is often referred to as the "fear index" and spikes during market turmoil.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-green-300 mb-2">S&P 500</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.</p>
               </div>
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-green-300 mb-2">10-Year Treasury Yield</h5>
-                <p className="text-sm text-gray-300">The 10-Year Treasury Yield reflects the return on investment for U.S. government bonds maturing in 10 years. It is a key indicator for interest rates and economic outlook.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-green-300 mb-2">VIX (Fear Index)</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">The VIX, or Volatility Index, measures the market's expectation of volatility over the next 30 days. It is often referred to as the "fear index" and spikes during market turmoil.</p>
               </div>
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-green-300 mb-2">Bitcoin</h5>
-                <p className="text-sm text-gray-300">Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-green-300 mb-2">10-Year Treasury Yield</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">The 10-Year Treasury Yield reflects the return on investment for U.S. government bonds maturing in 10 years. It is a key indicator for interest rates and economic outlook.</p>
               </div>
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-green-300 mb-2">How to Use</h5>
-                <p className="text-sm text-gray-300">Monitor these indices to understand the current market environment. Rising S&P 500 values indicate bullish sentiment, while spikes in the VIX suggest increased fear or volatility. The 10-Year Yield reflects interest rate expectations and economic outlook.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-green-300 mb-2">Bitcoin</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Bitcoin (BTC) is the world's largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-lg font-bold text-gray-900 dark:text-green-300 mb-2">How to Use</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Monitor these indices to understand the current market environment. Rising S&P 500 values indicate bullish sentiment, while spikes in the VIX suggest increased fear or volatility. The 10-Year Yield reflects interest rate expectations and economic outlook.</p>
               </div>
             </div>
           </InfoModal>
@@ -483,15 +512,16 @@ export default function App() {
 
           {/* Modal for Market Pulse Item Info */}
           {modalOpen && selectedPulse && (
-            <div className="fixed inset-0 z-[100] min-h-screen h-screen w-screen bg-black/70">
+            <div className="fixed inset-0 z-[100] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={`${selectedPulse.index} Info Modal`}>
               <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-                <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
-                  <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
+                <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+                  {/* Header with title and top X close button */}
+                  <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-2xl font-bold text-white flex items-center gap-2">{selectedPulse.index}</h4>
+                      <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{selectedPulse.index}</h4>
                     </div>
                     <button
-                      className="text-gray-400 hover:text-white text-2xl font-bold"
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
                       onClick={() => setModalOpen(false)}
                       aria-label="Close info modal"
                       data-testid="pulse-modal-close-top"
@@ -499,28 +529,41 @@ export default function App() {
                       &times;
                     </button>
                   </div>
-                  <div className="flex-1 flex flex-col justify-center items-center pt-6 pb-8 px-8 overflow-y-auto w-full">
-                    <p className="text-sm text-gray-300 mb-4 text-center max-w-xl w-full">
-                      {pulseDescriptions[selectedPulse.index] || 'No description available.'}
-                    </p>
-                    <div className="flex items-center justify-between w-full max-w-md mx-auto mb-8">
-                      <span className="text-lg font-bold text-white">{selectedPulse.value}</span>
-                      <span className={`text-sm font-semibold ${selectedPulse.color} flex items-center`}>
-                        {selectedPulse.color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-                        {selectedPulse.change}
-                      </span>
-                    </div>
-                    {/* Chart Placeholder */}
-                    <div className="w-full max-w-md h-64 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center mb-8">
-                      <span className="text-gray-400 text-lg">[Stock Chart Placeholder]</span>
+
+                  {/* Content area */}
+                  <div className="flex-1 flex flex-col justify-start items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen"
+                    style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="space-y-6 w-full max-w-2xl mx-auto">
+                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+                          {pulseDescriptions[selectedPulse.index] || 'No description available.'}
+                        </p>
+                      </div>
+
+                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPulse.value}</span>
+                          <span className={`text-sm font-semibold ${selectedPulse.color} flex items-center`}>
+                            {selectedPulse.color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                            {selectedPulse.change}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Chart Placeholder */}
+                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                        <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
+                          <span className="text-gray-600 dark:text-gray-400 text-lg">[Stock Chart Placeholder]</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  {/* Footer close button already added */}
-                  {/* Footer close button for Pulse item modal */}
-                  <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end">
+
+                  {/* Footer close button */}
+                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
                     <button
                       type="button"
-                      className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+                      className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => setModalOpen(false)}
                       aria-label="Close info modal"
                       data-testid="pulse-modal-close-bottom"
@@ -530,6 +573,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
               <style jsx>{`
                 @keyframes slideUp {
                   from { transform: translateY(100%); opacity: 0; }
@@ -546,36 +590,18 @@ export default function App() {
           <InfoModal
             open={signalFeedInfoOpen}
             onClose={() => setSignalFeedInfoOpen(false)}
-            title={<><Info className="w-6 h-6 text-orange-300" />About Live Setup Scans</>}
+            title={<><Info className="w-6 h-6 text-gray-900 dark:text-orange-300" />About Live Setup Scans</>}
             ariaLabel="About Live Setup Scans"
           >
-            <div className="w-full max-w-2xl mx-auto space-y-6">
+            <div className="space-y-6">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-indigo-300 mb-2">What is the Live Setup Scans Feed?</h5>
-                <p className="text-sm text-gray-300">The Live Setup Scans section provides real-time actionable trading setups detected by our AI. Each card summarizes a unique market opportunity, including the ticker, setup type, confluence factors, timeframe, and recent price change. Use these signals to quickly identify high-probability entries, reversals, breakouts, and consolidations across the market.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-indigo-300 mb-2">What is the Live Setup Scans Feed?</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">The Live Setup Scans section provides real-time actionable trading setups detected by our AI. Each card summarizes a unique market opportunity, including the ticker, setup type, confluence factors, timeframe, and recent price change. Use these signals to quickly identify high-probability entries, reversals, breakouts, and consolidations across the market.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-indigo-300 mb-2">How to Use</h5>
-                <p className="text-sm text-gray-300">Review the confluence factors for each setup to understand why the signal was generated. Add setups to your watchlist or view charts for deeper analysis. The feed updates continuously to reflect the latest market conditions.</p>
-              </div>
-            </div>
-          </InfoModal>
-          {/* Pinned MarketOverview removed: MarketOverview always renders inside the Market Pulse CollapsibleSection */}
-          {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
-          <InfoModal
-            open={signalFeedInfoOpen}
-            onClose={() => setSignalFeedInfoOpen(false)}
-            title={<><Info className="w-6 h-6 text-orange-300" />About Live Setup Scans</>}
-            ariaLabel="About Live Setup Scans"
-          >
-            <div className="w-full max-w-2xl mx-auto space-y-6">
+
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-indigo-300 mb-2">What is the Live Setup Scans Feed?</h5>
-                <p className="text-sm text-gray-300">The Live Setup Scans section provides real-time actionable trading setups detected by our AI. Each card summarizes a unique market opportunity, including the ticker, setup type, confluence factors, timeframe, and recent price change. Use these signals to quickly identify high-probability entries, reversals, breakouts, and consolidations across the market.</p>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-lg font-bold text-indigo-300 mb-2">How to Use</h5>
-                <p className="text-sm text-gray-300">Review the confluence factors for each setup to understand why the signal was generated. Add setups to your watchlist or view charts for deeper analysis. The feed updates continuously to reflect the latest market conditions.</p>
+                <h5 className="text-lg font-bold text-gray-900 dark:text-indigo-300 mb-2">How to Use</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Review the confluence factors for each setup to understand why the signal was generated. Add setups to your watchlist or view charts for deeper analysis. The feed updates continuously to reflect the latest market conditions.</p>
               </div>
             </div>
           </InfoModal>

@@ -34,14 +34,14 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
   return (
     <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
       <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-      <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+      <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
           {/* Header with title and top X close button */}
-          <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
+          <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h4 className="text-2xl font-bold text-orange-300 flex items-center gap-2">{title}</h4>
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
             </div>
             <button
-              className="text-gray-400 hover:text-white text-2xl font-bold"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
               onClick={onClose}
               aria-label="Close modal"
               data-testid="modal-close-top"
@@ -54,10 +54,10 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
             {children}
           </div>
           {/* Footer close button pinned to bottom of modal */}
-          <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
             <button
               type="button"
-              className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               onClick={onClose}
               aria-label="Close modal"
               data-testid="modal-close-bottom"
