@@ -6,6 +6,7 @@ export interface ToastProps {
   type?: 'success' | 'error' | 'info' | 'warning';
   duration?: number;
   onClose: (id: string) => void;
+  position?: 'top' | 'bottom';
 }
 
 export const Toast: React.FC<ToastProps> = ({ 
@@ -13,7 +14,8 @@ export const Toast: React.FC<ToastProps> = ({
   message, 
   type = 'info', 
   duration = 5000,
-  onClose 
+  onClose,
+  position = 'top',
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -68,6 +70,7 @@ export const Toast: React.FC<ToastProps> = ({
     ),
   };
 
+  const hiddenClass = position === 'bottom' ? 'translate-y-2 opacity-0' : '-translate-y-2 opacity-0';
   return (
     <div
       role="alert"
@@ -76,7 +79,7 @@ export const Toast: React.FC<ToastProps> = ({
         flex items-start gap-3 p-4 rounded-lg border shadow-lg min-w-[320px] max-w-md
         ${typeStyles[type]}
         transition-all duration-300 ease-out
-        ${isVisible && !isExiting ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}
+        ${isVisible && !isExiting ? 'translate-y-0 opacity-100' : hiddenClass}
       `}
     >
       <div className="flex-shrink-0 mt-0.5">

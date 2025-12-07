@@ -31,6 +31,14 @@ interface ToastProviderProps {
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isMobilePosition, setIsMobilePosition] = useState(false);
+
+  React.useEffect(() => {
+    const check = () => setIsMobilePosition(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const showToast = useCallback((
     message: string, 
@@ -53,7 +61,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       
       {/* Toast Container - fixed position at top-right */}
       <div 
-        className="fixed top-4 right-4 z-50 flex flex-col gap-3"
+        className={`fixed z-50 flex flex-col gap-3 ${isMobilePosition ? 'bottom-20 left-1/2 w-11/12 transform -translate-x-1/2' : 'top-4 right-4'} backdrop-blur-md bg-white/70 dark:bg-gray-900/60 rounded-lg p-2`}
         aria-live="polite"
         aria-atomic="true"
       >
@@ -64,6 +72,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
             message={toast.message}
             type={toast.type}
             duration={toast.duration}
+            position={isMobilePosition ? 'bottom' : 'top'}
             onClose={hideToast}
           />
         ))}

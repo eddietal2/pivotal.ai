@@ -3,6 +3,7 @@
 import React from 'react';
 import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import { ListChecks, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useToast } from '@/components/context/ToastContext';
 import { useUI } from '@/components/context/UIContext';
 
 type SignalFeedItemProps = {
@@ -31,6 +32,8 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
   const cardBorder = 'border border-gray-200 dark:border-gray-700';
 
   const { setModalOpen } = useUI();
+  const { showToast } = useToast();
+  const [added, setAdded] = React.useState(false);
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
   React.useEffect(() => {
     let locked = false;
@@ -74,10 +77,20 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
         {/* Action Buttons */}
         <div className="mt-4 flex gap-2 pt-3 border-t border-gray-700/50">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50 rounded-lg transition-colors">
+          <button
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${added ? 'text-green-800 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700/50' : 'text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50'} rounded-lg transition-colors`}
+            onClick={() => {
+              // UX: Show success toast and toggle temporary added state
+              showToast('Added to watchlist', 'success');
+              setAdded(true);
+              setTimeout(() => setAdded(false), 2500);
+            }}
+            aria-label="Add to Watchlist"
+          >
             <ListChecks className="w-3.5 h-3.5" />
-            Add to Watchlist
+            {added ? 'Added' : 'Add to Watchlist'}
           </button>
+          
           <button
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
             onClick={() => setChartModalOpen(true)}
@@ -109,13 +122,13 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
               {/* Content area */}
               <div className="flex-1 flex flex-col justify-start items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="space-y-6 w-full max-w-2xl mx-auto">
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                     <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
                       {signal}
                     </p>
                   </div>
 
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
                       <span className={`text-sm font-semibold ${color} flex items-center`}>
@@ -126,14 +139,14 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
                   </div>
 
                   {/* Chart Placeholder */}
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                     <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
                       <span className="text-gray-600 dark:text-gray-400 text-lg">[Signal Chart Placeholder]</span>
                     </div>
                   </div>
 
                   {/* Confluence List */}
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                     <div className="flex flex-wrap gap-2 justify-center">
                       {confluence.map((c, i) => (
                         <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">

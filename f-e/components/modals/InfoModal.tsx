@@ -110,7 +110,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
           {/* Header with title and top X close button */}
           <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
             </div>
             <button
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
