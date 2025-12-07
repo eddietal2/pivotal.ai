@@ -178,7 +178,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
             AI Market Overview
             {timeframe && (
               <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
-                {timeframe === 'D' ? 'Daily' : timeframe === 'W' ? 'Weekly' : timeframe === 'M' ? 'Monthly' : 'Yearly'}
+                {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
               </span>
             )}
           </h5>
