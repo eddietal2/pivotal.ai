@@ -16,9 +16,15 @@ type SignalFeedItemProps = {
 
 export default function SignalFeedItem({ ticker, signal, confluence, timeframe, change, type }: SignalFeedItemProps) {
   const isBullish = type === 'Bullish';
+  // Use softer/smaller contrast colors for readability
   const color = isBullish ? 'text-green-600' : type === 'Bearish' ? 'text-red-600' : 'text-yellow-600';
-  const bgColor = isBullish ? 'bg-green-50 dark:bg-green-900/50' : type === 'Bearish' ? 'bg-red-50 dark:bg-red-900/50' : 'bg-yellow-50 dark:bg-yellow-900/50';
-  const borderColor = isBullish ? 'border-green-300 dark:border-green-600' : type === 'Bearish' ? 'border-red-300 dark:border-red-600' : 'border-yellow-300 dark:border-yellow-600';
+  // Soft gradient with light grey -> color, and a gentle dark-mode overlay
+  const bgColor = isBullish
+    ? 'bg-gradient-to-r from-gray-50 to-green-50 dark:from-gray-900 dark:to-green-900/20'
+    : type === 'Bearish'
+    ? 'bg-gradient-to-r from-gray-50 to-red-50 dark:from-gray-900 dark:to-red-900/20'
+    : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow-900/20';
+  const borderColor = isBullish ? 'border-green-200 dark:border-green-500' : type === 'Bearish' ? 'border-red-200 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
 
   const { setModalOpen } = useUI();
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
@@ -53,9 +59,10 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
         <p className={`mt-2 text-lg font-semibold ${color}`}>{signal}</p>
 
+        {/* Confluence Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
           {confluence.map((c, i) => (
-            <span key={i} className="text-xs text-indigo-600 bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-700">
+            <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
               {c}
             </span>
           ))}
@@ -125,7 +132,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                     <div className="flex flex-wrap gap-2 justify-center">
                       {confluence.map((c, i) => (
-                        <span key={i} className="text-xs text-indigo-300 bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-700">
+                        <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
                           {c}
                         </span>
                       ))}
