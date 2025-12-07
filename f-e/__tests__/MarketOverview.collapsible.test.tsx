@@ -34,6 +34,8 @@ describe('MarketOverview collapsible behavior', () => {
     expect(screen.getByText('About Market Pulse')).toBeInTheDocument();
     // Modal CPU indicator should be rendered
     expect(screen.getByTestId('modal-cpu-indicator')).toBeInTheDocument();
+    // Modal header close button should be present
+    expect(screen.getByTestId('modal-close-top')).toBeInTheDocument();
   });
 
   test('Regenerate button triggers MarketOverview regeneration', async () => {

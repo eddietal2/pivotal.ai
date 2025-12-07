@@ -24,17 +24,35 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
     <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
       <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
         <div className="bg-gray-900 border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
-          <button
-            className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold z-10"
-            onClick={onClose}
-            aria-label="Close modal"
-          >
-            &times;
-          </button>
-          <div className="flex-1 flex flex-col justify-start items-center pt-16 pb-8 px-8 overflow-y-auto w-full max-h-screen"
+          {/* Header with title and top X close button */}
+          <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h4 className="text-2xl font-bold text-orange-300 flex items-center gap-2">{title}</h4>
+            </div>
+            <button
+              className="text-gray-400 hover:text-white text-2xl font-bold"
+              onClick={onClose}
+              aria-label="Close modal"
+              data-testid="modal-close-top"
+            >
+              &times;
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col justify-start items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen"
             style={{ WebkitOverflowScrolling: 'touch' }}>
-            <h4 className="text-2xl font-bold mb-6 text-center w-full flex items-center gap-2">{title}</h4>
             {children}
+          </div>
+          {/* Footer close button pinned to bottom of modal */}
+          <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+              onClick={onClose}
+              aria-label="Close modal"
+              data-testid="modal-close-bottom"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
