@@ -138,6 +138,8 @@ export default function App() {
   const closingTimer = React.useRef<number | null>(null);
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
+  // Modal chart timeframe state (for selectedPulse modal)
+  const [modalChartTimeframe, setModalChartTimeframe] = React.useState<'24H'|'1D'|'1W'|'1M'|'1Y'>(() => '1D');
 
   // Simulate loading on mount
   React.useEffect(() => {
@@ -158,16 +160,17 @@ export default function App() {
       }
     };
   }, [modalOpen]);
-  
-  // Example descriptions for each index
-  const pulseDescriptions: Record<string, string> = {
-    'S&P 500': 'The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.',
-    'VIX (Fear Index)': 'The VIX, or Volatility Index, measures the market’s expectation of volatility over the next 30 days. It is often referred to as the "fear index" and spikes during market turmoil.',
-    '10-Yr Yield': 'The 10-Year Treasury Yield reflects the return on investment for U.S. government bonds maturing in 10 years. It is a key indicator for interest rates and economic outlook.',
-    'Bitcoin': 'Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.',
-  };
 
-  // Normalize timeframe string to a category: D, W, M, Y
+  // When a pulse modal opens, initialize the modal chart timeframe to the selected pulse timeframe
+  React.useEffect(() => {
+    if (modalOpen && selectedPulse) {
+      const tf = selectedPulse.timeframe as '24H'|'1D'|'1W'|'1M'|'1Y' | undefined;
+      setModalChartTimeframe(tf ?? '1D');
+    }
+  }, [modalOpen, selectedPulse]);
+
+  // Compute display data for modal based on selectedPulse index and modal timeframe
+  // Normalize timeframe string to a category: D, W, M, Y (function moved up to be available for memo)
   const normalizeTimeframe = (tf?: string) => {
     if (!tf) return 'D';
     const t = tf.toUpperCase();
@@ -177,6 +180,34 @@ export default function App() {
     if (t.includes('Y') || t.includes('YEAR')) return 'Y';
     return 'D';
   };
+  // Human-friendly label for timeframe used in the modal pill (capitalized like MarketOverview)
+  const humanTimeframeLabel = (tf?: string) => {
+    if (!tf) return '';
+    const t = tf.toUpperCase();
+    if (t === '24H') return '24H';
+    if (t === '1D') return 'In the Last Day';
+    if (t === '1W') return 'In the Last Week';
+    if (t === '1M') return 'In the Last Month';
+    if (t === '1Y') return 'In the Last Year';
+    return tf;
+  };
+  const modalDisplayPulse = React.useMemo(() => {
+    if (!selectedPulse) return null;
+    const targetCat = normalizeTimeframe(modalChartTimeframe as string);
+    // find the first matching pulse with same index and timeframe category
+    const match = mockPulse.find((p) => p.index === selectedPulse.index && normalizeTimeframe(p.timeframe) === targetCat);
+    return match ?? selectedPulse;
+  }, [selectedPulse, modalChartTimeframe]);
+  
+  // Example descriptions for each index
+  const pulseDescriptions: Record<string, string> = {
+    'S&P 500': 'The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.',
+    'VIX (Fear Index)': 'The VIX, or Volatility Index, measures the market’s expectation of volatility over the next 30 days. It is often referred to as the "fear index" and spikes during market turmoil.',
+    '10-Yr Yield': 'The 10-Year Treasury Yield reflects the return on investment for U.S. government bonds maturing in 10 years. It is a key indicator for interest rates and economic outlook.',
+    'Bitcoin': 'Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.',
+  };
+
+  
 
   // Filter pulses by chosen timeframe
   const filteredPulse = React.useMemo(() => mockPulse.filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe), [pulseTimeframe]);
@@ -402,19 +433,27 @@ export default function App() {
               setSelectedPulse(null);
             }}
           >
+            {/* Modal Content */}
             <div className="space-y-6 w-full max-w-2xl mx-auto">
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {selectedPulse ? pulseDescriptions[selectedPulse.index] : 'No description available.'}
-                </p>
-              </div>
 
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+              {/* Price and Change */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPulse?.value}</span>
-                  <span className={`text-sm font-semibold ${selectedPulse?.color} flex items-center`}>
-                    {selectedPulse?.color?.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-                    {selectedPulse?.change}
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">{modalDisplayPulse?.value ?? selectedPulse?.value}</span>
+                    {(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe) && (
+                      <span
+                        title={(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe) === '24H' ? '24 hours (around the clock)' : `Last ${modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe}`}
+                        className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700"
+                      >
+                        {humanTimeframeLabel(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe)}
+                        {(modalDisplayPulse?.afterHours ?? selectedPulse?.afterHours) ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-sm font-semibold ${modalDisplayPulse?.color ?? selectedPulse?.color} flex items-center`}>
+                    {modalDisplayPulse?.color?.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                    {modalDisplayPulse?.change ?? selectedPulse?.change}
                   </span>
                 </div>
               </div>
@@ -422,9 +461,35 @@ export default function App() {
               {/* Chart Placeholder */}
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
-                  <span className="text-gray-600 dark:text-gray-400 text-lg">[Stock Chart Placeholder]</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-lg" data-testid="modal-chart-placeholder">[Stock Chart Placeholder{modalChartTimeframe ? ` - ${modalChartTimeframe}` : ''}]</span>
                 </div>
               </div>
+
+              {/* Timeline Filter (right above chart placeholder) */}
+              <div className="flex items-center justify-center gap-2">
+                <div className="text-sm text-gray-500 mr-2">Timeline:</div>
+                {(['1D','1W','1M','1Y'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={modalChartTimeframe === t}
+                    data-testid={`modal-chart-filter-${t}`}
+                    title={`Show ${t} timeframe`}
+                    onClick={() => setModalChartTimeframe(t)}
+                    className={`min-w-[40px] px-2 py-1 text-xs rounded ${modalChartTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              {/* Description */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {selectedPulse ? pulseDescriptions[selectedPulse.index] : 'No description available.'}
+                </p>
+              </div>
+
             </div>
           </InfoModal>
 

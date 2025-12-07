@@ -28,8 +28,20 @@ describe('MarketPulseCard Timeframe badges', () => {
     fireEvent.click(spCard);
     // lock count should be increased
     expect(document.body.dataset.modalCount).toBe('1');
+    // Change chart timeframe to 1W to test the timeline filter in modal
+    const filterBtn = getByText('1W');
+    fireEvent.click(filterBtn);
+    const chartPlaceholder = getByText(/Stock Chart Placeholder/);
+    expect(chartPlaceholder.textContent).toContain('1W');
+
+    // Additionally, verify the price and change update for the 1W timeframe for S&P 500
+    expect(screen.getByText('5185.32')).toBeInTheDocument();
+    expect(screen.getByText('+2.45%')).toBeInTheDocument();
+    // Verify the human-friendly timeframe pill is present
+    expect(screen.getByText(/in the last week/i)).toBeInTheDocument();
+
     // Close using the top-close button
-    const closeBtn = getByLabelText('Close info modal');
+    const closeBtn = getByLabelText('Close modal');
     fireEvent.click(closeBtn);
     // Advance timers to allow fallback to trigger
     jest.advanceTimersByTime(500);
