@@ -471,7 +471,24 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
-    it('FE-806: ', async () => {
-   
+    it('FE-806: The order of the links in the Bottom Nav Bar remains consistent across all pages.', async () => {
+        const pages = ['/home', '/watchlist', '/news', '/settings'];
+        let previousOrder = null;
+
+        for (const page of pages) {
+            mockUsePathname.mockReturnValue(page);
+            render(<BottomNav />);
+
+            const links = screen.getAllByRole('link');
+            const currentOrder = links.map(link => link.getAttribute('href'));
+
+            if (previousOrder) {
+                expect(currentOrder).toEqual(previousOrder);
+            }
+            previousOrder = currentOrder;
+
+            // Cleanup after each render to avoid overlapping renders
+            cleanup();
+        }
     });
  });
