@@ -32,9 +32,9 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
+    <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/50 dark:bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
       <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-      <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+      <div className="bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
           {/* Header with title and top X close button */}
           <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">

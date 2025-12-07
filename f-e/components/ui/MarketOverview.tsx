@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
-import { Cpu } from 'lucide-react';
+import { Cpu, Eye } from 'lucide-react';
+import InfoModal from '../modals/InfoModal';
 // Info icon removed; parent will render info button/modal
 
 type PulseItem = {
@@ -15,20 +16,38 @@ type PulseItem = {
 
 async function generateAiOverview(_pulses: PulseItem[]) {
   // For development: return a static placeholder message (deterministic)
-  const overlay = 'Market overview placeholder; use this text to prototype and test the UI. This placeholder repeats the same value for development.';
+  const summary = 'Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations.';
+  const fullSentiment = `Market overview placeholder; use this text to prototype and test the UI. This placeholder repeats the same value for development. The full sentiment analysis provides deeper insights into market psychology, technical indicators, and fundamental factors driving current price movements. It includes detailed analysis of sector rotations, institutional positioning, and macroeconomic influences that may not be immediately apparent from surface-level price action. This comprehensive view helps traders understand the broader context behind short-term market fluctuations and identify potential turning points in market sentiment.
+
+The market sentiment analysis delves into multiple layers of market dynamics, examining both quantitative and qualitative factors that influence price movements. Technical analysis reveals key support and resistance levels, while fundamental analysis considers earnings reports, economic indicators, and geopolitical events. Institutional positioning shows significant accumulation in defensive sectors, suggesting a risk-off mentality among large investors.
+
+Sector rotation analysis indicates a shift towards technology and healthcare stocks, with energy and financials showing relative weakness. This rotation may be driven by expectations of interest rate cuts and renewed focus on growth-oriented companies. The analysis also considers market breadth indicators, which show improving participation across market caps, though large-cap stocks continue to lead.
+
+Sentiment indicators, including put/call ratios, volatility indices, and investor surveys, point to cautious optimism rather than exuberance. This balanced sentiment suggests room for upside potential while acknowledging potential downside risks from economic uncertainty. The comprehensive sentiment model incorporates machine learning algorithms that analyze news sentiment, social media trends, and trading patterns to provide a holistic view of market psychology.
+
+Furthermore, the analysis examines intermarket relationships, including correlations between equities, bonds, commodities, and currencies. Current data shows weakening correlations, which could indicate increasing market segmentation and the potential for more idiosyncratic stock performance. This environment favors active stock selection over passive index investing.
+
+Risk assessment includes evaluation of tail risks, such as unexpected economic data releases or geopolitical tensions that could trigger market volatility. The model also considers liquidity conditions, with current tight spreads suggesting efficient markets but potential vulnerability to sudden shocks.
+
+In conclusion, the full sentiment analysis provides traders and investors with a comprehensive framework for understanding market dynamics, enabling more informed decision-making in an increasingly complex financial landscape. This detailed perspective goes beyond surface-level price action to uncover the underlying drivers of market behavior and sentiment shifts.`;
   // Keep simulated latency for UI timing
   await new Promise((r) => setTimeout(r, 600));
-  return overlay;
+  return { summary, fullSentiment };
 }
 
 export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { pulses: PulseItem[]; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; }) {
-  const [fullOverview, setFullOverview] = React.useState<string | null>(null);
+  const [summaryOverview, setSummaryOverview] = React.useState<string | null>(null);
+  const [fullSentiment, setFullSentiment] = React.useState<string | null>(null);
   const [displayedOverview, setDisplayedOverview] = React.useState<string>('');
   const [loading, setLoading] = React.useState(false);
   // Info modal is handled by parent; accept onOpenInfo callback
   const typingRef = React.useRef<number | null>(null);
   const [isTyping, setIsTyping] = React.useState(false);
-  const TYPING_SPEED = 20; // ms per char
+  const [fullSentimentModalOpen, setFullSentimentModalOpen] = React.useState(false);
+  const [modalDisplayedText, setModalDisplayedText] = React.useState<string>('');
+  const [modalTyping, setModalTyping] = React.useState(false);
+  const modalTypingRef = React.useRef<number | null>(null);
+  const TYPING_SPEED = 5; // ms per char
 
   const regenerate = React.useCallback(async () => {
     // cancel any current typing
@@ -39,7 +58,8 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
     // If there are no pulses to generate from, set a small message and avoid a fake generation
     if (!pulses || pulses.length === 0) {
       setDisplayedOverview('No data available for the selected timeframe.');
-      setFullOverview('No data available for the selected timeframe.');
+      setSummaryOverview('No data available for the selected timeframe.');
+      setFullSentiment('No data available for the selected timeframe.');
       setLoading(false);
       onStateChange?.({ loading: false, isTyping: false });
       return;
@@ -47,8 +67,9 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
     setLoading(true);
     onStateChange?.({ loading: true, isTyping: false });
     setDisplayedOverview('');
-    const text = await generateAiOverview(pulses);
-    setFullOverview(text);
+    const result = await generateAiOverview(pulses);
+    setSummaryOverview(result.summary);
+    setFullSentiment(result.fullSentiment);
     setLoading(false);
     onStateChange?.({ loading: false, isTyping: false });
   }, [pulses]);
@@ -61,9 +82,9 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
 
   // No external regenerate trigger; user can regenerate using the in-content button
 
-  // Start typewriter whenever fullOverview changes
+  // Start typewriter whenever summaryOverview changes
   React.useEffect(() => {
-    const text = fullOverview;
+    const text = summaryOverview;
     if (!text) return;
     // cancel any previous
     if (typingRef.current) {
@@ -94,7 +115,45 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
       setIsTyping(false);
       onStateChange?.({ loading: false, isTyping: false });
     };
-  }, [fullOverview]);
+  }, [summaryOverview]);
+
+  // Modal typewriter effect
+  React.useEffect(() => {
+    if (!fullSentimentModalOpen || !fullSentiment) {
+      setModalDisplayedText('');
+      setModalTyping(false);
+      return;
+    }
+
+    // cancel any previous modal typing
+    if (modalTypingRef.current) {
+      clearInterval(modalTypingRef.current);
+      modalTypingRef.current = null;
+    }
+
+    setModalDisplayedText('');
+    let i = 0;
+    setModalTyping(true);
+    modalTypingRef.current = window.setInterval(() => {
+      i += 1;
+      setModalDisplayedText(fullSentiment.slice(0, i));
+      if (i >= fullSentiment.length) {
+        if (modalTypingRef.current) {
+          clearInterval(modalTypingRef.current);
+          modalTypingRef.current = null;
+        }
+        setModalTyping(false);
+      }
+    }, TYPING_SPEED);
+
+    return () => {
+      if (modalTypingRef.current) {
+        clearInterval(modalTypingRef.current);
+        modalTypingRef.current = null;
+      }
+      setModalTyping(false);
+    };
+  }, [fullSentimentModalOpen, fullSentiment]);
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm dark:shadow-lg">
@@ -107,7 +166,7 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
               className={`${loading ? 'text-gray-500 dark:text-gray-400 animate-pulse' : isTyping ? 'text-orange-600 dark:text-orange-300 animate-pulse' : 'text-green-600 dark:text-green-300'} w-5 h-5`}
               aria-hidden
             />
-            AI Summary of Market Sentiment
+            AI Market Overview
           </h5>
         </div>
         <div className="flex items-center gap-2">
@@ -137,13 +196,23 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
               {/* Display overlay text */}
               <span className="inline-block pl-0 text-gray-900 dark:text-gray-100">{displayedOverview}</span>
             {/* caret while typing */}
-            {displayedOverview.length < (fullOverview?.length ?? 0) && (
+            {displayedOverview.length < (summaryOverview?.length ?? 0) && (
               <span data-testid="type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-900 dark:text-gray-100">|</span>
             )}
           </span>
         </p>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            title="View Full Sentiment Analysis"
+            className="px-3 py-1 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors flex items-center gap-1"
+            onClick={() => setFullSentimentModalOpen(true)}
+            aria-label="View full sentiment analysis"
+          >
+            <Eye className="w-3 h-3" />
+            View Full Sentiment
+          </button>
           <button
             type="button"
             title="Regenerate Overview"
@@ -163,6 +232,28 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
           animation: blink 1s step-end infinite;
         }
       `}</style>
+
+      {/* Full Sentiment Modal */}
+      <InfoModal
+        open={fullSentimentModalOpen}
+        onClose={() => setFullSentimentModalOpen(false)}
+        title={
+          <>
+            <Eye className="w-6 h-6" />
+            Full Sentiment Analysis
+          </>
+        }
+        ariaLabel="Full sentiment analysis modal"
+      >
+        <div className="max-w-4xl mx-auto">
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+            {modalDisplayedText || 'No full sentiment analysis available.'}
+            {modalTyping && modalDisplayedText.length < (fullSentiment?.length ?? 0) && (
+              <span data-testid="modal-type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-700 dark:text-gray-300">|</span>
+            )}
+          </p>
+        </div>
+      </InfoModal>
 
       {/* InfoModal moved to parent */}
     </div>
