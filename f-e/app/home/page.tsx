@@ -9,6 +9,7 @@ import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
 import Sparkline from '@/components/ui/Sparkline';
 import MarketOverview from '@/components/ui/MarketOverview';
+import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton } from '@/components/ui/skeletons';
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
@@ -63,7 +64,7 @@ const mockPulse = [
 // 1. Global Market Pulse Card
 const MarketPulseCard = ({ index, value, change, color, onClick, trend, timeframe, afterHours }: { index: string; value: number; change: string; color: string; onClick: () => void; trend?: number[]; timeframe?: string; afterHours?: boolean }) => (
   <button
-    className="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
     onClick={onClick}
     type="button"
     aria-label={`More info about ${index}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
@@ -74,7 +75,7 @@ const MarketPulseCard = ({ index, value, change, color, onClick, trend, timefram
       {timeframe && (
         <span
           title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`}
-          className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-800/70 border border-gray-700 text-gray-300"
+          className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
         >{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
       )}
     </div>
@@ -87,7 +88,7 @@ const MarketPulseCard = ({ index, value, change, color, onClick, trend, timefram
             <Sparkline data={trend} width={72} height={28} stroke={color.includes('green') ? '#34d399' : '#f87171'} className="rounded" gradient={true} fillOpacity={0.12} />
           )}
         </div>
-        <span className="text-xl font-bold text-white">{value}</span>
+        <span className="text-xl font-bold text-gray-900 dark:text-white">{value}</span>
       </div>
       <span className={`text-sm font-semibold ${color} flex items-center`}>
         {color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
@@ -100,9 +101,9 @@ const MarketPulseCard = ({ index, value, change, color, onClick, trend, timefram
 // 3. Confluence Signal Feed Item
 const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }: { ticker: string; signal: string; confluence: string[]; timeframe: string; change: string; type: string }) => {
   const isBullish = type === 'Bullish';
-  const color = isBullish ? 'text-green-400' : type === 'Bearish' ? 'text-red-400' : 'text-yellow-400';
-  const bgColor = isBullish ? 'bg-green-900/50' : type === 'Bearish' ? 'bg-red-900/50' : 'bg-yellow-900/50';
-  const borderColor = isBullish ? 'border-green-600' : type === 'Bearish' ? 'border-red-600' : 'border-yellow-600';
+  const color = isBullish ? 'text-green-600' : type === 'Bearish' ? 'text-red-600' : 'text-yellow-600';
+  const bgColor = isBullish ? 'bg-green-50 dark:bg-green-900/50' : type === 'Bearish' ? 'bg-red-50 dark:bg-red-900/50' : 'bg-yellow-50 dark:bg-yellow-900/50';
+  const borderColor = isBullish ? 'border-green-300 dark:border-green-600' : type === 'Bearish' ? 'border-red-300 dark:border-red-600' : 'border-yellow-300 dark:border-yellow-600';
 
   const { setModalOpen } = useUI();
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
@@ -122,8 +123,8 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
       <div className={`p-5 rounded-2xl border-l-4 ${borderColor} ${bgColor} transition duration-300 hover:shadow-2xl`}>
         <div className="flex justify-between items-start">
           <div className="flex items-baseline">
-            <span className="text-2xl font-extrabold text-white mr-2">{ticker}</span>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${borderColor} bg-gray-900/70`}>
+            <span className="text-2xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${borderColor} bg-gray-50 dark:bg-gray-900/70`}>
               {timeframe}
             </span>
           </div>
@@ -137,7 +138,7 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
 
         <div className="mt-3 flex flex-wrap gap-2">
           {confluence.map((c, i) => (
-            <span key={i} className="text-xs text-indigo-300 bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-700">
+            <span key={i} className="text-xs text-indigo-600 bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-700">
               {c}
             </span>
           ))}
@@ -145,12 +146,12 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
 
         {/* Action Buttons */}
         <div className="mt-4 flex gap-2 pt-3 border-t border-gray-700/50">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-300 bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-700/50 rounded-lg transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700/50 rounded-lg transition-colors">
             <ListChecks className="w-3.5 h-3.5" />
             Add to Watchlist
           </button>
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
             onClick={() => setChartModalOpen(true)}
           >
             View Chart
@@ -161,10 +162,10 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
       {chartModalOpen && (
         <div className="fixed inset-0 z-[101] min-h-screen h-screen w-screen bg-black/70">
           <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
               <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-2xl font-bold text-white flex items-center gap-2">{ticker} Chart</h4>
+                  <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{ticker} Chart</h4>
                 </div>
                 <button
                   className="text-gray-400 hover:text-white text-2xl font-bold"
@@ -176,19 +177,19 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
                 </button>
               </div>
               <div className="flex-1 flex flex-col justify-center items-center pt-6 pb-8 px-8 overflow-y-auto w-full">
-                <p className="text-sm text-gray-300 mb-4 text-center max-w-xl w-full">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 text-center max-w-xl w-full">
                   {signal}
                 </p>
                 <div className="flex items-center justify-between w-full max-w-md mx-auto mb-8">
-                  <span className="text-lg font-bold text-white">{change}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{change}</span>
                   <span className={`text-sm font-semibold ${color} flex items-center`}>
                     {type === 'Bullish' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : type === 'Bearish' ? <ArrowDownRight className="w-4 h-4 mr-1" /> : null}
                     {type}
                   </span>
                 </div>
                 {/* Chart Placeholder */}
-                <div className="w-full max-w-md h-64 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center mb-8">
-                  <span className="text-gray-400 text-lg">[Signal Chart Placeholder]</span>
+                <div className="w-full max-w-md h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center mb-8">
+                  <span className="text-gray-600 dark:text-gray-400 text-lg">[Signal Chart Placeholder]</span>
                 </div>
                 {/* Confluence List */}
                 <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -200,10 +201,10 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
                 </div>
               </div>
               {/* Footer close button for Chart Modal */}
-              <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
                 <button
                   type="button"
-                  className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   onClick={() => setChartModalOpen(false)}
                   aria-label="Close chart modal"
                   data-testid="chart-modal-close-bottom"
@@ -236,10 +237,22 @@ export default function App() {
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
+  // Timeframe filter for Market Pulse (D, W, M, Y)
+  const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
+  // Timeframe filter for Live Setup Scans (D, W, M, Y)
+  const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
   const [closingDisclaimer, setClosingDisclaimer] = React.useState(false);
   const closingTimer = React.useRef<number | null>(null);
+  // Loading state for skeletons
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Simulate loading on mount
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 2000); // 2 second loading simulation
+    return () => clearTimeout(timer);
+  }, []);
 
   // prevent background scrolling when the pulse info modal is open
   React.useEffect(() => {
@@ -261,59 +274,164 @@ export default function App() {
     'Bitcoin': 'Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.',
   };
 
+  // Normalize timeframe string to a category: D, W, M, Y
+  const normalizeTimeframe = (tf?: string) => {
+    if (!tf) return 'D';
+    const t = tf.toUpperCase();
+    if (t.includes('24H') || t.endsWith('D') || t.includes('DAY') || t === '1D') return 'D';
+    if (t.includes('W') || t.includes('WEEK')) return 'W';
+    if (t.includes('M') && !t.includes('MS')) return 'M';
+    if (t.includes('Y') || t.includes('YEAR')) return 'Y';
+    return 'D';
+  };
+
+  // Filter pulses by chosen timeframe
+  const filteredPulse = mockPulse.filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe);
+  // Filter signals by chosen timeframe
+  const filteredSignals = mockSignals.filter((s) => normalizeTimeframe(s.timeframe) === signalTimeframe);
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white font-sans">
+    <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white font-sans">
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
           
           {/* Global Market Pulse */}
-          <CollapsibleSection
-            title={
-              <span className="flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-green-400" />
-                Market Pulse Overview
-              </span>
-            }
-            infoButton={
-              <div className="flex items-center gap-2">
-                {/* Overview info button (shows MarketOverview modal even when collapsed) */}
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                  title="Learn more about Market Overview"
-                  aria-label="More info about Market Overview"
-                  data-testid="overview-info-btn"
-                  onClick={() => setInfoModalOpen(true)}
-                >
-                  <Info className="w-5 h-5 text-orange-300" />
-                </button>
+          {isLoading ? (
+            <MarketPulseSkeleton />
+          ) : (
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  {/* <TrendingUp className="w-6 h-6 text-green-400" /> */}
+                  Market Pulse
+                </span>
+              }
+              infoButton={
+                <div className="flex items-center gap-2">
+                  {/* Overview info button (shows MarketOverview modal even when collapsed) */}
+                  <button
+                    type="button"
+                    className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                    title="Learn more about Market Overview"
+                    aria-label="More info about Market Overview"
+                    data-testid="overview-info-btn"
+                    onClick={() => setInfoModalOpen(true)}
+                  >
+                    <Info className="w-5 h-5 text-orange-300" />
+                  </button>
+                  {/* Timeframe filter */}
+                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
+                    {(['D','W','M','Y'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        aria-pressed={pulseTimeframe === t}
+                        aria-label={`Show ${t} timeframe`}
+                        data-testid={`pulse-filter-${t}`}
+                        onClick={() => setPulseTimeframe(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              }
+            >
+              {/* Render MarketOverview inside collapsible */}
+                <div className="mb-4">
+                {isLoading ? (
+                  <MarketOverviewSkeleton />
+                ) : (
+                  <MarketOverview
+                    pulses={mockPulse}
+                    onOpenInfo={() => setInfoModalOpen(true)}
+                    onStateChange={(s) => setOverviewCpuState(s)}
+                  />
+                )}
               </div>
-            }
-          >
-            {/* Render MarketOverview inside collapsible */}
-              <div className="mb-4">
-              <MarketOverview
-                pulses={mockPulse}
-                onOpenInfo={() => setInfoModalOpen(true)}
-                onStateChange={(s) => setOverviewCpuState(s)}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {mockPulse.map((pulse, index) => (
-                <MarketPulseCard
-                  key={index}
-                  {...pulse}
-                  onClick={() => {
-                    setSelectedPulse(pulse);
-                    setModalOpen(true);
-                  }}
-                />
-              ))}
-            {/* Market Pulse Info Modal (renders outside the collapsible content so it shows even when collapsed) */}
-            </div>
-              </CollapsibleSection>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
+                ) : (
+                  filteredPulse.map((pulse, index) => (
+                    <MarketPulseCard
+                      key={index}
+                      {...pulse}
+                      onClick={() => {
+                        setSelectedPulse(pulse);
+                        setModalOpen(true);
+                      }}
+                    />
+                  ))
+                )}
+              {/* Market Pulse Info Modal (renders outside the collapsible content so it shows even when collapsed) */}
+              </div>
+                </CollapsibleSection>
+          )}
+
+          {/* Real-time Confluence Feed */}
+          {isLoading ? (
+            <SignalFeedSkeleton />
+          ) : (
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  {/* <ListChecks className="w-6 h-6 text-indigo-400" /> */}
+                  Live Setup Scans
+                </span>
+              }
+              infoButton={
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="p-1 rounded-full hover:bg-gray-800 transition"
+                    title="Learn more about Live Setup Scans"
+                    aria-label="More info about Live Setup Scans"
+                    onClick={() => setSignalFeedInfoOpen(true)}
+                  >
+                    <Info className="w-5 h-5 text-orange-300" />
+                  </button>
+                  {/* Timeframe filter */}
+                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
+                    {(['D','W','M','Y'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${signalTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        aria-pressed={signalTimeframe === t}
+                        aria-label={`Show ${t} timeframe`}
+                        data-testid={`signal-filter-${t}`}
+                        onClick={() => setSignalTimeframe(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              }
+            >
+              <div className="space-y-6">
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
+                ) : (
+                  filteredSignals.map((signal, index) => (
+                    <SignalFeedItem key={index} {...signal} />
+                  ))
+                )}
+                <div className="text-center p-4">
+                  <p className="text-indigo-400 font-semibold flex items-center justify-center">
+                    <ListChecks className="w-5 h-5 mr-2" />
+                    View & Customize Watchlist Scans
+                  </p>
+                </div>
+                {/* Info Modal for Live Setup Scans - renders outside collapsible content */}
+              </div>
+            </CollapsibleSection>
+          )}
+
           {/* Market Pulse Info Modal (refactored to InfoModal) */}
           {/* Unified Info Modal: includes both Market Pulse details and Market Overview details */}
           <InfoModal
@@ -339,23 +457,23 @@ export default function App() {
                 <h4 className="text-xl font-bold text-green-300 flex items-center gap-2"><TrendingUp className="w-5 h-5" />About Market Pulse</h4>
                 <p className="text-sm text-gray-300 mt-2">Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">S&P 500</h5>
                 <p className="text-sm text-gray-300">The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">VIX (Fear Index)</h5>
                 <p className="text-sm text-gray-300">The VIX, or Volatility Index, measures the market’s expectation of volatility over the next 30 days. It is often referred to as the "fear index" and spikes during market turmoil.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">10-Year Treasury Yield</h5>
                 <p className="text-sm text-gray-300">The 10-Year Treasury Yield reflects the return on investment for U.S. government bonds maturing in 10 years. It is a key indicator for interest rates and economic outlook.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">Bitcoin</h5>
                 <p className="text-sm text-gray-300">Bitcoin (BTC) is the world’s largest cryptocurrency by market capitalization. It is a decentralized digital currency that operates without a central bank and is traded globally 24/7. Bitcoin is often seen as a store of value and a hedge against inflation.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">How to Use</h5>
                 <p className="text-sm text-gray-300">Monitor these indices to understand the current market environment. Rising S&P 500 values indicate bullish sentiment, while spikes in the VIX suggest increased fear or volatility. The 10-Year Yield reflects interest rate expectations and economic outlook.</p>
               </div>
@@ -424,39 +542,24 @@ export default function App() {
             </div>
           )}
 
-          {/* Real-time Confluence Feed */}
-          <CollapsibleSection
-            title={
-              <span className="flex items-center gap-2">
-                <ListChecks className="w-6 h-6 text-indigo-400" />
-                Live Setup Scans
-              </span>
-            }
-            infoButton={
-              <button
-                type="button"
-                className="p-1 rounded-full hover:bg-gray-800 transition ml-4"
-                title="Learn more about Live Setup Scans"
-                aria-label="More info about Live Setup Scans"
-                onClick={() => setSignalFeedInfoOpen(true)}
-              >
-                <Info className="w-5 h-5 text-orange-300" />
-              </button>
-            }
+          {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
+          <InfoModal
+            open={signalFeedInfoOpen}
+            onClose={() => setSignalFeedInfoOpen(false)}
+            title={<><Info className="w-6 h-6 text-orange-300" />About Live Setup Scans</>}
+            ariaLabel="About Live Setup Scans"
           >
-            <div className="space-y-6">
-              {mockSignals.map((signal, index) => (
-                <SignalFeedItem key={index} {...signal} />
-              ))}
-              <div className="text-center p-4">
-                <p className="text-indigo-400 font-semibold flex items-center justify-center">
-                  <ListChecks className="w-5 h-5 mr-2" />
-                  View & Customize Watchlist Scans
-                </p>
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-lg font-bold text-indigo-300 mb-2">What is the Live Setup Scans Feed?</h5>
+                <p className="text-sm text-gray-300">The Live Setup Scans section provides real-time actionable trading setups detected by our AI. Each card summarizes a unique market opportunity, including the ticker, setup type, confluence factors, timeframe, and recent price change. Use these signals to quickly identify high-probability entries, reversals, breakouts, and consolidations across the market.</p>
               </div>
-              {/* Info Modal for Live Setup Scans - renders outside collapsible content */}
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h5 className="text-lg font-bold text-indigo-300 mb-2">How to Use</h5>
+                <p className="text-sm text-gray-300">Review the confluence factors for each setup to understand why the signal was generated. Add setups to your watchlist or view charts for deeper analysis. The feed updates continuously to reflect the latest market conditions.</p>
+              </div>
             </div>
-          </CollapsibleSection>
+          </InfoModal>
           {/* Pinned MarketOverview removed: MarketOverview always renders inside the Market Pulse CollapsibleSection */}
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal
@@ -466,7 +569,7 @@ export default function App() {
             ariaLabel="About Live Setup Scans"
           >
             <div className="w-full max-w-2xl mx-auto space-y-6">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-indigo-300 mb-2">What is the Live Setup Scans Feed?</h5>
                 <p className="text-sm text-gray-300">The Live Setup Scans section provides real-time actionable trading setups detected by our AI. Each card summarizes a unique market opportunity, including the ticker, setup type, confluence factors, timeframe, and recent price change. Use these signals to quickly identify high-probability entries, reversals, breakouts, and consolidations across the market.</p>
               </div>
@@ -480,7 +583,7 @@ export default function App() {
           {/* Legal Disclaimer */}
           {showDisclaimer && (
             <div
-              className={`relative p-4 bg-orange-900/40 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8 transition-opacity transform ${closingDisclaimer ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0'}`}
+              className={`relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8 transition-opacity transform ${closingDisclaimer ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0'}`}
               aria-hidden={closingDisclaimer}
             >
               <button
