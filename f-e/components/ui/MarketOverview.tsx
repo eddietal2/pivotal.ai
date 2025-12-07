@@ -14,12 +14,22 @@ type PulseItem = {
   afterHours?: boolean;
 };
 
-async function generateAiOverview(_pulses: PulseItem[]) {
-  // For development: return a static placeholder message (deterministic)
-  const summary = 'Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations.';
-  const fullSentiment = `Market overview placeholder; use this text to prototype and test the UI. This placeholder repeats the same value for development. The full sentiment analysis provides deeper insights into market psychology, technical indicators, and fundamental factors driving current price movements. It includes detailed analysis of sector rotations, institutional positioning, and macroeconomic influences that may not be immediately apparent from surface-level price action. This comprehensive view helps traders understand the broader context behind short-term market fluctuations and identify potential turning points in market sentiment.
+async function generateAiOverview(_pulses: PulseItem[], timeframe: 'D'|'W'|'M'|'Y' = 'D') {
+  // For development: return timeframe-specific placeholder messages
+  const timeframeLabels = {
+    D: 'daily',
+    W: 'weekly',
+    M: 'monthly',
+    Y: 'yearly'
+  };
 
-The market sentiment analysis delves into multiple layers of market dynamics, examining both quantitative and qualitative factors that influence price movements. Technical analysis reveals key support and resistance levels, while fundamental analysis considers earnings reports, economic indicators, and geopolitical events. Institutional positioning shows significant accumulation in defensive sectors, suggesting a risk-off mentality among large investors.
+  const timeframeContext = timeframeLabels[timeframe];
+
+  const summary = `Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations. (Based on ${timeframeContext} data)`;
+
+  const fullSentiment = `Market overview placeholder for ${timeframeContext} analysis; use this text to prototype and test the UI. This ${timeframeContext} sentiment analysis provides deeper insights into market psychology, technical indicators, and fundamental factors driving current price movements. It includes detailed analysis of sector rotations, institutional positioning, and macroeconomic influences that may not be immediately apparent from surface-level price action. This comprehensive view helps traders understand the broader context behind ${timeframeContext} market fluctuations and identify potential turning points in market sentiment.
+
+The ${timeframeContext} market sentiment analysis delves into multiple layers of market dynamics, examining both quantitative and qualitative factors that influence price movements. Technical analysis reveals key support and resistance levels, while fundamental analysis considers earnings reports, economic indicators, and geopolitical events. Institutional positioning shows significant accumulation in defensive sectors, suggesting a risk-off mentality among large investors.
 
 Sector rotation analysis indicates a shift towards technology and healthcare stocks, with energy and financials showing relative weakness. This rotation may be driven by expectations of interest rate cuts and renewed focus on growth-oriented companies. The analysis also considers market breadth indicators, which show improving participation across market caps, though large-cap stocks continue to lead.
 
@@ -29,13 +39,13 @@ Furthermore, the analysis examines intermarket relationships, including correlat
 
 Risk assessment includes evaluation of tail risks, such as unexpected economic data releases or geopolitical tensions that could trigger market volatility. The model also considers liquidity conditions, with current tight spreads suggesting efficient markets but potential vulnerability to sudden shocks.
 
-In conclusion, the full sentiment analysis provides traders and investors with a comprehensive framework for understanding market dynamics, enabling more informed decision-making in an increasingly complex financial landscape. This detailed perspective goes beyond surface-level price action to uncover the underlying drivers of market behavior and sentiment shifts.`;
+In conclusion, the full ${timeframeContext} sentiment analysis provides traders and investors with a comprehensive framework for understanding market dynamics, enabling more informed decision-making in an increasingly complex financial landscape. This detailed perspective goes beyond surface-level price action to uncover the underlying drivers of market behavior and sentiment shifts.`;
   // Keep simulated latency for UI timing
   await new Promise((r) => setTimeout(r, 600));
   return { summary, fullSentiment };
 }
 
-export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { pulses: PulseItem[]; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; }) {
+export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateChange }: { pulses: PulseItem[]; timeframe?: 'D'|'W'|'M'|'Y'; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; }) {
   const [summaryOverview, setSummaryOverview] = React.useState<string | null>(null);
   const [fullSentiment, setFullSentiment] = React.useState<string | null>(null);
   const [displayedOverview, setDisplayedOverview] = React.useState<string>('');
@@ -67,18 +77,17 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
     setLoading(true);
     onStateChange?.({ loading: true, isTyping: false });
     setDisplayedOverview('');
-    const result = await generateAiOverview(pulses);
+    const result = await generateAiOverview(pulses, timeframe);
     setSummaryOverview(result.summary);
     setFullSentiment(result.fullSentiment);
     setLoading(false);
     onStateChange?.({ loading: false, isTyping: false });
-  }, [pulses]);
+  }, [pulses, timeframe]);
 
   React.useEffect(() => {
-    // generate initial overview on mount and whenever pulses change
+    // generate initial overview on mount and whenever pulses or timeframe change
     regenerate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pulses]);
+  }, [regenerate]);
 
   // No external regenerate trigger; user can regenerate using the in-content button
 
@@ -167,6 +176,11 @@ export default function MarketOverview({ pulses, onOpenInfo, onStateChange }: { 
               aria-hidden
             />
             AI Market Overview
+            {timeframe && (
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                {timeframe === 'D' ? 'Daily' : timeframe === 'W' ? 'Weekly' : timeframe === 'M' ? 'Monthly' : 'Yearly'}
+              </span>
+            )}
           </h5>
         </div>
         <div className="flex items-center gap-2">
