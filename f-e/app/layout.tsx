@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/context/ThemeContext";
 import { ToastProvider } from "@/components/context/ToastContext";
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
+import { UIProvider } from "@/components/context/UIContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,15 +33,17 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ToastProvider>
-            <div className="min-h-screen flex flex-col">
-              {/* Navigation wrapper conditionally renders TopNav and BottomNav */}
-              <NavigationWrapper />
-              
-              {/* Main Content Area */}
-              <main className="flex-1 pb-16 md:pb-0">
-                {children}
-              </main>
-            </div>
+            {/* UIProvider for global modal state */}
+            <UIProvider>
+              <div className="min-h-screen flex flex-col">
+                {/* Navigation wrapper conditionally renders TopNav and BottomNav */}
+                <NavigationWrapper />
+                {/* Main Content Area */}
+                <main className="flex-1 pb-16 md:pb-0">
+                  {children}
+                </main>
+              </div>
+            </UIProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

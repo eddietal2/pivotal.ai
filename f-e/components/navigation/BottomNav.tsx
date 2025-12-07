@@ -13,6 +13,9 @@ const navLinks = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { modalOpen } = require('@/components/context/UIContext').useUI();
+
+  if (modalOpen) return null;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black z-50">
@@ -20,7 +23,6 @@ export default function BottomNav() {
         {navLinks.map((link) => {
           const Icon = link.icon;
           const isActive = pathname === link.href;
-          
           return (
             <Link
               key={link.name}

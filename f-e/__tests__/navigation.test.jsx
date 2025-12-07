@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ThemeProvider } from '../components/context/ThemeContext'
 import { redirectTo } from '../lib/redirect'
 
