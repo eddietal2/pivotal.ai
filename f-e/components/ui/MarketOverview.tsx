@@ -129,8 +129,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   // Modal typewriter effect
   React.useEffect(() => {
     if (!fullSentimentModalOpen || !fullSentiment) {
-      setModalDisplayedText('');
-      setModalTyping(false);
+      // Keep displayed text while the modal plays its closing animation; cleanup handled in onAfterClose
       return;
     }
 
@@ -258,6 +257,15 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           </>
         }
         ariaLabel="Full sentiment analysis modal"
+        onAfterClose={() => {
+          // clear modal typing text only after animation ends and modal is fully closed
+          if (modalTypingRef.current) {
+            clearInterval(modalTypingRef.current);
+            modalTypingRef.current = null;
+          }
+          setModalDisplayedText('');
+          setModalTyping(false);
+        }}
       >
         <div className="max-w-4xl mx-auto">
           {timeframe && (
