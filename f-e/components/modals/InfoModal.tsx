@@ -8,9 +8,14 @@ interface InfoModalProps {
   children: React.ReactNode;
   ariaLabel?: string;
   onAfterClose?: () => void;
+  /**
+   * verticalAlign controls how the modal content aligns vertically.
+   * 'center' (default) centers content vertically; 'top' starts content at the top.
+   */
+  verticalAlign?: 'top' | 'center';
 }
 
-export default function InfoModal({ open, onClose, title, children, ariaLabel, onAfterClose }: InfoModalProps) {
+export default function InfoModal({ open, onClose, title, children, ariaLabel, onAfterClose, verticalAlign = 'center' }: InfoModalProps) {
   const [rendered, setRendered] = React.useState(open);
   const [closing, setClosing] = React.useState(false);
   const closingHandledRef = React.useRef(false);
@@ -116,7 +121,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
               &times;
             </button>
           </div>
-          <div className="flex-1 flex flex-col justify-center items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen"
+          <div className={`flex-1 flex flex-col ${verticalAlign === 'top' ? 'justify-start items-center' : 'justify-center items-center'} pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen`}
             style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>

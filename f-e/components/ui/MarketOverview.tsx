@@ -276,6 +276,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       <InfoModal
         open={fullSentimentModalOpen}
         onClose={() => setFullSentimentModalOpen(false)}
+        verticalAlign="top"
         title={
           <>
             <Eye className="w-6 h-6" />
