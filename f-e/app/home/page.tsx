@@ -404,7 +404,7 @@ export default function App() {
           >
             <div className="space-y-6 w-full max-w-2xl mx-auto">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
                   {selectedPulse ? pulseDescriptions[selectedPulse.index] : 'No description available.'}
                 </p>
               </div>
