@@ -53,4 +53,37 @@ describe('CollapsibleSection', () => {
     // Should remain visible
     expect(contentWrapper.style.display === 'none').toBe(false);
   });
+
+  test('openKey change opens the section when it is closed', () => {
+    const { rerender } = render(
+      <CollapsibleSection
+        title={<span>Test Title</span>}
+        infoButton={<button aria-label="info-btn">i</button>}
+        defaultOpen={false}
+        openKey={'D'}
+      >
+        <div>Collapsible Content</div>
+      </CollapsibleSection>
+    );
+
+    // Initially closed
+    const contentNode = screen.getByText('Collapsible Content');
+    const contentWrapper = contentNode.parentElement as HTMLElement;
+    expect(contentWrapper.style.display).toBe('none');
+
+    // Change the openKey to simulate timeframe change
+    rerender(
+      <CollapsibleSection
+        title={<span>Test Title</span>}
+        infoButton={<button aria-label="info-btn">i</button>}
+        defaultOpen={false}
+        openKey={'W'}
+      >
+        <div>Collapsible Content</div>
+      </CollapsibleSection>
+    );
+
+    // Should now be open
+    expect(contentWrapper.style.display).toBe('block');
+  });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) {
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean }) {
   const [open, setOpen] = React.useState<boolean>(() => defaultOpen ?? true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -67,6 +67,18 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
       el.style.opacity = '1';
     }
   }, [open]);
+
+  // If `openKey` changes, open the section. This is used by parent controls
+  // (e.g., timeframe selectors) to ensure content opens when a relevant
+  // setting has changed.
+  const prevOpenKeyRef = React.useRef<typeof openKey | undefined>(openKey);
+  React.useEffect(() => {
+    if (prevOpenKeyRef.current !== undefined && prevOpenKeyRef.current !== openKey) {
+      // Open on change
+      setOpen(true);
+    }
+    prevOpenKeyRef.current = openKey;
+  }, [openKey]);
 
   return (
     <div className="mb-4" ref={containerRef}>

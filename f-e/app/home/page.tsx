@@ -230,6 +230,7 @@ export default function App() {
                   </div>
                 </div>
               }
+                openKey={pulseTimeframe}
             >
               {/* Render MarketOverview inside collapsible */}
                 <div className="mb-4">
@@ -304,6 +305,7 @@ export default function App() {
                   </div>
                 </div>
               }
+                openKey={signalTimeframe}
             >
               <div className="space-y-6">
                 {isLoading ? (
