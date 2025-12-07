@@ -238,6 +238,8 @@ export default function App() {
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
+  const [closingDisclaimer, setClosingDisclaimer] = React.useState(false);
+  const closingTimer = React.useRef<number | null>(null);
 
   // prevent background scrolling when the pulse info modal is open
   React.useEffect(() => {
@@ -477,12 +479,26 @@ export default function App() {
           
           {/* Legal Disclaimer */}
           {showDisclaimer && (
-            <div className="relative p-4 bg-orange-900/40 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8">
+            <div
+              className={`relative p-4 bg-orange-900/40 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8 transition-opacity transform ${closingDisclaimer ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0'}`}
+              aria-hidden={closingDisclaimer}
+            >
               <button
                 type="button"
                 aria-label="Close disclaimer"
-                className="absolute top-2 right-2 p-1 rounded hover:bg-orange-800/30 text-orange-100"
-                onClick={() => setShowDisclaimer(false)}
+                className="absolute top-1/2 right-2 transform -translate-y-1/2 p-1 rounded hover:bg-orange-800/30 text-orange-100"
+                onClick={() => {
+                  // Start closing animation then hide
+                  setClosingDisclaimer(true);
+                  if (closingTimer.current) {
+                    window.clearTimeout(closingTimer.current);
+                  }
+                  closingTimer.current = window.setTimeout(() => {
+                    setShowDisclaimer(false);
+                    setClosingDisclaimer(false);
+                    closingTimer.current = null;
+                  }, 220); // matches Tailwind duration-200
+                }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -494,7 +510,7 @@ export default function App() {
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
-      {!(modalOpen || infoModalOpen || signalFeedInfoOpen) && (
+      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || closingDisclaimer) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
           {/* ...existing BottomNav code... */}
         </div>
