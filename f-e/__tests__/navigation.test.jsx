@@ -331,12 +331,56 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
-    it('FE-802: ', async () => {
-   
+    it('FE-802: The Bottom Navigation Bar component is hidden (not visible) when the viewport width is above the mobile breakpoint.', async () => {
+        // This test would require a way to simulate viewport width changes.
+        // Since JSDOM doesn't support layout or media queries, this test might be limited.
+        // One approach is to check for the presence of the "md:hidden" class which hides the component on medium and larger screens.
+        mockUsePathname.mockReturnValue('/home');
+
+        const { container } = render(<BottomNav />);
+
+        const nav = container.querySelector('nav');
+        expect(nav).toHaveClass('md:hidden');
     });
 
-    it('FE-803: ', async () => {
-   
+    it('FE-803: The Bottom Nav Bar renders all required navigation icons/links (Home, Watchlist, News, Settings), and each item has a text label or clear tooltip.', async () => {
+        mockUsePathname.mockReturnValue('/home');
+
+        render(<BottomNav />);
+
+        // Verify all navigation links are present and clickable
+        const homeLink = screen.getByRole('link', { name: /home/i });
+        const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
+        const newsLink = screen.getByRole('link', { name: /news/i });
+        const settingsLink = screen.getByRole('link', { name: /settings/i });
+
+        expect(homeLink).toBeInTheDocument();
+        expect(watchlistLink).toBeInTheDocument();
+        expect(newsLink).toBeInTheDocument();
+        expect(settingsLink).toBeInTheDocument();
+
+        // Verify links have correct href attributes
+        expect(homeLink).toHaveAttribute('href', '/home');
+        expect(watchlistLink).toHaveAttribute('href', '/watchlist');
+        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(settingsLink).toHaveAttribute('href', '/settings');
+
+        // Verify text labels are visible
+        expect(screen.getByText('Home')).toBeVisible();
+        expect(screen.getByText('Watchlist')).toBeVisible();
+        expect(screen.getByText('News')).toBeVisible();
+        expect(screen.getByText('Settings')).toBeVisible();
+
+        // Verify icons are present (check for SVG elements within links)
+        const homeSvg = homeLink.querySelector('svg');
+        const watchlistSvg = watchlistLink.querySelector('svg');
+        const newsSvg = newsLink.querySelector('svg');
+        const settingsSvg = settingsLink.querySelector('svg');
+
+        expect(homeSvg).toBeInTheDocument();
+        expect(watchlistSvg).toBeInTheDocument();
+        expect(newsSvg).toBeInTheDocument();
+        expect(settingsSvg).toBeInTheDocument();
     });
 
     it('FE-804: ', async () => {
