@@ -1,0 +1,96 @@
+import React from 'react';
+
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = React.useState<boolean>(() => defaultOpen ?? true);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+  // toggle using animation on the content
+  const toggle = () => {
+    if (!contentRef.current) {
+      setOpen((v) => !v);
+      return;
+    }
+    const el = contentRef.current;
+    const currentHeight = el.scrollHeight;
+    if (open) {
+      // Close: set explicit height then animate to 0
+      el.style.height = `${currentHeight}px`;
+      // Force reflow so transition occurs
+      void el.offsetHeight;
+      el.style.transition = 'height 220ms cubic-bezier(0.4,0.8,0.2,1), opacity 160ms ease-out';
+      el.style.height = '0px';
+      el.style.opacity = '0';
+      const handler = function (e: TransitionEvent) {
+        if ((e as TransitionEvent).propertyName === 'height') {
+          el.style.display = 'none';
+          el.style.transition = '';
+          el.removeEventListener('transitionend', handler as any);
+        }
+      };
+      el.addEventListener('transitionend', handler as any);
+      setOpen(false);
+    } else {
+      // Open: make sure it's displayed and animate from 0 to scrollHeight
+      el.style.display = 'block';
+      el.style.height = '0px';
+      el.style.opacity = '0';
+      // Force reflow
+      void el.offsetHeight;
+      const target = `${el.scrollHeight}px`;
+      el.style.transition = 'height 220ms cubic-bezier(0.4,0.8,0.2,1), opacity 160ms ease-in';
+      el.style.height = target;
+      el.style.opacity = '1';
+      const handler = function (e: TransitionEvent) {
+        if ((e as TransitionEvent).propertyName === 'height') {
+          el.style.height = 'auto';
+          el.style.transition = '';
+          el.removeEventListener('transitionend', handler as any);
+        }
+      };
+      el.addEventListener('transitionend', handler as any);
+      setOpen(true);
+    }
+  };
+
+  React.useEffect(() => {
+    // Ensure correct initial state immediately on mount
+    const el = contentRef.current;
+    if (!el) return;
+    if (!open) {
+      el.style.display = 'none';
+      el.style.height = '0px';
+      el.style.opacity = '0';
+    } else {
+      el.style.display = 'block';
+      el.style.height = 'auto';
+      el.style.opacity = '1';
+    }
+  }, [open]);
+
+  return (
+    <div className="mb-4" ref={containerRef}>
+      <div className="flex items-center justify-between gap-2">
+        {/* Collapse toggle button (arrow + title) */}
+        <button
+          type="button"
+          aria-label={open ? 'Collapse section' : 'Expand section'}
+          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800 focus:outline-none"
+          onClick={(e) => { e.stopPropagation(); toggle(); }}
+        >
+          <span className={`transition-transform duration-200 ${open ? '' : 'rotate-180'}`}>▼</span>
+          {title}
+        </button>
+        {/* Info button (separate, does not toggle collapse) */}
+        {infoButton && (
+          <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            {infoButton}
+          </div>
+        )}
+      </div>
+      <div ref={contentRef} className="mt-4 overflow-hidden opacity-100">
+        {children}
+      </div>
+    </div>
+  );
+}
