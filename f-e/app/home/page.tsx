@@ -4,7 +4,7 @@
 import React from 'react';
 import InfoModal from '@/components/modals/InfoModal';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X } from 'lucide-react';
 
 // CollapsibleSection component (add at the top of the file, after imports)
 function CollapsibleSection({ title, infoButton, children }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode }) {
@@ -213,6 +213,7 @@ export default function App() {
   const [selectedPulse, setSelectedPulse] = React.useState<null | typeof mockPulse[0]>(null);
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
   const [marketPulseInfoOpen, setMarketPulseInfoOpen] = React.useState(false);
+  const [showDisclaimer, setShowDisclaimer] = React.useState(true);
   
   // Example descriptions for each index
   const pulseDescriptions: Record<string, string> = {
@@ -267,10 +268,11 @@ export default function App() {
           <InfoModal
             open={marketPulseInfoOpen}
             onClose={() => setMarketPulseInfoOpen(false)}
-            title={<><Info className="w-6 h-6 text-orange-300" />About Market Pulse</>}
+            title={<><TrendingUp className="w-6 h-6 text-green-400" />About Market Pulse</>}
             ariaLabel="About Market Pulse"
           >
             <div className="w-full max-w-2xl mx-auto space-y-6">
+              <p>Market Pulse provides a quick overview of key market indicators to help you gauge the current financial environment.</p>
               <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
                 <h5 className="text-lg font-bold text-green-300 mb-2">S&P 500</h5>
                 <p className="text-sm text-gray-300">The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.</p>
@@ -392,11 +394,21 @@ export default function App() {
           </InfoModal>
           
           {/* Legal Disclaimer */}
-          <div className="p-4 bg-orange-900/40 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8">
+          {showDisclaimer && (
+            <div className="relative p-4 bg-orange-900/40 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8">
+              <button
+                type="button"
+                aria-label="Close disclaimer"
+                className="absolute top-2 right-2 p-1 rounded hover:bg-orange-800/30 text-orange-100"
+                onClick={() => setShowDisclaimer(false)}
+              >
+                <X className="w-4 h-4" />
+              </button>
               <p className="font-medium">
                 ⚠️ Disclaimer: This data is for informational/testing purposes and is NOT financial advice.
               </p>
-          </div>
+            </div>
+          )}
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
