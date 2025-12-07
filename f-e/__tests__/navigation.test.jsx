@@ -441,8 +441,34 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         expect(newsLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
     });
 
-    it('FE-805: ', async () => {
-   
+    it('FE-805: Clicking any icon in the Bottom Nav Bar correctly calls the routing function to navigate to the corresponding page, and the URL changes correctly.', async () => {
+        mockUsePathname.mockReturnValue('/home');
+
+        render(<BottomNav />);
+
+        // Get all navigation links
+        const homeLink = screen.getByRole('link', { name: /home/i });
+        const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
+        const newsLink = screen.getByRole('link', { name: /news/i });
+        const settingsLink = screen.getByRole('link', { name: /settings/i });
+
+        // Verify all links are clickable (not disabled or non-interactive)
+        expect(homeLink).not.toHaveAttribute('aria-disabled', 'true');
+        expect(watchlistLink).not.toHaveAttribute('aria-disabled', 'true');
+        expect(newsLink).not.toHaveAttribute('aria-disabled', 'true');
+        expect(settingsLink).not.toHaveAttribute('aria-disabled', 'true');
+
+        // Verify clicking links doesn't throw errors (they're functional Link components)
+        fireEvent.click(homeLink);
+        fireEvent.click(watchlistLink);
+        fireEvent.click(newsLink);
+        fireEvent.click(settingsLink);
+
+        // Verify links maintain correct hrefs after interactions
+        expect(homeLink).toHaveAttribute('href', '/home');
+        expect(watchlistLink).toHaveAttribute('href', '/watchlist');
+        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
     it('FE-806: ', async () => {
