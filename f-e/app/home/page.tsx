@@ -147,11 +147,13 @@ export default function App() {
 
   // prevent background scrolling when the pulse info modal is open
   React.useEffect(() => {
+    let locked = false;
     if (modalOpen) {
       lockScroll();
+      locked = true;
     }
     return () => {
-      if (modalOpen) {
+      if (locked) {
         unlockScroll();
       }
     };
@@ -385,81 +387,46 @@ export default function App() {
           </InfoModal>
           {/* Pinned MarketOverview is rendered earlier to keep it above Live Setup Scans */}
 
-          {/* Modal for Market Pulse Item Info */}
-          {modalOpen && selectedPulse && (
-            <div className="fixed inset-0 z-[100] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={`${selectedPulse.index} Info Modal`}>
-              <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-                <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
-                  {/* Header with title and top X close button */}
-                  <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{selectedPulse.index}</h4>
-                    </div>
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
-                      onClick={() => setModalOpen(false)}
-                      aria-label="Close info modal"
-                      data-testid="pulse-modal-close-top"
-                    >
-                      &times;
-                    </button>
-                  </div>
+          {/* Modal for Market Pulse Item Info (converted to InfoModal) */}
+          <InfoModal
+            open={Boolean(modalOpen && selectedPulse)}
+            onClose={() => setModalOpen(false)}
+            title={
+              <>
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">{selectedPulse?.index}</span>
+              </>
+            }
+            ariaLabel={`${selectedPulse?.index} Info Modal`}
+            onAfterClose={() => {
+              // Clear selectedPulse only after modal fully closed
+              setSelectedPulse(null);
+            }}
+          >
+            <div className="space-y-6 w-full max-w-2xl mx-auto">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+                  {selectedPulse ? pulseDescriptions[selectedPulse.index] : 'No description available.'}
+                </p>
+              </div>
 
-                  {/* Content area */}
-                  <div className="flex-1 flex flex-col justify-start items-center pt-6 pb-8 px-8 overflow-y-auto w-full max-h-screen"
-                    style={{ WebkitOverflowScrolling: 'touch' }}>
-                    <div className="space-y-6 w-full max-w-2xl mx-auto">
-                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
-                          {pulseDescriptions[selectedPulse.index] || 'No description available.'}
-                        </p>
-                      </div>
-
-                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPulse.value}</span>
-                          <span className={`text-sm font-semibold ${selectedPulse.color} flex items-center`}>
-                            {selectedPulse.color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-                            {selectedPulse.change}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Chart Placeholder */}
-                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                        <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
-                          <span className="text-gray-600 dark:text-gray-400 text-lg">[Stock Chart Placeholder]</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer close button */}
-                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => setModalOpen(false)}
-                      aria-label="Close info modal"
-                      data-testid="pulse-modal-close-bottom"
-                    >
-                      Close
-                    </button>
-                  </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPulse?.value}</span>
+                  <span className={`text-sm font-semibold ${selectedPulse?.color} flex items-center`}>
+                    {selectedPulse?.color?.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                    {selectedPulse?.change}
+                  </span>
                 </div>
               </div>
 
-              <style jsx>{`
-                @keyframes slideUp {
-                  from { transform: translateY(100%); opacity: 0; }
-                  to { transform: translateY(0); opacity: 1; }
-                }
-                .animate-slideUp {
-                  animation: slideUp 0.4s cubic-bezier(0.4, 0.8, 0.2, 1) both;
-                }
-              `}</style>
+              {/* Chart Placeholder */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
+                  <span className="text-gray-600 dark:text-gray-400 text-lg">[Stock Chart Placeholder]</span>
+                </div>
+              </div>
             </div>
-          )}
+          </InfoModal>
 
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal

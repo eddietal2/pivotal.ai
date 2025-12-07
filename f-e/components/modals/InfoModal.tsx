@@ -14,6 +14,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
   const [rendered, setRendered] = React.useState(open);
   const [closing, setClosing] = React.useState(false);
   const closingHandledRef = React.useRef(false);
+  const closeTimerRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -22,25 +23,56 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
     if (!open && rendered) {
       // Start the closing animation — the parent unmounted the modal by setting `open=false`.
       setClosing(true);
+      // fallback: ensure we unmount to avoid stuck modal if animationend doesn't fire
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      closeTimerRef.current = window.setTimeout(() => {
+        if (closingHandledRef.current) return;
+        closingHandledRef.current = true;
+        setClosing(false);
+        setRendered(false);
+        if (onAfterClose) {
+          try { onAfterClose(); } catch (err) { /* ignore */ }
+        }
+        // reset handler shortly after to allow next open/close cycle to work
+        setTimeout(() => { closingHandledRef.current = false; }, 50);
+      }, 420);
     }
+    return () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
   }, [open, rendered]);
 
+  // Bind Escape and lock scroll while the modal is actually rendered (visible or closing).
   React.useEffect(() => {
-    if (!open) return;
+    if (!rendered) return;
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onEsc);
-    // Lock background scroll while modal is rendered (open or closing)
+    let locked = false;
+    // Lock only if we are rendering the modal
     lockScroll();
-    return () => document.removeEventListener('keydown', onEsc);
-  }, [open, onClose]);
-
-  React.useEffect(() => {
-    if (!rendered) return;
+    locked = true;
     return () => {
-      // Unlock body scroll when modal is fully unmounted
-      unlockScroll();
+      document.removeEventListener('keydown', onEsc);
+      if (locked) {
+        unlockScroll();
+      }
+    };
+  }, [rendered, onClose]);
+
+  // `rendered` is still used so we keep the lifecycle flow but the lock/unlock
+  // is handled above in the rendered effect. This effect is left for side-effects
+  // related to render/unmount in case callers need to add behaviors here.
+  React.useEffect(() => {
+    return () => {
+      /* placeholder for cleanup, lock/unlock are handled elsewhere */
     };
   }, [rendered]);
 
@@ -57,6 +89,10 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
           if (!closing) return;
           if (closingHandledRef.current) return;
           closingHandledRef.current = true;
+          if (closeTimerRef.current) {
+            window.clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+          }
           setClosing(false);
           setRendered(false);
           if (onAfterClose) {

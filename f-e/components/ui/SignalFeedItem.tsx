@@ -23,11 +23,13 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
   const { setModalOpen } = useUI();
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
   React.useEffect(() => {
+    let locked = false;
     if (chartModalOpen) {
       lockScroll();
+      locked = true;
     }
     return () => {
-      if (chartModalOpen) {
+      if (locked) {
         unlockScroll();
       }
     };
