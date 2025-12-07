@@ -2,7 +2,7 @@
   
 
 import React from 'react';
-import InfoModal from '@/components/InfoModal';
+import InfoModal from '@/components/modals/InfoModal';
 import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info } from 'lucide-react';
 

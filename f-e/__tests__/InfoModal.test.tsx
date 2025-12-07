@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import InfoModal from '@/components/InfoModal';
+import InfoModal from '@/components/modals/InfoModal';
 
 describe('InfoModal', () => {
   test('renders title and children when open', () => {
