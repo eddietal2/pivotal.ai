@@ -11,7 +11,7 @@ const mockPulses = [
 describe('MarketOverview', () => {
   test('renders and types out overview (typewriter animation)', async () => {
     jest.useFakeTimers();
-    render(<MarketOverview pulses={mockPulses} />);
+    render(<MarketOverview pulses={mockPulses} timeframe={'D'} />);
     expect(screen.getByText('Market Pulse Overview')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /regenerate market overview/i })).toBeInTheDocument();
     // Initially show header CPU and generating text with the original gray loading dot
@@ -30,16 +30,20 @@ describe('MarketOverview', () => {
     });
     expect(partial).toBeTruthy();
     // The typewriter caret should be visible while typing
-    // Expect cpu indicator to be present and set to typing
-    const cpuTyping = screen.getByTestId('cpu-indicator');
-    expect(cpuTyping).toBeInTheDocument();
-    expect(cpuTyping).toHaveAttribute('data-state', 'typing');
+    // Expect header CPU indicator to be present and set to typing
+    expect(headerCpu).toHaveAttribute('data-state', 'typing');
     expect(headerCpu).toHaveAttribute('data-state', 'typing');
     // Finish typing out
     act(() => jest.advanceTimersByTime(2000));
     const full = await screen.findByText(/AI Overview:/, {}, { timeout: 1500 });
     expect(full).toBeInTheDocument();
     jest.useRealTimers();
+    // Last generated timestamp label should be present and non-empty and include a date in parentheses
+    const label = screen.getByTestId('last-generated-label');
+    expect(label).toBeInTheDocument();
+    expect(label.textContent).not.toBe('');
+    // It should contain parens with a weekday and a date format like mm/dd/yy
+    expect(label.textContent).toMatch(/\(\w+, \d{2}\/\d{2}\/\d{2}\)/);
     // After typing completes, the loading-dot should not be visible
     expect(screen.queryByTestId('loading-dot')).not.toBeInTheDocument();
     expect(headerCpu).toHaveAttribute('data-state', 'idle');
@@ -47,7 +51,7 @@ describe('MarketOverview', () => {
 
   test('Regenerate button triggers a new overview and typing', async () => {
     jest.useFakeTimers();
-    render(<MarketOverview pulses={mockPulses} />);
+    render(<MarketOverview pulses={mockPulses} timeframe={'D'} />);
     const button = screen.getByRole('button', { name: /regenerate market overview/i });
     fireEvent.click(button);
     // Show 'Regenerating' while AI is being generated
@@ -61,5 +65,10 @@ describe('MarketOverview', () => {
     // Loading placeholder should be gone after regenerate typing completes
     expect(screen.queryByTestId('loading-dot')).not.toBeInTheDocument();
     jest.useRealTimers();
+    // Label should be present after regenerate and include the date
+    const label2 = screen.getByTestId('last-generated-label');
+    expect(label2).toBeInTheDocument();
+    expect(label2.textContent).not.toBe('');
+    expect(label2.textContent).toMatch(/\(\w+, \d{2}\/\d{2}\/\d{2}\)/);
   });
 });

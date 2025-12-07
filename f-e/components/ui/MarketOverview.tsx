@@ -50,6 +50,24 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const [fullSentiment, setFullSentiment] = React.useState<string | null>(null);
   const [displayedOverview, setDisplayedOverview] = React.useState<string>('');
   const [loading, setLoading] = React.useState(false);
+  // Track last generated time for each timeframe (D/W/M/Y)
+  const [lastGeneratedMap, setLastGeneratedMap] = React.useState<Record<'D'|'W'|'M'|'Y', string | null>>(() => ({ D: null, W: null, M: null, Y: null }));
+  // Format the stored ISO timestamp into a readable time + date string
+  const formatLastGenerated = (iso?: string) => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      const time = d.toLocaleTimeString();
+      // Weekday, mm/dd/yy
+      const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(-2);
+      return `${time} (${weekday}, ${mm}/${dd}/${yy})`;
+    } catch (e) {
+      return new Date(iso).toLocaleString();
+    }
+  };
   // Info modal is handled by parent; accept onOpenInfo callback
   const typingRef = React.useRef<number | null>(null);
   const [isTyping, setIsTyping] = React.useState(false);
@@ -82,6 +100,9 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     setFullSentiment(result.fullSentiment);
     setLoading(false);
     onStateChange?.({ loading: false, isTyping: false });
+    // Mark last generated time for the current timeframe
+    const tfKey = (timeframe ?? 'D') as 'D'|'W'|'M'|'Y';
+    setLastGeneratedMap((prev) => ({ ...prev, [tfKey]: new Date().toISOString() }));
   }, [pulses, timeframe]);
 
   React.useEffect(() => {
@@ -175,12 +196,17 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               aria-hidden
             />
             AI Market Overview
-            {timeframe && (
-              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
-                {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
-              </span>
-            )}
           </h5>
+          {timeframe && (
+            <div className="mt-2 flex flex-col items-start gap-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                  {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
+                </span>
+              </div>
+              <div data-testid="last-generated-label" className="text-xs text-gray-500 dark:text-gray-400">{lastGeneratedMap[timeframe as 'D'|'W'|'M'|'Y'] ? `Last generated @ ${formatLastGenerated(lastGeneratedMap[timeframe as 'D'|'W'|'M'|'Y'] as string)}` : ''}</div>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Header area: extra controls (info managed by parent) */}
