@@ -383,8 +383,62 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         expect(settingsSvg).toBeInTheDocument();
     });
 
-    it('FE-804: ', async () => {
-   
+    it('FE-804: When a user navigates to a route (e.g., \'/settings\'), the corresponding icon/link in the Bottom Nav Bar receives the correct \'active\' style.', async () => {
+        // PART 1: Test Settings page - Settings link should be active
+        mockUsePathname.mockReturnValue('/settings');
+        
+        const { rerender } = render(<BottomNav />);
+
+        // Get all navigation links
+        const homeLink = screen.getByRole('link', { name: /home/i });
+        const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
+        const newsLink = screen.getByRole('link', { name: /news/i });
+        const settingsLink = screen.getByRole('link', { name: /settings/i });
+
+        // Settings link should have active style classes
+        expect(settingsLink).toHaveClass('text-blue-600', 'bg-blue-50');
+        
+        // Other links should have inactive style (text-gray-600, no bg-blue-50)
+        expect(homeLink).toHaveClass('text-gray-600');
+        expect(homeLink).not.toHaveClass('bg-blue-50');
+        expect(watchlistLink).toHaveClass('text-gray-600');
+        expect(watchlistLink).not.toHaveClass('bg-blue-50');
+        expect(newsLink).toHaveClass('text-gray-600');
+        expect(newsLink).not.toHaveClass('bg-blue-50');
+
+        // PART 2: Test Home page - Home link should be active
+        mockUsePathname.mockReturnValue('/home');
+        rerender(<BottomNav />);
+
+        const homeLinkActive = screen.getByRole('link', { name: /home/i });
+        const watchlistLinkInactive = screen.getByRole('link', { name: /watchlist/i });
+        const newsLinkInactive = screen.getByRole('link', { name: /news/i });
+        const settingsLinkInactive = screen.getByRole('link', { name: /settings/i });
+
+        // Home link should be active
+        expect(homeLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
+        
+        // Other links should be inactive
+        expect(watchlistLinkInactive).toHaveClass('text-gray-600');
+        expect(watchlistLinkInactive).not.toHaveClass('bg-blue-50');
+        expect(newsLinkInactive).toHaveClass('text-gray-600');
+        expect(newsLinkInactive).not.toHaveClass('bg-blue-50');
+        expect(settingsLinkInactive).toHaveClass('text-gray-600');
+        expect(settingsLinkInactive).not.toHaveClass('bg-blue-50');
+
+        // PART 3: Test Watchlist page - Watchlist link should be active
+        mockUsePathname.mockReturnValue('/watchlist');
+        rerender(<BottomNav />);
+
+        const watchlistLinkActive = screen.getByRole('link', { name: /watchlist/i });
+        expect(watchlistLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
+
+        // PART 4: Test News page - News link should be active
+        mockUsePathname.mockReturnValue('/news');
+        rerender(<BottomNav />);
+
+        const newsLinkActive = screen.getByRole('link', { name: /news/i });
+        expect(newsLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
     });
 
     it('FE-805: ', async () => {
