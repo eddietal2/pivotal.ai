@@ -24,7 +24,11 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
     : type === 'Bearish'
     ? 'bg-gradient-to-r from-gray-50 to-red-50 dark:from-gray-900 dark:to-red-900/20'
     : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow-900/20';
-  const borderColor = isBullish ? 'border-green-200 dark:border-green-500' : type === 'Bearish' ? 'border-red-200 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
+  // left border color for sentiment and chip border for smaller controls
+  const leftBorderColor = isBullish ? 'border-l-green-200 dark:border-l-green-500' : type === 'Bearish' ? 'border-l-red-200 dark:border-l-red-500' : 'border-l-yellow-200 dark:border-l-yellow-500';
+  const chipBorderColor = isBullish ? 'border-green-200 dark:border-green-500' : type === 'Bearish' ? 'border-red-200 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
+  // base card border (grey, slim) to surround the card in addition to the colored left border
+  const cardBorder = 'border border-gray-200 dark:border-gray-700';
 
   const { setModalOpen } = useUI();
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
@@ -43,11 +47,11 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
   return (
     <>
-      <div className={`p-5 rounded-2xl border-l-4 ${borderColor} ${bgColor} transition duration-300 hover:shadow-2xl`}>
+      <div className={`p-5 rounded-2xl ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl`}>
         <div className="flex justify-between items-start">
           <div className="flex items-baseline">
             <span className="text-2xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${borderColor} bg-gray-50 dark:bg-gray-900/70`}>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${chipBorderColor} bg-gray-50 dark:bg-gray-900/70`}>
               {timeframe}
             </span>
           </div>
@@ -62,7 +66,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
         {/* Confluence Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
           {confluence.map((c, i) => (
-            <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                      <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
               {c}
             </span>
           ))}
@@ -70,7 +74,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
         {/* Action Buttons */}
         <div className="mt-4 flex gap-2 pt-3 border-t border-gray-700/50">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700/50 rounded-lg transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50 rounded-lg transition-colors">
             <ListChecks className="w-3.5 h-3.5" />
             Add to Watchlist
           </button>
