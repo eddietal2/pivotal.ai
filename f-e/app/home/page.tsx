@@ -3,6 +3,7 @@
 
 import React from 'react';
 import InfoModal from '@/components/modals/InfoModal';
+import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
@@ -105,6 +106,16 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
 
   const { setModalOpen } = useUI();
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (chartModalOpen) {
+      lockScroll();
+    }
+    return () => {
+      if (chartModalOpen) {
+        unlockScroll();
+      }
+    };
+  }, [chartModalOpen]);
 
   return (
     <>
@@ -150,7 +161,7 @@ const SignalFeedItem = ({ ticker, signal, confluence, timeframe, change, type }:
       {chartModalOpen && (
         <div className="fixed inset-0 z-[101] min-h-screen h-screen w-screen bg-black/70">
           <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-            <div className="bg-gray-900 border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
               <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h4 className="text-2xl font-bold text-white flex items-center gap-2">{ticker} Chart</h4>
@@ -227,6 +238,18 @@ export default function App() {
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
+
+  // prevent background scrolling when the pulse info modal is open
+  React.useEffect(() => {
+    if (modalOpen) {
+      lockScroll();
+    }
+    return () => {
+      if (modalOpen) {
+        unlockScroll();
+      }
+    };
+  }, [modalOpen]);
   
   // Example descriptions for each index
   const pulseDescriptions: Record<string, string> = {
@@ -342,7 +365,7 @@ export default function App() {
           {modalOpen && selectedPulse && (
             <div className="fixed inset-0 z-[100] min-h-screen h-screen w-screen bg-black/70">
               <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-                <div className="bg-gray-900 border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+                <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
                   <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <h4 className="text-2xl font-bold text-white flex items-center gap-2">{selectedPulse.index}</h4>
@@ -471,7 +494,7 @@ export default function App() {
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
-      {!modalOpen && (
+      {!(modalOpen || infoModalOpen || signalFeedInfoOpen) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
           {/* ...existing BottomNav code... */}
         </div>

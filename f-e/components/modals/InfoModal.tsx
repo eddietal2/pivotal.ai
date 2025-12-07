@@ -1,4 +1,5 @@
 import React from 'react';
+import { lockScroll, unlockScroll } from './scrollLock';
 
 interface InfoModalProps {
   open: boolean;
@@ -15,15 +16,25 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel }:
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onEsc);
+    // Lock background scroll when modal opens
+    lockScroll();
     return () => document.removeEventListener('keydown', onEsc);
   }, [open, onClose]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    return () => {
+      // Unlock body scroll on unmount/close
+      unlockScroll();
+    };
+  }, [open]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
       <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
-        <div className="bg-gray-900 border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
+      <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-t-2xl shadow-2xl w-full min-h-screen h-screen mx-auto relative animate-slideUp flex flex-col">
           {/* Header with title and top X close button */}
           <div className="w-full px-6 pt-6 pb-4 border-b border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
