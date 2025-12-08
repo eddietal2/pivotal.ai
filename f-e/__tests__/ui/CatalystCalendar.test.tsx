@@ -1,0 +1,31 @@
+import '@testing-library/jest-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
+import CatalystCalendar from '@/components/ui/CatalystCalendar';
+
+const sampleDays = [
+  { id: 'd1', dateLabel: 'NOV 1', dayLabel: 'MON', eventsCount: 1, icons: ['🗓️'] },
+  { id: 'd2', dateLabel: 'NOV 2', dayLabel: 'TUE', eventsCount: 0, icons: [] },
+  { id: 'd3', dateLabel: 'NOV 3', dayLabel: 'WED', eventsCount: 3, icons: ['💎', '⚡️'] },
+];
+
+describe('CatalystCalendar', () => {
+  test('renders days and calls onSelect when clicked', () => {
+    const onSelect = jest.fn();
+    render(<CatalystCalendar days={sampleDays} selectedId={sampleDays[1].id} onSelect={onSelect} />);
+
+    // Check that day labels are shown
+    expect(screen.getByText('MON')).toBeInTheDocument();
+    expect(screen.getByText('NOV 2')).toBeInTheDocument();
+    expect(screen.getByText('WED')).toBeInTheDocument();
+
+    const btn = screen.getByRole('button', { name: /Show events for NOV 3/i });
+    fireEvent.click(btn);
+    expect(onSelect).toHaveBeenCalledWith('d3');
+  });
+
+  test('displays the active day with aria-pressed true', () => {
+    render(<CatalystCalendar days={sampleDays} selectedId={'d1'} />);
+    const activeBtn = screen.getByRole('button', { name: /Show events for NOV 1/i });
+    expect(activeBtn).toHaveAttribute('aria-pressed', 'true');
+  });
+});
