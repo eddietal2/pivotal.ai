@@ -9,9 +9,12 @@ type Props = {
   price: string;
   change?: number; // percent change
   sparkline?: number[]; // numeric array for sparkline values
+  timeframe?: string;
+  afterHours?: boolean;
+  onClick?: () => void;
 };
 
-export default function MarketPulseItem({ ticker, price, change = 0, sparkline = [] }: Props) {
+export default function MarketPulseItem({ ticker, price, change = 0, sparkline = [], timeframe, afterHours, onClick }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -20,11 +23,16 @@ export default function MarketPulseItem({ ticker, price, change = 0, sparkline =
     <button
       data-testid={`market-pulse-${ticker}`}
       type="button"
+      onClick={onClick}
       className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      aria-label={`More info about ${ticker}`}
+      aria-label={`More info about ${ticker}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-gray-400">{ticker}</p>
+        {/* timeframe chip */}
+        {timeframe && (
+          <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
+        )}
       </div>
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-3">

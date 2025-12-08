@@ -11,6 +11,7 @@ import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } fr
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import Sparkline from '@/components/ui/Sparkline';
+import MarketPulseItem from '@/components/watchlist/MarketPulseItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton } from '@/components/ui/skeletons';
 
@@ -81,44 +82,7 @@ const mockPulse = [
   { index: 'Bitcoin', value: 38500.75, change: '+45.23%', color: 'text-green-500', trend: [26500, 28500, 30500, 33500, 38500], timeframe: '1Y', afterHours: false },
 ];
 
-// --- INLINE COMPONENTS ---
-
-// 1. Global Market Pulse Card
-const MarketPulseCard = ({ index, value, change, color, onClick, trend, timeframe, afterHours }: { index: string; value: number; change: string; color: string; onClick: () => void; trend?: number[]; timeframe?: string; afterHours?: boolean }) => (
-  <button
-    className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    onClick={onClick}
-    type="button"
-    aria-label={`More info about ${index}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
-  >
-    <div className="flex items-center justify-between gap-2">
-      <p className="text-sm font-medium text-gray-400">{index}</p>
-      {/* timeframe chip */}
-      {timeframe && (
-        <span
-          title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`}
-          className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
-        >{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
-      )}
-    </div>
-    <div className="flex items-center justify-between mt-1">
-      <div className="flex items-center gap-3">
-        {/* Sparkline */}
-        <div className="flex-shrink-0">
-          {/* Will render sparkline if trend data is provided */}
-          {trend && trend.length > 0 && (
-            <Sparkline data={trend} width={72} height={28} stroke={color.includes('green') ? '#34d399' : '#f87171'} className="rounded" gradient={true} fillOpacity={0.12} />
-          )}
-        </div>
-        <span className="text-xl font-bold text-gray-900 dark:text-white">{value}</span>
-      </div>
-      <span className={`text-sm font-semibold ${color} flex items-center`}>
-        {color.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-        {change}
-      </span>
-    </div>
-  </button>
-);
+// --- Using shared MarketPulseItem from components/watchlist
 
 
 
@@ -283,9 +247,14 @@ export default function App() {
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
                 ) : (
                   filteredPulse.map((pulse, index) => (
-                    <MarketPulseCard
+                    <MarketPulseItem
                       key={index}
-                      {...pulse}
+                      ticker={pulse.index}
+                      price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
+                      change={typeof pulse.change === 'string' ? parseFloat(pulse.change.replace('%', '')) : (pulse.change as any)}
+                      sparkline={pulse.trend}
+                      timeframe={pulse.timeframe}
+                      afterHours={pulse.afterHours}
                       onClick={() => {
                         setSelectedPulse(pulse);
                         setModalOpen(true);
