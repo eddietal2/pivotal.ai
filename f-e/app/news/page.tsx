@@ -3,6 +3,7 @@
 import React from 'react';
 import { useState, useMemo } from 'react';
 import CatalystCalendar, { CalendarDay } from '@/components/ui/CatalystCalendar';
+import InfoModal from '@/components/modals/InfoModal';
 import NewsFeedFilters from '@/components/ui/NewsFeedFilters';
 import NewsArticleCard, { NewsArticle } from '@/components/ui/NewsArticleCard';
 
@@ -50,10 +51,42 @@ const MOCK_ARTICLES: NewsArticle[] = [
     sentiment: 'bearish',
     date: MOCK_DAYS[1].id,
   },
+  {
+    id: '3',
+    ticker: 'TSLA',
+    headline: 'Tesla Recalls Model X Over Brake Component',
+    summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
+    source: 'Reuters',
+    timeAgo: '2 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
+  {
+    id: '3',
+    ticker: 'TSLA',
+    headline: 'Tesla Recalls Model X Over Brake Component',
+    summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
+    source: 'Reuters',
+    timeAgo: '2 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
+  {
+    id: '3',
+    ticker: 'TSLA',
+    headline: 'Tesla Recalls Model X Over Brake Component',
+    summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
+    source: 'Reuters',
+    timeAgo: '2 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
 ];
 
 export default function NewsPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(MOCK_DAYS[0].id);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [modalDay, setModalDay] = useState<CalendarDay | null>(null);
   const [watchlists] = useState(() => ['All Watchlists','Tech Setups','Macro Alerts']);
   const [selectedWatchlist, setSelectedWatchlist] = useState(watchlists[0]);
   const [sentiment, setSentiment] = useState<'all'|'bullish'|'bearish'|'high'>('all');
@@ -61,7 +94,6 @@ export default function NewsPage() {
 
   const filteredArticles = useMemo(() => {
     return MOCK_ARTICLES.filter((a) => {
-      if (selectedDay && a.date !== selectedDay) return false;
       if (sentiment !== 'all') {
         if (sentiment === 'high' && a.sentiment !== 'catalyst') return false;
         if (sentiment === 'bullish' && a.sentiment !== 'bullish') return false;
@@ -70,15 +102,26 @@ export default function NewsPage() {
       if (query && !`${a.ticker} ${a.headline} ${a.summary}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
-  }, [selectedDay, sentiment, query]);
+  }, [sentiment, query]);
 
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Top: Catalyst Calendar */}
-      <section aria-label="Upcoming Catalysts (Next 7 Days)" className="mb-6">
-        <h2 className="text-sm text-center text-gray-600 dark:text-gray-400 mb-2">Upcoming Catalysts (Next 7 Days)</h2>
-        <CatalystCalendar days={MOCK_DAYS} selectedId={selectedDay ?? null} onSelect={(id) => setSelectedDay(id)} />
-      </section>
+      <header aria-label="Upcoming Catalysts (Next 7 Days)" className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 py-3 mb-4">
+        <div className="max-w-5xl mx-auto px-2">
+          <h2 className="text-sm text-center text-gray-600 dark:text-gray-400 mb-2">Upcoming Catalysts (Next 7 Days)</h2>
+          <CatalystCalendar
+            days={MOCK_DAYS}
+            selectedId={selectedDay ?? null}
+            onSelect={(id) => {
+              setSelectedDay(id);
+              const day = MOCK_DAYS.find((d) => d.id === id) ?? null;
+              setModalDay(day);
+              setDayModalOpen(true);
+            }}
+          />
+        </div>
+      </header>
 
       {/* Main content */}
       <section className="grid grid-cols-1 lg:grid-cols-[1fr] gap-6">
@@ -111,6 +154,28 @@ export default function NewsPage() {
           </div>
         </div>
       </section>
+
+      {/* Day modal showing catalysts for the selected day */}
+      <InfoModal
+        open={dayModalOpen}
+        onClose={() => setDayModalOpen(false)}
+        onAfterClose={() => setModalDay(null)}
+        title={modalDay ? `Catalysts for ${modalDay.dateLabel}` : 'Catalysts'}
+        ariaLabel={`Catalysts for ${modalDay?.dateLabel ?? 'day'}`}
+        verticalAlign="top"
+      >
+        <div className="w-full max-w-2xl mx-auto space-y-4 p-4">
+          {modalDay ? (
+            MOCK_ARTICLES.filter(a => a.date === modalDay.id).length ? (
+              MOCK_ARTICLES.filter(a => a.date === modalDay.id).map(a => (
+                <NewsArticleCard key={a.id} article={a} />
+              ))
+            ) : (
+              <div className="text-gray-600 dark:text-gray-400">No catalysts for {modalDay.dateLabel}</div>
+            )
+          ) : null}
+        </div>
+      </InfoModal>
     </div>
   );
 }
