@@ -113,6 +113,41 @@ const MOCK_ARTICLES: NewsArticle[] = [
   },
 ];
 
+// Calendar-specific events/data (separate from article news feed)
+type CalendarEvent = { id: string; date: string; title: string; description: string; time: string; symbol?: string; tags?: string[]; sentiment?: 'bullish'|'bearish'|'catalyst'|'neutral'|'mixed' };
+const MOCK_CALENDAR_EVENTS: CalendarEvent[] = [
+  {
+    id: 'c1',
+    date: MOCK_DAYS[0].id,
+    title: 'FOMC Rate Decision',
+    description: 'Federal Reserve announces new monetary policy decision',
+    time: '8:30 AM ET',
+    symbol: 'FOMC',
+    tags: ['macro', 'high-impact'],
+    sentiment: 'bearish',
+  },
+  {
+    id: 'c2',
+    date: MOCK_DAYS[1].id,
+    title: 'Earnings Call: AMD',
+    description: 'AMD Q4 earnings call with management',
+    time: '5:00 PM ET',
+    symbol: 'AMD',
+    tags: ['earnings'],
+    sentiment: 'bullish',
+  },
+  {
+    id: 'c3',
+    date: MOCK_DAYS[1].id,
+    title: 'IPO: New Fintech',
+    description: 'New Fintech announces IPO pricing',
+    time: '10:00 AM ET',
+    symbol: 'NFIN',
+    tags: ['ipo'],
+    sentiment: 'catalyst',
+  },
+];
+
 export default function NewsPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(MOCK_DAYS[0].id);
   const [dayModalOpen, setDayModalOpen] = useState(false);
@@ -136,10 +171,15 @@ export default function NewsPage() {
     });
   }, [sentiment, query]);
 
-  // Attach catalysts to each day based on article dates
+  // Attach catalysts to each day based on a separate calendar data source (not MOCK_ARTICLES)
+  const mapToSentiment = (s?: 'bullish'|'bearish'|'catalyst'|'neutral'|'mixed'): 'bullish'|'bearish'|'mixed' => {
+    if (s === 'bearish') return 'bearish';
+    if (s === 'bullish') return 'bullish';
+    return 'mixed';
+  };
   const daysWithCatalysts = MOCK_DAYS.map((d) => ({
     ...d,
-    catalysts: MOCK_ARTICLES.filter(a => a.date === d.id).map(a => ({ id: a.id, ticker: a.ticker, headline: a.headline, sentiment: a.sentiment }))
+    catalysts: MOCK_CALENDAR_EVENTS.filter(e => e.date === d.id).map(e => ({ id: e.id, ticker: e.symbol ?? e.title.split(' ')[0], headline: e.title, sentiment: mapToSentiment(e.sentiment) }))
   }));
 
   return (
@@ -207,15 +247,48 @@ export default function NewsPage() {
         verticalAlign="top"
       >
         <div className="w-full max-w-2xl mx-auto space-y-4 p-4">
-          {modalDay ? (
-            MOCK_ARTICLES.filter(a => a.date === modalDay.id).length ? (
-              MOCK_ARTICLES.filter(a => a.date === modalDay.id).map(a => (
-                <NewsArticleCard key={a.id} article={a} />
-              ))
-            ) : (
-              <div className="text-gray-600 dark:text-gray-400">No catalysts for {modalDay.dateLabel}</div>
-            )
-          ) : null}
+            {modalDay ? (
+              // Show calendar events in the day modal (separate from news articles)
+              <>
+                <div className="mb-2">
+                  <div className="text-xs text-gray-500 mb-2">Legend</div>
+                  <div className="flex gap-3 items-center" role="list" aria-label="Catalyst legend" data-testid="calendar-legend">
+                    <div role="listitem" className="inline-flex items-center gap-2">
+                      <span data-testid="legend-dot-bullish" className="inline-flex h-3 w-3 rounded-full bg-green-500" aria-hidden />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">Bullish</span>
+                    </div>
+                    <div role="listitem" className="inline-flex items-center gap-2">
+                      <span data-testid="legend-dot-bearish" className="inline-flex h-3 w-3 rounded-full bg-red-500" aria-hidden />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">Bearish</span>
+                    </div>
+                    <div role="listitem" className="inline-flex items-center gap-2">
+                      <span data-testid="legend-dot-neutral" className="inline-flex h-3 w-3 rounded-full bg-orange-400" aria-hidden />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">Neutral</span>
+                    </div>
+                  </div>
+                </div>
+              {MOCK_CALENDAR_EVENTS.filter(e => e.date === modalDay.id).length ? (
+                MOCK_CALENDAR_EVENTS.filter(e => e.date === modalDay.id).map(e => (
+                  <div key={e.id} className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <span
+                          data-testid={`calendar-modal-dot-${e.id}`}
+                          className={`inline-flex h-2 w-2 rounded-full ${e.sentiment === 'bearish' ? 'bg-red-500' : e.sentiment === 'mixed' ? 'bg-orange-400' : 'bg-green-500'}`}
+                          aria-hidden
+                        />
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{e.title}</div>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{e.time}{e.tags?.length ? ` • ${e.tags.join(', ')}` : ''}</div>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">{e.description}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-600 dark:text-gray-400">No catalysts for {modalDay.dateLabel}</div>
+              ) }
+            </>
+            ) : null}
         </div>
       </InfoModal>
       {/* Article modal showing full article content */}

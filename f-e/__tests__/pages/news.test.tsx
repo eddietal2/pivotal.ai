@@ -30,11 +30,33 @@ describe('News page', () => {
     const closeTop = await screen.findByTestId('modal-close-top');
     expect(closeTop).toBeInTheDocument();
 
-    // The AMD article should be present inside the modal
-    await waitFor(() => expect(screen.getByText(/AMD Gains 5%/)).toBeInTheDocument());
+    // The calendar event (FOMC Rate Decision) should be present inside the modal
+    await waitFor(() => expect(screen.getByText(/FOMC Rate Decision/)).toBeInTheDocument());
+    // Legend shows all colors: Bullish (green), Bearish (red), Neutral (orange)
+    const legend = screen.getByTestId('calendar-legend');
+    expect(legend).toBeInTheDocument();
+    expect(screen.getByTestId('legend-dot-bullish')).toHaveClass('bg-green-500');
+    expect(screen.getByTestId('legend-dot-bearish')).toHaveClass('bg-red-500');
+    expect(screen.getByTestId('legend-dot-neutral')).toHaveClass('bg-orange-400');
+    // The modal should show sentiment dot for the event and it should be red (bearish)
+    const modalDot = screen.getByTestId('calendar-modal-dot-c1');
+    expect(modalDot).toHaveClass('bg-red-500');
 
     // The feed should still contain articles from other days (e.g., AAPL)
     expect(screen.getByText(/Apple Files New Patent/)).toBeInTheDocument();
+  });
+
+  test('the second day modal shows mixed (orange) for catalyst event', async () => {
+    render(<NewsPage />);
+    const dayBtns = screen.getAllByRole('button', { name: /Show events for/i });
+    expect(dayBtns.length).toBeGreaterThan(1);
+    fireEvent.click(dayBtns[1]);
+    await waitFor(() => expect(screen.getByText(/Earnings Call: AMD/)).toBeInTheDocument());
+    // c3 is catalyst (mixed), c2 is bullish
+    const modalDotC2 = screen.getByTestId('calendar-modal-dot-c2');
+    const modalDotC3 = screen.getByTestId('calendar-modal-dot-c3');
+    expect(modalDotC2).toHaveClass('bg-green-500');
+    expect(modalDotC3).toHaveClass('bg-orange-400');
   });
 
   test('clicking on an article opens the article modal', async () => {
@@ -48,5 +70,13 @@ describe('News page', () => {
     expect(screen.getByText(/AMD Gains 5%/)).toBeInTheDocument();
     fireEvent.click(closeTop);
     await waitFor(() => expect(screen.queryByTestId('modal-close-top')).not.toBeInTheDocument());
+  });
+
+  test('calendar header shows calendar-specific events (not news feed)', () => {
+    render(<NewsPage />);
+    // header should show the calendar event title for the selected day (FOMC Rate Decision)
+    expect(screen.getByText(/FOMC Rate Decision/)).toBeInTheDocument();
+    // feed still contains AMD article
+    expect(screen.getByText(/AMD Gains 5%/)).toBeInTheDocument();
   });
 });

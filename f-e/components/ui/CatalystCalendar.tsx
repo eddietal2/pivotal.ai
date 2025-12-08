@@ -9,7 +9,7 @@ export type CalendarDay = {
   dayLabel?: string; // e.g., Thu
   eventsCount: number;
   icons?: string[];
-  catalysts?: Array<{ id: string; ticker: string; headline: string; sentiment?: 'bullish'|'bearish'|'catalyst'|'neutral' }>;
+  catalysts?: Array<{ id: string; ticker: string; headline: string; sentiment?: 'bullish'|'bearish'|'catalyst'|'neutral'|'mixed' }>;
 };
 
 type Props = {

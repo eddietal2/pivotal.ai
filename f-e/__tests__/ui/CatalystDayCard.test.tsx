@@ -31,4 +31,30 @@ describe('CatalystDayCard', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument();
     expect(screen.getByText('Patent filing')).toBeInTheDocument();
   });
+
+  test('renders sentiment dot and ticker in chip', () => {
+    const catalysts = [
+      { id: 'a1', ticker: 'AMD', headline: 'Earnings beat', sentiment: 'bullish' as 'bullish' },
+    ];
+    render(<CatalystDayCard date="NOV 22" catalysts={catalysts} />);
+    expect(screen.getByText('AMD')).toBeInTheDocument();
+    // ensure the colored dot exists by checking the data-testid
+    const dot = screen.getByTestId('catalyst-chip-dot-a1');
+    expect(dot).toHaveClass('bg-green-500');
+  });
+
+  test('renders bearish and fallback/mixed sentiments correctly', () => {
+    const catalysts = [
+      { id: 'b1', ticker: 'TSLA', headline: 'Recall', sentiment: 'bearish' as 'bearish' },
+      { id: 'c1', ticker: 'AAPL', headline: 'Catalyst Event', sentiment: 'catalyst' as 'catalyst' },
+      { id: 'n1', ticker: 'MSFT', headline: 'Neutral Event', sentiment: 'neutral' as 'neutral' },
+    ];
+    render(<CatalystDayCard date="NOV 22" catalysts={catalysts} />);
+    const dotB = screen.getByTestId('catalyst-chip-dot-b1');
+    const dotC = screen.getByTestId('catalyst-chip-dot-c1');
+    const dotN = screen.getByTestId('catalyst-chip-dot-n1');
+    expect(dotB).toHaveClass('bg-red-500');
+    expect(dotC).toHaveClass('bg-orange-400');
+    expect(dotN).toHaveClass('bg-orange-400');
+  });
 });

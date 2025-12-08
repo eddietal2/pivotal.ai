@@ -9,12 +9,12 @@ export type NewsArticle = {
   summary: string;
   source: string;
   timeAgo: string;
-  sentiment: 'bullish'|'bearish'|'catalyst'|'neutral';
+  sentiment: 'bullish'|'bearish'|'catalyst'|'neutral'|'mixed';
   date?: string; // iso date used for filtering
 };
 
 export default function NewsArticleCard({ article, onClick }: { article: NewsArticle; onClick?: () => void }) {
-  const sentimentColor = article.sentiment === 'bullish' ? 'bg-green-50 text-green-800' : article.sentiment === 'bearish' ? 'bg-red-50 text-red-800' : article.sentiment === 'catalyst' ? 'bg-orange-50 text-orange-500' : 'bg-gray-50 text-gray-700';
+  const sentimentColor = article.sentiment === 'bullish' ? 'bg-green-50 text-green-800' : article.sentiment === 'bearish' ? 'bg-red-50 text-red-800' : article.sentiment === 'mixed' ? 'bg-orange-50 text-orange-500' : article.sentiment === 'catalyst' ? 'bg-orange-50 text-orange-500' : 'bg-gray-50 text-gray-700';
 
   return (
     <article
