@@ -5,14 +5,20 @@ import RuleBuilder from '../../components/watchlist/RuleBuilder';
 import StrategyList from '../../components/watchlist/StrategyList';
 import LivePreview from '../../components/watchlist/LivePreview';
 import Watchlist from '../../components/watchlist/Watchlist';
+import { WatchlistSkeleton, LivePreviewSkeleton } from '../../components/ui/skeletons';
 
 export default function WatchlistPage() {
+  const [isLoading, setIsLoading] = useState(true);
   const [sample, setSample] = useState([
     { ticker: 'AAPL', price: '$180.50', match: true, change: 1.24, sparkline: [170, 175, 178, 180, 181, 180, 180.5] },
     { ticker: 'AMD', price: '$130.20', match: false, change: -2.34, sparkline: [140, 135, 138, 131, 130, 129, 128] },
     { ticker: 'TSLA', price: '$260.10', match: true, change: 0.65, sparkline: [250, 252, 255, 258, 260, 259, 260.1] },
   ]);
   const [view, setView] = useState<'watchlist' | 'strategy'>('watchlist');
+  React.useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 py-3 mb-4">
@@ -50,10 +56,22 @@ export default function WatchlistPage() {
       <section id="panel-watchlist" role="tabpanel" aria-labelledby="tab-watchlist" hidden={view !== 'watchlist'}>
         <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6">
           <div>
-            <Watchlist items={sample} />
+            {isLoading ? (
+              <div className="space-y-3">
+                <WatchlistSkeleton />
+                <WatchlistSkeleton />
+                <WatchlistSkeleton />
+              </div>
+            ) : (
+              <Watchlist items={sample} />
+            )}
           </div>
           <aside>
-            <LivePreview sampleTickers={sample} ruleSummary="RSI less than 30 AND MACD crosses above Signal Line" />
+            {isLoading ? (
+              <LivePreviewSkeleton />
+            ) : (
+              <LivePreview sampleTickers={sample} ruleSummary="RSI less than 30 AND MACD crosses above Signal Line" />
+            )}
           </aside>
         </div>
       </section>
