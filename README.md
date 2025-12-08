@@ -8,8 +8,8 @@ Demo Link: https://pivotal-ai-web-app.vercel.app/
 
 ** [Currently Under Construction - Link & Video Last Updated @ 12/2/2025] **
 
-![Demo GIF](https://github.com/eddietal2/pivotal.ai/design/demo_gifs/pivotal_login_git_demo.gif?raw=true)
-![](https://github.com/eddietal2/pivotal.ai/blob/main/design/demo_gifs/pivotal_login_git_demo.gif)
+![Demo GIF](https://github.com/eddietal2/pivotal.ai/design/demo_gifs/2_08_2025_demo.gif?raw=true)
+![](https://github.com/eddietal2/pivotal.ai/blob/main/design/demo_gifs/2_08_2025_demo.gif.gif)
 ---
 
 ## 💡 Core Value Proposition
