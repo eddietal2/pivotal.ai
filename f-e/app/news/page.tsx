@@ -52,6 +52,36 @@ const MOCK_ARTICLES: NewsArticle[] = [
     date: MOCK_DAYS[1].id,
   },
   {
+    id: '4',
+    ticker: 'TSLA',
+    headline: 'Tesla Recall Follow-up: Dealer Guidance Updated',
+    summary: "Dealers report new inspection steps as interim guidance to owners.",
+    source: 'Reuters',
+    timeAgo: '3 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
+  {
+    id: '5',
+    ticker: 'TSLA',
+    headline: 'Tesla Supplier Issues Prompt Shortage Warning',
+    summary: "Supplier cutbacks could slightly delay next-gen Model X parts.",
+    source: 'Wall Street Journal',
+    timeAgo: '4 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
+  {
+    id: '6',
+    ticker: 'TSLA',
+    headline: 'Tesla Expands Service Discounts',
+    summary: "Cost-saving move to address recall repairs ahead of the holiday season.",
+    source: 'CNBC',
+    timeAgo: '5 hours ago',
+    sentiment: 'bearish',
+    date: MOCK_DAYS[1].id,
+  },
+  {
     id: '3',
     ticker: 'TSLA',
     headline: 'Tesla Recalls Model X Over Brake Component',
@@ -106,6 +136,12 @@ export default function NewsPage() {
     });
   }, [sentiment, query]);
 
+  // Attach catalysts to each day based on article dates
+  const daysWithCatalysts = MOCK_DAYS.map((d) => ({
+    ...d,
+    catalysts: MOCK_ARTICLES.filter(a => a.date === d.id).map(a => ({ id: a.id, ticker: a.ticker, headline: a.headline, sentiment: a.sentiment }))
+  }));
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Top: Catalyst Calendar */}
@@ -113,7 +149,7 @@ export default function NewsPage() {
         <div className="max-w-5xl mx-auto px-2">
           <h2 className="text-sm text-center text-gray-600 dark:text-gray-400 mb-2">Upcoming Catalysts (Next 7 Days)</h2>
           <CatalystCalendar
-            days={MOCK_DAYS}
+            days={daysWithCatalysts}
             selectedId={selectedDay ?? null}
             onSelect={(id) => {
               setSelectedDay(id);

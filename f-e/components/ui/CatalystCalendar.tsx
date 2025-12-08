@@ -9,6 +9,7 @@ export type CalendarDay = {
   dayLabel?: string; // e.g., Thu
   eventsCount: number;
   icons?: string[];
+  catalysts?: Array<{ id: string; ticker: string; headline: string; sentiment?: 'bullish'|'bearish'|'catalyst'|'neutral' }>;
 };
 
 type Props = {
@@ -28,6 +29,7 @@ export default function CatalystCalendar({ days, selectedId, onSelect }: Props) 
               dayLabel={d.dayLabel}
               eventsCount={d.eventsCount}
               icons={d.icons}
+              catalysts={d.catalysts}
               active={selectedId === d.id}
               onClick={() => onSelect && onSelect(d.id)}
             />

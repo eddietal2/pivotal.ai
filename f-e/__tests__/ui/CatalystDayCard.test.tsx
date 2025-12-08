@@ -19,4 +19,16 @@ describe('CatalystDayCard', () => {
     fireEvent.click(btn);
     expect(cb).toHaveBeenCalled();
   });
+
+  test('renders catalysts list when provided', () => {
+    const catalysts = [
+      { id: 'a1', ticker: 'AMD', headline: 'Earnings beat' },
+      { id: 'a2', ticker: 'AAPL', headline: 'Patent filing' },
+    ];
+    render(<CatalystDayCard date="NOV 22" catalysts={catalysts} />);
+    expect(screen.getByText('AMD')).toBeInTheDocument();
+    expect(screen.getByText('Earnings beat')).toBeInTheDocument();
+    expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('Patent filing')).toBeInTheDocument();
+  });
 });

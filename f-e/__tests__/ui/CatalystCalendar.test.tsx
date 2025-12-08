@@ -3,9 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import CatalystCalendar from '@/components/ui/CatalystCalendar';
 
 const sampleDays = [
-  { id: 'd1', dateLabel: 'NOV 1', dayLabel: 'MON', eventsCount: 1, icons: ['🗓️'] },
-  { id: 'd2', dateLabel: 'NOV 2', dayLabel: 'TUE', eventsCount: 0, icons: [] },
-  { id: 'd3', dateLabel: 'NOV 3', dayLabel: 'WED', eventsCount: 3, icons: ['💎', '⚡️'] },
+  { id: 'd1', dateLabel: 'NOV 1', dayLabel: 'MON', eventsCount: 1, icons: ['🗓️'], catalysts: [{ id: 'a1', ticker: 'AMD', headline: 'Earnings' }] },
+  { id: 'd2', dateLabel: 'NOV 2', dayLabel: 'TUE', eventsCount: 0, icons: [], catalysts: [] },
+  { id: 'd3', dateLabel: 'NOV 3', dayLabel: 'WED', eventsCount: 3, icons: ['💎', '⚡️'], catalysts: [{ id: 'a3', ticker: 'TSLA', headline: 'Recall' }] },
 ];
 
 describe('CatalystCalendar', () => {
@@ -17,6 +17,8 @@ describe('CatalystCalendar', () => {
     expect(screen.getByText('MON')).toBeInTheDocument();
     expect(screen.getByText('NOV 2')).toBeInTheDocument();
     expect(screen.getByText('WED')).toBeInTheDocument();
+    // Check that catalysts are displayed
+    expect(screen.getByText('AMD')).toBeInTheDocument();
 
     const btn = screen.getByRole('button', { name: /Show events for NOV 3/i });
     fireEvent.click(btn);
