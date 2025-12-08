@@ -36,4 +36,17 @@ describe('News page', () => {
     // The feed should still contain articles from other days (e.g., AAPL)
     expect(screen.getByText(/Apple Files New Patent/)).toBeInTheDocument();
   });
+
+  test('clicking on an article opens the article modal', async () => {
+    render(<NewsPage />);
+    // click the AMD article (outer card should have testid)
+    const articleCard = screen.getByTestId('news-article-1');
+    expect(articleCard).toBeInTheDocument();
+    articleCard.click();
+    // modal should open with headline
+    const closeTop = await screen.findByTestId('modal-close-top');
+    expect(screen.getByText(/AMD Gains 5%/)).toBeInTheDocument();
+    fireEvent.click(closeTop);
+    await waitFor(() => expect(screen.queryByTestId('modal-close-top')).not.toBeInTheDocument());
+  });
 });

@@ -91,6 +91,8 @@ export default function NewsPage() {
   const [selectedWatchlist, setSelectedWatchlist] = useState(watchlists[0]);
   const [sentiment, setSentiment] = useState<'all'|'bullish'|'bearish'|'high'>('all');
   const [query, setQuery] = useState('');
+  const [articleModalOpen, setArticleModalOpen] = useState(false);
+  const [modalArticle, setModalArticle] = useState<NewsArticle | null>(null);
 
   const filteredArticles = useMemo(() => {
     return MOCK_ARTICLES.filter((a) => {
@@ -148,7 +150,11 @@ export default function NewsPage() {
               <div className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400">No articles found for the selected filters.</div>
             ) : (
               filteredArticles.map((a) => (
-                <NewsArticleCard key={a.id} article={a} />
+                <NewsArticleCard
+                  key={a.id}
+                  article={a}
+                  onClick={() => { setModalArticle(a); setArticleModalOpen(true); }}
+                />
               ))
             )}
           </div>
@@ -174,6 +180,32 @@ export default function NewsPage() {
               <div className="text-gray-600 dark:text-gray-400">No catalysts for {modalDay.dateLabel}</div>
             )
           ) : null}
+        </div>
+      </InfoModal>
+      {/* Article modal showing full article content */}
+      <InfoModal
+        open={articleModalOpen}
+        onClose={() => setArticleModalOpen(false)}
+        onAfterClose={() => setModalArticle(null)}
+        title={modalArticle ? `${modalArticle.ticker} • ${modalArticle.headline}` : 'Article'}
+        ariaLabel={`Article ${modalArticle?.ticker ?? ''}`}
+        verticalAlign="top"
+      >
+        <div className="w-full max-w-2xl mx-auto p-4">
+          {modalArticle ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-300">{modalArticle.ticker}</div>
+                <div className={`px-2 py-0.5 text-xs font-semibold rounded-full ${modalArticle.sentiment === 'bullish' ? 'bg-green-50 text-green-800' : modalArticle.sentiment === 'bearish' ? 'bg-red-50 text-red-800' : 'bg-orange-50 text-orange-500'}`}>{modalArticle.sentiment.toUpperCase()}</div>
+              </div>
+              <h3 className="text-2xl font-semibold">{modalArticle.headline}</h3>
+              <div className="text-sm text-gray-600 dark:text-gray-400">{modalArticle.summary}</div>
+              <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between"><div>{modalArticle.source}</div><div>{modalArticle.timeAgo}</div></div>
+              <div className="mt-4">
+                <a href="#" className="text-indigo-600 dark:text-indigo-300 hover:underline">Read full article</a>
+              </div>
+            </div>
+          ) : null }
         </div>
       </InfoModal>
     </div>
