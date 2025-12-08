@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import CatalystCalendar, { CalendarDay } from '@/components/ui/CatalystCalendar';
 import InfoModal from '@/components/modals/InfoModal';
 import NewsFeedFilters from '@/components/ui/NewsFeedFilters';
 import NewsArticleCard, { NewsArticle } from '@/components/ui/NewsArticleCard';
+import { NewsArticleSkeleton, CatalystCalendarSkeleton, NewsFeedFiltersSkeleton, NewsArticleModalSkeleton, DayModalSkeleton } from '@/components/ui/skeletons';
 
 const MOCK_DAYS: CalendarDay[] = Array.from({ length: 9 }).map((_, idx) => {
   const d = new Date();
@@ -82,7 +83,7 @@ const MOCK_ARTICLES: NewsArticle[] = [
     date: MOCK_DAYS[1].id,
   },
   {
-    id: '3',
+    id: '7',
     ticker: 'TSLA',
     headline: 'Tesla Recalls Model X Over Brake Component',
     summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
@@ -92,7 +93,7 @@ const MOCK_ARTICLES: NewsArticle[] = [
     date: MOCK_DAYS[1].id,
   },
   {
-    id: '3',
+    id: '8',
     ticker: 'TSLA',
     headline: 'Tesla Recalls Model X Over Brake Component',
     summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
@@ -102,7 +103,7 @@ const MOCK_ARTICLES: NewsArticle[] = [
     date: MOCK_DAYS[1].id,
   },
   {
-    id: '3',
+    id: '9',
     ticker: 'TSLA',
     headline: 'Tesla Recalls Model X Over Brake Component',
     summary: "Recall expected to cost the company an estimated $200M, analysts say caution ahead of earnings.",
@@ -149,15 +150,19 @@ const MOCK_CALENDAR_EVENTS: CalendarEvent[] = [
 ];
 
 export default function NewsPage() {
+  // Always start with skeletons on load; hide after a small demo delay
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(MOCK_DAYS[0].id);
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [modalDay, setModalDay] = useState<CalendarDay | null>(null);
+  const [dayModalLoading, setDayModalLoading] = useState(false);
   const [watchlists] = useState(() => ['All Watchlists','Tech Setups','Macro Alerts']);
   const [selectedWatchlist, setSelectedWatchlist] = useState(watchlists[0]);
   const [sentiment, setSentiment] = useState<'all'|'bullish'|'bearish'|'high'>('all');
   const [query, setQuery] = useState('');
   const [articleModalOpen, setArticleModalOpen] = useState(false);
   const [modalArticle, setModalArticle] = useState<NewsArticle | null>(null);
+  const [articleModalLoading, setArticleModalLoading] = useState(false);
 
   const filteredArticles = useMemo(() => {
     return MOCK_ARTICLES.filter((a) => {
@@ -171,6 +176,13 @@ export default function NewsPage() {
     });
   }, [sentiment, query]);
 
+  // Optional demo loader: when ?skeleton=1 is set the page will show skeletons for 1.5s and then show content.
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Attach catalysts to each day based on a separate calendar data source (not MOCK_ARTICLES)
   const mapToSentiment = (s?: 'bullish'|'bearish'|'catalyst'|'neutral'|'mixed'): 'bullish'|'bearish'|'mixed' => {
     if (s === 'bearish') return 'bearish';
@@ -182,34 +194,76 @@ export default function NewsPage() {
     catalysts: MOCK_CALENDAR_EVENTS.filter(e => e.date === d.id).map(e => ({ id: e.id, ticker: e.symbol ?? e.title.split(' ')[0], headline: e.title, sentiment: mapToSentiment(e.sentiment) }))
   }));
 
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  const openArticleModalWithLoading = (article: NewsArticle) => {
+    if (isDev || isLoading) {
+      setArticleModalLoading(true);
+      setModalArticle(null);
+      setArticleModalOpen(true);
+      // simulate fetch
+      setTimeout(() => {
+        setModalArticle(article);
+        setArticleModalLoading(false);
+      }, 400);
+    } else {
+      setModalArticle(article);
+      setArticleModalOpen(true);
+    }
+  };
+
+  const openDayModalWithLoading = (day: CalendarDay) => {
+    if (isDev || isLoading) {
+      setDayModalLoading(true);
+      setModalDay(null);
+      setDayModalOpen(true);
+      setTimeout(() => {
+        setModalDay(day);
+        setDayModalLoading(false);
+      }, 400);
+    } else {
+      setModalDay(day);
+      setDayModalOpen(true);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Top: Catalyst Calendar */}
       <header aria-label="Upcoming Catalysts (Next 7 Days)" className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 py-3 mb-4">
         <div className="max-w-5xl mx-auto px-2">
           <h2 className="text-sm text-center text-gray-600 dark:text-gray-400 mb-2">Upcoming Catalysts (Next 7 Days)</h2>
-          <CatalystCalendar
-            days={daysWithCatalysts}
-            selectedId={selectedDay ?? null}
-            onSelect={(id) => {
-              setSelectedDay(id);
-              const day = MOCK_DAYS.find((d) => d.id === id) ?? null;
-              setModalDay(day);
-              setDayModalOpen(true);
-            }}
-          />
-        </div>
+          {isLoading ? (
+            <CatalystCalendarSkeleton />
+          ) : (
+            <CatalystCalendar
+              days={daysWithCatalysts}
+              selectedId={selectedDay ?? null}
+              onSelect={(id) => {
+                setSelectedDay(id);
+                const day = MOCK_DAYS.find((d) => d.id === id) ?? null;
+                if (day) openDayModalWithLoading(day);
+              }}
+            />
+          )}
+          </div>
+          <div className="max-w-5xl mx-auto px-2 flex justify-between items-center">
+            <div className="flex-1" />
+          </div>
       </header>
 
       {/* Main content */}
       <section className="grid grid-cols-1 lg:grid-cols-[1fr] gap-6">
         <div className="w-full">
           {/* Controls */}
-          <div className="mb-4">
+            <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">Watchlist News Feed</h3>
             </div>
-            <NewsFeedFilters
+            {isLoading ? (
+              <NewsFeedFiltersSkeleton />
+            ) : (
+              <NewsFeedFilters
               watchlists={watchlists}
               selectedWatchlist={selectedWatchlist}
               onWatchlistChange={setSelectedWatchlist}
@@ -218,18 +272,23 @@ export default function NewsPage() {
               query={query}
               onQueryChange={(q) => setQuery(q)}
             />
+            )}
           </div>
 
           {/* News feed */}
           <div className="space-y-4">
-            {filteredArticles.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <NewsArticleSkeleton key={i} />
+              ))
+            ) : filteredArticles.length === 0 ? (
               <div className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400">No articles found for the selected filters.</div>
             ) : (
               filteredArticles.map((a) => (
                 <NewsArticleCard
                   key={a.id}
                   article={a}
-                  onClick={() => { setModalArticle(a); setArticleModalOpen(true); }}
+                  onClick={() => openArticleModalWithLoading(a)}
                 />
               ))
             )}
@@ -247,7 +306,9 @@ export default function NewsPage() {
         verticalAlign="top"
       >
         <div className="w-full max-w-2xl mx-auto space-y-4 p-4">
-            {modalDay ? (
+            {dayModalLoading ? (
+              <DayModalSkeleton />
+            ) : modalDay ? (
               // Show calendar events in the day modal (separate from news articles)
               <>
                 <div className="mb-2">
@@ -301,7 +362,9 @@ export default function NewsPage() {
         verticalAlign="top"
       >
         <div className="w-full max-w-2xl mx-auto p-4">
-          {modalArticle ? (
+          {articleModalLoading ? (
+            <NewsArticleModalSkeleton />
+          ) : modalArticle ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-bold text-indigo-600 dark:text-indigo-300">{modalArticle.ticker}</div>
