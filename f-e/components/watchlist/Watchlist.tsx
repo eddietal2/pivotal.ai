@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import MarketPulseItem from './MarketPulseItem';
+import WatchListItem from './WatchListItem';
 
 type Ticker = { ticker: string; price?: string; match?: boolean; change?: number; sparkline?: number[] };
 
@@ -19,7 +19,7 @@ export default function Watchlist({ items }: Props) {
         ) : (
           <div className="space-y-2">
             {items.map((it) => (
-              <MarketPulseItem
+              <WatchListItem
                 key={it.ticker}
                 ticker={it.ticker}
                 price={it.price ?? ''}

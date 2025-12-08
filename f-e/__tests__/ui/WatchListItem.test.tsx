@@ -12,6 +12,7 @@ describe('WatchListItem', () => {
     expect(screen.getByTestId('sparkline-svg')).toBeInTheDocument();
     // Positive change will render with a + sign and should be in green text
     expect(screen.getByText('+2.15%')).toBeInTheDocument();
+    // The button should have watchlist-item data-testid
     expect(screen.getByTestId('watchlist-item-AAPL')).toBeInTheDocument();
   });
 

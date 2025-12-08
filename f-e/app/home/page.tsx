@@ -11,7 +11,7 @@ import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } fr
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import Sparkline from '@/components/ui/Sparkline';
-import MarketPulseItem from '@/components/watchlist/MarketPulseItem';
+import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton } from '@/components/ui/skeletons';
 
@@ -82,7 +82,7 @@ const mockPulse = [
   { index: 'Bitcoin', value: 38500.75, change: '+45.23%', color: 'text-green-500', trend: [26500, 28500, 30500, 33500, 38500], timeframe: '1Y', afterHours: false },
 ];
 
-// --- Using shared MarketPulseItem from components/watchlist
+// --- Using shared WatchListItem from components/watchlist
 
 
 
@@ -247,7 +247,7 @@ export default function App() {
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
                 ) : (
                   filteredPulse.map((pulse, index) => (
-                    <MarketPulseItem
+                    <WatchListItem
                       key={index}
                       ticker={pulse.index}
                       price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
