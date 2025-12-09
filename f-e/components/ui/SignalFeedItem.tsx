@@ -24,10 +24,10 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
     ? 'bg-gradient-to-r from-gray-50 to-green-50 dark:from-gray-900 dark:to-green-900/20'
     : type === 'Bearish'
     ? 'bg-gradient-to-r from-gray-50 to-red-50 dark:from-gray-900 dark:to-red-900/20'
-    : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow-900/20';
+    : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow`-900/20';
   // left border color for sentiment and chip border for smaller controls
-  const leftBorderColor = isBullish ? 'border-l-green-200 dark:border-l-green-500' : type === 'Bearish' ? 'border-l-red-200 dark:border-l-red-500' : 'border-l-yellow-200 dark:border-l-yellow-500';
-  const chipBorderColor = isBullish ? 'border-green-200 dark:border-green-500' : type === 'Bearish' ? 'border-red-200 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
+  const leftBorderColor = isBullish ? 'border-l-green-500 dark:border-l-green-700' : type === 'Bearish' ? 'border-l-red-700 dark:border-l-red-700' : 'border-l-yellow-500 dark:border-l-yellow-500';
+  const chipBorderColor = isBullish ? 'border-green-500 dark:border-green-700' : type === 'Bearish' ? 'border-red-500 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
   // base card border (grey, slim) to surround the card in addition to the colored left border
   const cardBorder = 'border border-gray-200 dark:border-gray-700';
 
@@ -62,7 +62,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
   return (
     <>
-      <div className={`p-5 lg:p-4 rounded-2xl ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}>
+      <div className={`p-5 lg:p-4 ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}>
         <div className="flex justify-between items-start">
           <div className="flex items-baseline">
             <span className="text-2xl lg:text-xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
@@ -76,12 +76,12 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
           </div>
         </div>
 
-        <p className={`mt-2 text-lg lg:text-base font-semibold ${color}`}>{signal}</p>
+        <p className={`mt-2 text-lg lg:text-base font-semibold`}>{signal}</p>
 
         {/* Confluence Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
           {confluence.map((c, i) => (
-                      <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+            <span key={i} className="text-xs lg:text-[0.7em] font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
               {c}
             </span>
           ))}

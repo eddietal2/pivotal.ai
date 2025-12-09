@@ -94,6 +94,7 @@ export default function App() {
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
   const [disclaimerModalOpen, setDisclaimerModalOpen] = React.useState(false);
+  const [stopLossModalOpen, setStopLossModalOpen] = React.useState(false);
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Timeframe filter for Market Pulse (D, W, M, Y)
   const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
@@ -101,6 +102,7 @@ export default function App() {
   const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
+  const [showStopLossAlert, setShowStopLossAlert] = React.useState(true);
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
   // Modal chart timeframe state (for selectedPulse modal)
@@ -495,6 +497,31 @@ export default function App() {
             </div>
           </InfoModal>
 
+          {/* Stop Loss Reminder Modal (detailed) */}
+          <InfoModal
+            open={stopLossModalOpen}
+            onClose={() => setStopLossModalOpen(false)}
+            title={<><Info className="w-6 h-6 text-red-400" />Stop Loss Reminder</>}
+            ariaLabel="Stop Loss Reminder"
+          >
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <p className="text-sm text-gray-700 dark:text-gray-300">A stop loss is an order designed to limit an investor’s loss on a position. Setting a stop loss can help you protect capital and manage risk if a trade moves against you.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-red-600 dark:text-red-300 mb-2">Why set a stop loss</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Stop losses automatically exit a losing trade at a predetermined price, helping reduce emotional decision-making and ensuring disciplined risk management.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-red-600 dark:text-red-300 mb-2">Common strategies</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Consider setting stop loss levels based on volatility, below key support levels, or at a predefined percentage loss you are comfortable with. Always test your strategy in a paper environment before trading live.</p>
+              </div>
+              <div className="text-right">
+                <button type="button" className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white" onClick={() => setStopLossModalOpen(false)}>I Understand</button>
+              </div>
+            </div>
+          </InfoModal>
+
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal
             open={signalFeedInfoOpen}
@@ -534,28 +561,45 @@ export default function App() {
               </div>
             </div>
           </InfoModal>
-          
+
+          {/* Stop Loss Reminder */}
+          {showStopLossAlert && (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Open stop loss details"
+              className="relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onClick={() => setStopLossModalOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setStopLossModalOpen(true);
+              }}
+            >
+              <p className="font-medium">
+                🛑 <b>Reminder</b>: Set appropriate stop losses to manage risk and protect capital.
+              </p>
+            </div>
+          )}          
           {/* Legal Disclaimer */}
           {showDisclaimer && (
               <div
                 role="button"
                 tabIndex={0}
                 aria-label="Open disclaimer details"
-                className="relative mb-[50vh] p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 onClick={() => setDisclaimerModalOpen(true)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') setDisclaimerModalOpen(true);
                 }}
               >
               <p className="font-medium">
-                ⚠️ Disclaimer: This data is for informational/testing purposes and is NOT financial advice.
+                ⚠️ <b>Disclaimer</b>: This data is for informational/testing purposes and is NOT financial advice.
               </p>
             </div>
           )}
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
-      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen) && (
+      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen || stopLossModalOpen) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
           {/* ...existing BottomNav code... */}
         </div>
