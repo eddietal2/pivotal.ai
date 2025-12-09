@@ -5,6 +5,7 @@ import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import { ListChecks, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useToast } from '@/components/context/ToastContext';
 import { useUI } from '@/components/context/UIContext';
+import Sparkline from '@/components/ui/Sparkline';
 
 type SignalFeedItemProps = {
   ticker: string;
@@ -61,24 +62,26 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
   return (
     <>
       <div className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}> 
-        {/* Sentiment tag (top-right) */}
         <div className="flex justify-between items-start">
 
           {/* Left */}
           <div className="flex items-baseline">
             <span className="text-2xl lg:text-xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${chipBorderColor} bg-gray-50 dark:bg-gray-900/70`}>
-              {timeframe}
-            </span>
           </div>
 
           {/* Right */}
           <div className="text-right pr-14 lg:pr-1">
             <span className={`mt-4 text-lg lg:text-base font-bold ${color}`}>{change}</span>
+            <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${chipBorderColor} bg-gray-50 dark:bg-gray-900/70`}>
+              {timeframe}
+            </span>
           </div>
         </div>
 
-        <p className={`mt-2 text-lg lg:text-base font-semibold`}>{signal}</p>
+        <p className={`mt-2 text-lg lg:text-base font-semibold text-yellow-400`}>{signal}</p>
+        <span className='my-4'>
+          <Sparkline data={[1, 2, 4, 3, 6]}></Sparkline>
+        </span>
 
         {/* Confluence Tags */}
         <div className="mt-3 flex flex-wrap gap-2">

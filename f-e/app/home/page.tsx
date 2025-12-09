@@ -10,7 +10,6 @@ import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
-import Sparkline from '@/components/ui/Sparkline';
 import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton } from '@/components/ui/skeletons';
@@ -386,7 +385,6 @@ export default function App() {
               </div>
             </div>
           </InfoModal>
-          {/* Pinned MarketOverview is rendered earlier to keep it above Live Setup Scans */}
 
           {/* Modal for Market Pulse Item Info (converted to InfoModal) */}
           <InfoModal
