@@ -674,21 +674,61 @@ def google_oauth_callback(request):
         user_info = userinfo_response.json()
         
         print(f"Google user info retrieved: {user_info.get('email')}")
-        
-        # Return user info to the client
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Google OAuth authentication successful',
-            'user_info': {
-                'email': user_info.get('email'),
-                'name': user_info.get('name'),
-                'given_name': user_info.get('given_name'),
-                'family_name': user_info.get('family_name'),
-                'picture': user_info.get('picture'),
-                'google_id': user_info.get('id'),
-                'verified_email': user_info.get('verified_email')
-            }
-        }, status=200)
+
+        # Find or create user in the DB
+        email = user_info.get('email')
+        google_id = user_info.get('id')
+        name = user_info.get('name')
+        given_name = user_info.get('given_name')
+        family_name = user_info.get('family_name')
+
+        # Try to find existing user by email
+        user = User.objects.filter(email=email, is_deleted=False).first()
+        if not user:
+            # Create a new user (simple username derived from email)
+            base_username = (email.split('@')[0] if email else f'google_{google_id}')
+            username = base_username
+            # Ensure the username is not too long
+            if len(username) > 255:
+                username = username[:255]
+            user = User.objects.create(email=email, username=username)
+
+        # Generate a session token for the frontend (24 hour expiry)
+        session_token = SessionToken()
+        session_token['user_id'] = user.id
+        session_token['email'] = user.email
+
+        # Build frontend redirect URL and include token
+        frontend_url = (
+            f"http://192.168.1.68:3000/login?"
+            f"token={str(session_token)}&"
+            f"email={user.email}&"
+            f"user_id={user.id}&"
+            f"username={user.username or ''}"
+        )
+
+        # If the caller explicitly requested JSON (e.g., tests or API usage), return JSON
+        if request.GET.get('format') == 'json' or request.headers.get('Accept') == 'application/json':
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Google OAuth authentication successful',
+                'token': str(session_token),
+                'user_info': {
+                    'email': user.email,
+                    'name': name,
+                    'given_name': given_name,
+                    'family_name': family_name,
+                    'picture': user_info.get('picture'),
+                    'google_id': google_id,
+                    'verified_email': user_info.get('verified_email')
+                }
+            }, status=200)
+
+        # Otherwise redirect to frontend and set a cookie for convenience
+        response = redirect(frontend_url)
+        # Try to set a httpOnly cookie for the session token; secure flag depends on environment
+        response.set_cookie('token', str(session_token), httponly=True, samesite='Lax')
+        return response
         
     except requests.RequestException as e:
         print(f"Error during Google OAuth: {e}")

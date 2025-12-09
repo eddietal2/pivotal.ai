@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/context/ThemeContext";
 import { ToastProvider } from "@/components/context/ToastContext";
+import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
 import { UIProvider } from "@/components/context/UIContext";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ToastProvider>
+            <PostLoginToastHandler />
             {/* UIProvider for global modal state */}
             <UIProvider>
               <div className="min-h-screen flex flex-col">

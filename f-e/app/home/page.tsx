@@ -5,6 +5,7 @@ import React from 'react';
 import InfoModal from '@/components/modals/InfoModal';
 import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
+import { useToast } from '@/components/context/ToastContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
@@ -106,12 +107,15 @@ export default function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   // Modal chart timeframe state (for selectedPulse modal)
   const [modalChartTimeframe, setModalChartTimeframe] = React.useState<'24H'|'1D'|'1W'|'1M'|'1Y'>(() => '1D');
+  const { showToast } = useToast();
 
   // Simulate loading on mount
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 2000); // 2 second loading simulation
     return () => clearTimeout(timer);
   }, []);
+
+  // Post-login toast handler has been moved to RootLayout's PostLoginToastHandler.
 
   // prevent background scrolling when the pulse info modal is open
   React.useEffect(() => {

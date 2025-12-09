@@ -603,7 +603,7 @@ class MagicLinkAuthTests(TestCase):
             # ACT: Make the GET request to the callback endpoint with the auth code
             response = self.client.get(
                 reverse('google_oauth_callback'),
-                {'code': valid_auth_code}
+                {'code': valid_auth_code, 'format': 'json'}
             )
 
             # ASSERT 1: Check for HTTP 200 OK status
@@ -676,7 +676,7 @@ class MagicLinkAuthTests(TestCase):
             # ACT: Make the GET request to the callback endpoint with the auth code
             response = self.client.get(
                 reverse('google_oauth_callback'),
-                {'code': valid_auth_code}
+                {'code': valid_auth_code, 'format': 'json'}
             )
 
             # ASSERT 1: Check for HTTP 200 OK status
@@ -746,7 +746,7 @@ class MagicLinkAuthTests(TestCase):
             # ACT: Make the GET request to the callback endpoint with the auth code
             response = self.client.get(
                 reverse('google_oauth_callback'),
-                {'code': valid_auth_code}
+                {'code': valid_auth_code, 'format': 'json'}
             )
 
             # ASSERT 1: Check for HTTP 200 OK status

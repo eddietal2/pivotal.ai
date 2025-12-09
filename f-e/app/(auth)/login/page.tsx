@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { AlertCircleIcon, Mail, Lock, Loader2 } from "lucide-react";
 
 import { useTheme } from "@/components/context/ThemeContext";
+import { useToast } from '@/components/context/ToastContext';
 import ThemeToggleButton from "@/components/ui/ThemeToggleButton";
 import CandleStickAnim from "@/components/ui/CandleStickAnim";
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,7 @@ export default function LoginPage() {
     const [showError, setShowError] = useState(false);
     const [successMessage, setSuccessMessage] = useState(''); // New state for success
     const [isSubmitting, setIsSubmitting] = useState(false); // New state for loading/submitting
+    const { showToast } = useToast();
 
     // Check if user is already authenticated on mount
     useEffect(() => {
@@ -56,6 +58,11 @@ export default function LoginPage() {
             
             localStorage.setItem('auth_token', token);
             localStorage.setItem('user', JSON.stringify(userData));
+                        // Persist a toast message so it can be shown on the Home page after redirect — include the user's name if available
+                        try { 
+                            const name = username || (urlEmail ? urlEmail.split('@')[0] : '');
+                            localStorage.setItem('post_login_toast', JSON.stringify({ message: name ? `Welcome back, ${name}!` : 'Successfully logged in', type: 'success', duration: 6000 })); 
+                        } catch (e) { /* ignore in tests */ }
             
             log('Auth data stored, redirecting to home...');
             redirectTo('http://192.168.1.68:3000/home');
@@ -133,11 +140,25 @@ export default function LoginPage() {
                     log('User data stored in localStorage');
                 }
                 
-                // Store session token if provided
-                if (data.token || data.access_token) {
+                // If the server returns a redirect_url: persist the toast and redirect
+                if (data.redirect_url) {
+                    const token = data.token || data.access_token;
+                    if (token) {
+                        localStorage.setItem('auth_token', token);
+                        log('Authentication token stored');
+                    }
+                                        // Persist toast for next page after redirect (include user's name if present)
+                                        try {
+                                            const userName = data.user?.username || data.user?.first_name || (data.user?.email ? data.user.email.split('@')[0] : '');
+                                            localStorage.setItem('post_login_toast', JSON.stringify({ message: userName ? `Welcome back, ${userName}!` : (data.message || 'Successfully logged in'), type: 'success', duration: 6000 }));
+                                        } catch (e) { /* ignore */ }
+                }
+                // If token was returned without a redirect, store it and show toast on the current page
+                else if (data.token || data.access_token) {
                     const token = data.token || data.access_token;
                     localStorage.setItem('auth_token', token);
                     log('Authentication token stored');
+                    try { showToast(data.message || 'Successfully logged in', 'success', 4000); } catch (e) { /* ignore in tests */ }
                 }
                 
                 // If redirect_url is provided, redirect the user
@@ -179,23 +200,8 @@ export default function LoginPage() {
     return (
         <div className={`${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-white'} flex flex-col items-center justify-center lg:min-h-screen font-sans`}>
 
-            {/* Desktop Message - Simplified/Stylized */}
-            <div className={`hidden lg:flex flex-col items-center justify-center p-10 h-screen w-full ${theme === 'dark' ? 'bg-[#0a0a0a] text-gray-300' : 'bg-white text-gray-800'}`}>
-                <CandleStickAnim />
-                <div className="w-full relative mx-auto my-6" style={{ height: '0', paddingBottom: '20%', maxWidth: '300px' }}>
-                    <Image 
-                        src={logoSrc} 
-                        alt="Pivotal Logo"
-                        fill={true} 
-                        className="object-contain"
-                    />
-                </div>
-                <b className="text-xl">This is currently optimized for mobile devices.</b>
-                <p className="text-sm mt-2">Please use a smaller screen or mobile browser to access the sign-in features.</p>
-            </div>
-
             {/* Mobile & Tablet Login Card */}
-            <div className="w-full max-w-sm mx-auto p-6 bg-transparent lg:hidden"> 
+            <div className="w-full max-w-sm mx-auto p-6 bg-transparent"> 
 
                 {/* Theme Toggle Button */}
                 <div className="flex justify-end mb-4">

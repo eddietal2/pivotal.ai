@@ -1,10 +1,12 @@
 import '@testing-library/jest-dom'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Page from '../../app/(auth)/login/page'
+import Home from '../../app/home/page';
 import CandleStickAnim from '@/components/ui/CandleStickAnim'
 import ThemeToggleButton from '@/components/ui/ThemeToggleButton'
 import { ThemeProvider } from '../../components/context/ThemeContext'
 import { ToastProvider } from '../../components/context/ToastContext'
+import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import { redirectTo } from '../../lib/redirect'
 
 // in your Jest setup (e.g., in setupFilesAfterEnv) or imported here.
@@ -27,6 +29,7 @@ const renderWithProviders = (ui, options) => {
   return render(
     <ThemeProvider>
       <ToastProvider>
+        <PostLoginToastHandler />
         {ui}
       </ToastProvider>
     </ThemeProvider>,
@@ -514,10 +517,13 @@ describe('Post Login Redirect', () => {
     // ACT 2: Click the magic link button to trigger login
     fireEvent.click(magicLinkButton);
 
-    // ASSERT: Wait for all async operations to complete
+    // ASSERT: Wait for redirect to be called
     await waitFor(() => {
       expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
     }, { timeout: 3000 });
+
+    // Render Home page to simulate after redirect and assert toast presence
+    renderWithProviders(<Home />);
 
     // ASSERT 1: Verify user data was stored in localStorage
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
@@ -542,6 +548,13 @@ describe('Post Login Redirect', () => {
     // Both setItem calls should have a lower invocation order (happened earlier) than redirectTo
     expect(setItemCalls[0]).toBeLessThan(redirectCall);
     expect(setItemCalls[1]).toBeLessThan(redirectCall);
+
+    // ASSERT 5: Verify a success toast was shown on Home page after redirect
+    await waitFor(() => {
+      const toast = screen.getByTestId('toast-container');
+      expect(toast).toBeInTheDocument();
+      expect(screen.getByText(/Login successful|Successfully logged in|Welcome back/i)).toBeInTheDocument();
+    });
   });
 
   // FE-304: Attempting to manually navigate back to the login page (/, /login) while authenticated results in the user being immediately redirected back to the home screen (/home or /dashboard).
@@ -576,6 +589,45 @@ describe('Post Login Redirect', () => {
     // ASSERT: Verify localStorage was checked for auth data
     expect(localStorageMock.getItem).toHaveBeenCalledWith('user');
     expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
+  });
+
+  // FE-305: If the login handler is visited with a token in the URL (e.g., via Google OAuth or Magic Link),
+  // the app should store the token/user and show a success toast before redirecting to /home.
+  it("FE-305 should show a logged-in toast and redirect when token is present in URL", async () => {
+    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const mockUser = { email: 'user@example.com', id: '123', username: 'user' };
+    const mockToken = 'mock-token-abc';
+
+    // Set the location search params as if the backend redirected here with a token
+    const params = `?token=${mockToken}&email=${encodeURIComponent(mockUser.email)}&user_id=${mockUser.id}&username=${mockUser.username}`;
+    window.history.pushState({}, 'Test Login', `/login${params}`);
+
+    // Mock localStorage and clear redirectTo
+    const mockLocalStorage = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn()
+    };
+    Object.defineProperty(window, 'localStorage', { value: mockLocalStorage, writable: true });
+    redirectTo.mockClear();
+
+    // Render the page
+    renderWithProviders(<Page />);
+
+    // Wait for redirect to be called and for token to be stored
+    await waitFor(() => {
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('auth_token', mockToken);
+      expect(redirectTo).toHaveBeenCalledWith(expectedHomePageURL);
+    });
+
+    // Assert the toast appeared on Home page after redirect
+    renderWithProviders(<Home />);
+    await waitFor(() => {
+      const toast = screen.getByTestId('toast-container');
+      expect(toast).toBeInTheDocument();
+      expect(screen.getByText(/Successfully logged in|Login successful|Welcome back/i)).toBeInTheDocument();
+    });
   });
 
   // FE-305: Attempting to access a protected route (e.g., /settings) when unauthenticated results in a redirect back to the login page (/) or displays a 'Sign In Required' message.
