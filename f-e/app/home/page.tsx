@@ -468,26 +468,26 @@ export default function App() {
             title={<><Info className="w-6 h-6 text-orange-300" />Legal Disclaimer</>}
             ariaLabel="Legal Disclaimer"
           >
-            <div className="w-full pb-32 max-w-2xl mx-auto space-y-6">
-              <div className="h-88"></div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <p className="text-sm text-gray-300">This application and the data it surfaces are provided for informational, educational, and research purposes only. Nothing presented by this app is intended to be, and should not be construed as, financial, investment, tax, or legal advice. Use of this app does not create any advisory relationship.</p>
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+              <div className="h-52"></div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <p className="text-sm text-gray-700 dark:text-gray-300">This application and the data it surfaces are provided for informational, educational, and research purposes only. Nothing presented by this app is intended to be, and should not be construed as, financial, investment, tax, or legal advice. Use of this app does not create any advisory relationship.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-sm font-semibold text-indigo-300 mb-2">No Financial Advice</h5>
-                <p className="text-xs text-gray-400">Any signals, metrics, or analysis presented here are not recommendations to buy, sell, or hold any assets. Users should perform their own due diligence and consult a licensed financial advisor before making decisions.</p>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">No Financial Advice</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Any signals, metrics, or analysis presented here are not recommendations to buy, sell, or hold any assets. Users should perform their own due diligence and consult a licensed financial advisor before making decisions.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-sm font-semibold text-indigo-300 mb-2">No Guarantees &amp; Accuracy</h5>
-                <p className="text-xs text-gray-400">Data may be delayed, incomplete, or inaccurate. We make no warranties regarding the completeness, timeliness, or accuracy of the information provided. All content is provided 'as is' without warranty of any kind.</p>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">No Guarantees &amp; Accuracy</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Data may be delayed, incomplete, or inaccurate. We make no warranties regarding the completeness, timeliness, or accuracy of the information provided. All content is provided 'as is' without warranty of any kind.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-sm font-semibold text-indigo-300 mb-2">Limitation of Liability</h5>
-                <p className="text-xs text-gray-400">We and our affiliates shall not be liable for any loss or damage arising from the use of the app or reliance on any information presented. You assume full responsibility for any investment decisions you make.</p>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Limitation of Liability</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">We and our affiliates shall not be liable for any loss or damage arising from the use of the app or reliance on any information presented. You assume full responsibility for any investment decisions you make.</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <h5 className="text-sm font-semibold text-indigo-300 mb-2">Consult a Professional</h5>
-                <p className="text-xs text-gray-400">If you need individual advice, consult a licensed financial, tax, or legal advisor. The app is not a substitute for professional advice.</p>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Consult a Professional</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">If you need individual advice, consult a licensed financial, tax, or legal advisor. The app is not a substitute for professional advice.</p>
               </div>
               <div className="text-right">
                 <button type="button" className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setDisclaimerModalOpen(false)}>I Understand</button>

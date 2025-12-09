@@ -20,6 +20,8 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
   const [closing, setClosing] = React.useState(false);
   const closingHandledRef = React.useRef(false);
   const closeTimerRef = React.useRef<number | null>(null);
+  const fallbackTitleIdRef = React.useRef<string>(`info-modal-title-${Math.random().toString(36).slice(2, 8)}`);
+  const titleId = typeof React.useId === 'function' ? React.useId() : fallbackTitleIdRef.current;
 
   React.useEffect(() => {
     if (open) {
@@ -82,12 +84,13 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
   }, [rendered]);
 
   if (!rendered) return null;
+  // titleId already created at top-level to keep hook order stable
 
   return (
-    <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/50 dark:bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel || 'Info Modal'}>
+    <div className="fixed inset-0 z-[102] min-h-screen h-screen w-screen bg-black/50 dark:bg-black/70" role="dialog" aria-modal="true" aria-labelledby={ariaLabel ? undefined : titleId} aria-label={ariaLabel || undefined}>
       <div className="absolute inset-0 min-h-screen h-screen w-screen flex items-stretch justify-stretch">
       <div
-        className={`bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative flex flex-col ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}
+        className={`bg-white dark:bg-gray-900 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-sm dark:shadow-2xl w-full min-h-screen h-screen mx-auto relative flex flex-col ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}
         onAnimationEnd={(e) => {
           // only handle the event on the main element (ignore bubbled children animations)
           if (e.currentTarget !== e.target) return;
@@ -110,10 +113,10 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
           {/* Header with title and top X close button */}
           <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
+              <h4 id={titleId} className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
             </div>
             <button
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-2xl font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
               onClick={onClose}
               aria-label="Close modal"
               data-testid="modal-close-top"
