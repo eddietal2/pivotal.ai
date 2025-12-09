@@ -93,6 +93,7 @@ export default function App() {
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
+  const [disclaimerModalOpen, setDisclaimerModalOpen] = React.useState(false);
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Timeframe filter for Market Pulse (D, W, M, Y)
   const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
@@ -100,8 +101,6 @@ export default function App() {
   const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
   const [showDisclaimer, setShowDisclaimer] = React.useState(true);
-  const [closingDisclaimer, setClosingDisclaimer] = React.useState(false);
-  const closingTimer = React.useRef<number | null>(null);
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
   // Modal chart timeframe state (for selectedPulse modal)
@@ -462,6 +461,40 @@ export default function App() {
             </div>
           </InfoModal>
 
+          {/* Legal Disclaimer Modal (detailed) */}
+          <InfoModal
+            open={disclaimerModalOpen}
+            onClose={() => setDisclaimerModalOpen(false)}
+            title={<><Info className="w-6 h-6 text-orange-300" />Legal Disclaimer</>}
+            ariaLabel="Legal Disclaimer"
+          >
+            <div className="w-full pb-32 max-w-2xl mx-auto space-y-6">
+              <div className="h-88"></div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <p className="text-sm text-gray-300">This application and the data it surfaces are provided for informational, educational, and research purposes only. Nothing presented by this app is intended to be, and should not be construed as, financial, investment, tax, or legal advice. Use of this app does not create any advisory relationship.</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-300 mb-2">No Financial Advice</h5>
+                <p className="text-xs text-gray-400">Any signals, metrics, or analysis presented here are not recommendations to buy, sell, or hold any assets. Users should perform their own due diligence and consult a licensed financial advisor before making decisions.</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-300 mb-2">No Guarantees &amp; Accuracy</h5>
+                <p className="text-xs text-gray-400">Data may be delayed, incomplete, or inaccurate. We make no warranties regarding the completeness, timeliness, or accuracy of the information provided. All content is provided 'as is' without warranty of any kind.</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-300 mb-2">Limitation of Liability</h5>
+                <p className="text-xs text-gray-400">We and our affiliates shall not be liable for any loss or damage arising from the use of the app or reliance on any information presented. You assume full responsibility for any investment decisions you make.</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-300 mb-2">Consult a Professional</h5>
+                <p className="text-xs text-gray-400">If you need individual advice, consult a licensed financial, tax, or legal advisor. The app is not a substitute for professional advice.</p>
+              </div>
+              <div className="text-right">
+                <button type="button" className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setDisclaimerModalOpen(false)}>I Understand</button>
+              </div>
+            </div>
+          </InfoModal>
+
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal
             open={signalFeedInfoOpen}
@@ -504,29 +537,16 @@ export default function App() {
           
           {/* Legal Disclaimer */}
           {showDisclaimer && (
-            <div
-              className={`relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg mt-8 transition-opacity transform ${closingDisclaimer ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0'}`}
-              aria-hidden={closingDisclaimer}
-            >
-              <button
-                type="button"
-                aria-label="Close disclaimer"
-                className="absolute top-1/2 right-2 transform -translate-y-1/2 p-1 rounded hover:bg-orange-800/30 text-orange-100"
-                onClick={() => {
-                  // Start closing animation then hide
-                  setClosingDisclaimer(true);
-                  if (closingTimer.current) {
-                    window.clearTimeout(closingTimer.current);
-                  }
-                  closingTimer.current = window.setTimeout(() => {
-                    setShowDisclaimer(false);
-                    setClosingDisclaimer(false);
-                    closingTimer.current = null;
-                  }, 220); // matches Tailwind duration-200
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Open disclaimer details"
+                className="relative mb-[50vh] p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onClick={() => setDisclaimerModalOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setDisclaimerModalOpen(true);
                 }}
               >
-                <X className="w-4 h-4" />
-              </button>
               <p className="font-medium">
                 ⚠️ Disclaimer: This data is for informational/testing purposes and is NOT financial advice.
               </p>
@@ -535,7 +555,7 @@ export default function App() {
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
-      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || closingDisclaimer) && (
+      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
           {/* ...existing BottomNav code... */}
         </div>
