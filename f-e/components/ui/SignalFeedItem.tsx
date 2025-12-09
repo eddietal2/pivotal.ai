@@ -24,11 +24,9 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
     ? 'bg-gradient-to-r from-gray-50 to-green-50 dark:from-gray-900 dark:to-green-900/20'
     : type === 'Bearish'
     ? 'bg-gradient-to-r from-gray-50 to-red-50 dark:from-gray-900 dark:to-red-900/20'
-    : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow`-900/20';
-  // left border color for sentiment and chip border for smaller controls
-  const leftBorderColor = isBullish ? 'border-l-green-500 dark:border-l-green-700' : type === 'Bearish' ? 'border-l-red-700 dark:border-l-red-700' : 'border-l-yellow-500 dark:border-l-yellow-500';
+    : 'bg-gradient-to-r from-gray-50 to-yellow-50 dark:from-gray-900 dark:to-yellow-900/20';
   const chipBorderColor = isBullish ? 'border-green-500 dark:border-green-700' : type === 'Bearish' ? 'border-red-500 dark:border-red-500' : 'border-yellow-200 dark:border-yellow-500';
-  // base card border (grey, slim) to surround the card in addition to the colored left border
+  // base card border (grey, slim) to surround the card
   const cardBorder = 'border border-gray-200 dark:border-gray-700';
 
   const { setModalOpen } = useUI();
@@ -59,20 +57,24 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
       }
     };
   }, [chartModalOpen]);
-
+``
   return (
     <>
-      <div className={`p-5 lg:p-4 ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}>
+      <div className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}> 
+        {/* Sentiment tag (top-right) */}
         <div className="flex justify-between items-start">
+
+          {/* Left */}
           <div className="flex items-baseline">
             <span className="text-2xl lg:text-xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${chipBorderColor} bg-gray-50 dark:bg-gray-900/70`}>
               {timeframe}
             </span>
           </div>
-          <div className="text-right">
-            <span className={`text-lg lg:text-base font-bold ${color}`}>{change}</span>
-            <p className="text-xs text-gray-400">{type} Change</p>
+
+          {/* Right */}
+          <div className="text-right pr-14 lg:pr-1">
+            <span className={`mt-4 text-lg lg:text-base font-bold ${color}`}>{change}</span>
           </div>
         </div>
 

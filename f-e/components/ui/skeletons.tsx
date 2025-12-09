@@ -42,13 +42,15 @@ export function MarketOverviewSkeleton() {
 // Skeleton for SignalFeedItem
 export function SignalFeedSkeleton() {
   return (
-    <div className="p-5 lg:p-4 rounded-2xl border-l-4 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 animate-pulse">
+    <div className="relative p-5 lg:p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 animate-pulse">
+      {/* Placeholder sentiment tag in top-right */}
+      <div className="absolute right-3 top-3 w-10 h-3 rounded-full bg-gray-200 dark:bg-gray-700"></div>
       <div className="flex justify-between items-start">
         <div className="flex items-baseline">
           <div className="h-8 lg:h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 mr-2"></div>
           <div className="h-4 lg:h-3 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
         </div>
-        <div className="text-right">
+        <div className="text-right pr-14 lg:pr-16">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-14 mb-1"></div>
           <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
         </div>
