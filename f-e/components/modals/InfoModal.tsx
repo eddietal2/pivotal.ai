@@ -111,7 +111,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
         }}
       >
           {/* Header with title and top X close button */}
-          <div className="w-full px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
+          <div className="w-full px-4 lg:px-100 sm:px-6 lg:px-64 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h4 id={titleId} className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h4>
             </div>
@@ -129,7 +129,7 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
             {children}
           </div>
           {/* Footer close button pinned to bottom of modal */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
+          <div className="px-4 sm:px-6 lg:px-64 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex justify-end">
             <button
               type="button"
               className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"

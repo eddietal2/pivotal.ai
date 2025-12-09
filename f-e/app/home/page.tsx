@@ -308,7 +308,7 @@ export default function App() {
               }
                 openKey={signalTimeframe}
             >
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
                 ) : (
@@ -316,7 +316,7 @@ export default function App() {
                     <SignalFeedItem key={index} {...signal} />
                   ))
                 )}
-                <div className="text-center p-4">
+                <div className="text-center p-4 sm:col-span-3">
                   <p className="text-indigo-400 font-semibold flex items-center justify-center">
                     <ListChecks className="w-5 h-5 mr-2" />
                     View & Customize Watchlist Scans

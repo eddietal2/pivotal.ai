@@ -62,21 +62,21 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 
   return (
     <>
-      <div className={`p-5 rounded-2xl ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl`}>
+      <div className={`p-5 lg:p-4 rounded-2xl ${cardBorder} border-l-4 ${leftBorderColor} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full`}>
         <div className="flex justify-between items-start">
           <div className="flex items-baseline">
-            <span className="text-2xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
+            <span className="text-2xl lg:text-xl font-extrabold text-gray-900 dark:text-white mr-2">{ticker}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color} border ${chipBorderColor} bg-gray-50 dark:bg-gray-900/70`}>
               {timeframe}
             </span>
           </div>
           <div className="text-right">
-            <span className={`text-lg font-bold ${color}`}>{change}</span>
+            <span className={`text-lg lg:text-base font-bold ${color}`}>{change}</span>
             <p className="text-xs text-gray-400">{type} Change</p>
           </div>
         </div>
 
-        <p className={`mt-2 text-lg font-semibold ${color}`}>{signal}</p>
+        <p className={`mt-2 text-lg lg:text-base font-semibold ${color}`}>{signal}</p>
 
         {/* Confluence Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
@@ -88,9 +88,9 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-4 flex gap-2 pt-3 border-t border-gray-700/50">
+        <div className="mt-auto flex gap-2 pt-3 border-t border-gray-700/50">
           <button
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${added ? 'text-green-800 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700/50' : 'text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50'} rounded-lg transition-colors`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 lg:px-2 lg:py-1 text-xs font-medium ${added ? 'text-green-800 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700/50' : 'text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50'} rounded-lg transition-colors`}
             onClick={() => {
               // UX: Show success toast and toggle temporary added state
               showToast('Added to watchlist', 'success');
@@ -104,7 +104,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
           </button>
           
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 lg:px-2 lg:py-1 text-xs font-medium text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
             onClick={() => setChartModalOpen(true)}
           >
             View Chart
