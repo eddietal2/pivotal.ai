@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean }) {
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean }) {
   const [open, setOpen] = React.useState<boolean>(() => defaultOpen ?? true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -81,7 +81,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
   }, [openKey]);
 
   return (
-    <div className="mb-4" ref={containerRef}>
+    <div ref={containerRef} className={`mb-4 ${borderBottom && open ? 'border-b border-gray-200 dark:border-gray-700 pb-4' : ''}`}>
       <div className="flex items-center justify-between gap-2">
         {/* Collapse toggle button (arrow + title) */}
         <button

@@ -181,7 +181,7 @@ export default function App() {
     <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white font-sans">
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
           
           {/* Global Market Pulse */}
