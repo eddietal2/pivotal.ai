@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Cpu, Eye, Minus, Maximize2, Mic } from 'lucide-react';
+import { Cpu, Eye, Minus, Maximize2, Mic, Play, Pause, RefreshCw } from 'lucide-react';
 import InfoModal from '../modals/InfoModal';
 import { useToast } from '@/components/context/ToastContext';
 // Info icon removed; parent will render info button/modal
@@ -103,6 +103,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const headerTitleRef = React.useRef<HTMLHeadingElement | null>(null);
   const { showToast } = useToast();
   const [voiceActive, setVoiceActive] = React.useState(false);
+  const [isPaused, setIsPaused] = React.useState(false);
   const voiceUtteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
   const audioCtxRef = React.useRef<AudioContext | null>(null);
 
@@ -136,9 +137,11 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           try { window.localStorage.setItem('mkt_overview_selected_voice', chosenVoice.name); } catch (_) { /* ignore */ }
         }
       } catch (err) { /* ignore */ }
-      utterance.onstart = () => { setSpeaking(true); try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (_) {} };
-      utterance.onend = () => { setSpeaking(false); setVoiceActive(false); try { onVoiceToggle?.(false); } catch (_) {} };
-      utterance.onerror = () => { setSpeaking(false); setVoiceActive(false); try { onVoiceToggle?.(false); } catch (_) {} };
+      utterance.onstart = () => { setSpeaking(true); setIsPaused(false); try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (_) {} };
+      utterance.onend = () => { setSpeaking(false); setVoiceActive(false); setIsPaused(false); try { onVoiceToggle?.(false); } catch (_) {} };
+      utterance.onerror = () => { setSpeaking(false); setVoiceActive(false); setIsPaused(false); try { onVoiceToggle?.(false); } catch (_) {} };
+      utterance.onpause = () => { setIsPaused(true); };
+      utterance.onresume = () => { setIsPaused(false); };
       voiceUtteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     } catch (err) {
@@ -248,6 +251,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         voiceUtteranceRef.current = null;
       }
       setSpeaking(false);
+      setIsPaused(false);
       return;
     }
 
@@ -274,14 +278,18 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       utterance.onend = () => {
         setVoiceActive(false);
         setSpeaking(false);
+        setIsPaused(false);
         try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
         try { showToast?.('Finished speaking', 'success'); } catch (e) { /* ignore */ }
         voiceUtteranceRef.current = null;
       };
       utterance.onstart = () => {
         setSpeaking(true);
+        setIsPaused(false);
         try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (e) { /* ignore */ }
       };
+      utterance.onpause = () => { setIsPaused(true); };
+      utterance.onresume = () => { setIsPaused(false); };
       utterance.onboundary = (e) => {
         // debug boundary events to confirm speech progress
         // console.debug('Speech boundary', e);
@@ -289,6 +297,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       utterance.onerror = (e) => {
         setVoiceActive(false);
         setSpeaking(false);
+        setIsPaused(false);
         try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
         try { showToast?.('Error speaking overview', 'error'); } catch (e) { /* ignore */ }
         voiceUtteranceRef.current = null;
@@ -528,18 +537,54 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           {/* Voice / Mic Toggle */}
           <button
             type="button"
-            aria-label={voiceActive ? 'Stop voice summary' : 'Start voice summary'}
+            aria-label={!speaking ? 'Start voice summary' : (isPaused ? 'Resume voice summary' : 'Pause voice summary')}
             aria-pressed={voiceActive}
-            title={voiceActive ? 'Stop voice summary' : 'Voice summary'}
+            title={!speaking ? 'Start voice summary' : (isPaused ? 'Resume voice summary' : 'Pause voice summary')}
             data-testid="market-overview-voice-toggle"
-            className={`ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring ${voiceActive ? 'bg-cyan-600 text-white' : ''}`}
+            className={`ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring ${voiceActive && !isPaused ? 'bg-cyan-600 text-white' : ''} ${isPaused ? 'bg-yellow-600 text-white' : ''}`}
             onClick={() => {
-              setVoiceActive((v) => {
-                const nv = !v;
-                try { onVoiceToggle?.(nv); } catch (err) { /* ignore */ }
-                return nv;
-              });
-              // Prefer starting speech immediately if text is available and the user clicked the button
+              if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                try { showToast?.('Speech synthesis not available in this browser', 'error'); } catch (_) { /* ignore */ }
+                return;
+              }
+              const synth = window.speechSynthesis;
+              // If speaking and not paused -> pause
+              if (synth.speaking && !synth.paused) {
+                try {
+                  synth.pause();
+                  setIsPaused(true);
+                  setVoiceActive(true);
+                  try { showToast?.('Paused Market Overview', 'info'); } catch (_) {}
+                } catch (e) { /* ignore */ }
+                return;
+              }
+              // If paused -> resume (fallback to restart if resume doesn't take effect)
+              if (synth.paused || isPaused) {
+                try {
+                  synth.resume();
+                  setIsPaused(false);
+                  setVoiceActive(true);
+                  try { showToast?.('Resumed Market Overview', 'info'); } catch (_) {}
+                  try { onVoiceToggle?.(true); } catch (_) {}
+                  // If resume doesn't work in this browser, restart the speech
+                  setTimeout(() => {
+                    try {
+                      if (synth.paused) {
+                        try { synth.cancel(); } catch (_) { /* ignore */ }
+                        const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
+                        if (immediateText && immediateText.length > 0) {
+                          trySpeakNow(immediateText, selectedVoiceName);
+                          try { onVoiceToggle?.(true); } catch (_) {}
+                        }
+                      }
+                    } catch (_) { /* ignore */ }
+                  }, 150);
+                } catch (e) { /* ignore */ }
+                return;
+              }
+              // Not speaking: start speaking
+              setVoiceActive(true);
+              try { onVoiceToggle?.(true); } catch (_) {}
               const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
               if (immediateText && immediateText.length > 0) {
                 trySpeakNow(immediateText, selectedVoiceName);
@@ -548,10 +593,37 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               }
             }}
           >
-            <Mic className="w-4 h-4" />
-            {speaking && (
+            {(!speaking) ? <Mic className="w-4 h-4" /> : (isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />)}
+            {speaking && !isPaused && (
               <span className="ml-2 inline-block w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden />
             )}
+          </button>
+          <button
+            type="button"
+            aria-label="Restart voice summary"
+            title="Restart voice summary"
+            data-testid="market-overview-voice-restart"
+            className="ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring"
+            onClick={() => {
+              if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                try { showToast?.('Speech synthesis not available', 'error'); } catch (_) { /* ignore */ }
+                return;
+              }
+              const synth = window.speechSynthesis;
+              // Cancel any existing and restart from the beginning
+              try { synth.cancel(); } catch (_) { /* ignore */ }
+              setIsPaused(false);
+              setVoiceActive(true);
+              const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
+              if (immediateText && immediateText.length > 0) {
+                trySpeakNow(immediateText, selectedVoiceName);
+                try { onVoiceToggle?.(true); } catch (_) {}
+              } else {
+                try { showToast?.('No overview to restart', 'info'); } catch (_) {}
+              }
+            }}
+          >
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
         <span className="cli-close-anim" aria-hidden />
@@ -577,7 +649,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               {/* Typewriter dot (green) — reserved space with padding to prevent layout shift */}
             
               {/* Display overlay text */}
-              <span className="inline-block lg:text-[1em] text-gray-200">{displayedOverview}</span>
+              <span className="inline-block lg:text-[1.15em] text-gray-200">{displayedOverview}</span>
             {/* caret while typing */}
             {displayedOverview.length < (summaryOverview?.length ?? 0) && (
               <span data-testid="type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-900 dark:text-gray-100">|</span>
