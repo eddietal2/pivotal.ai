@@ -101,7 +101,15 @@ export default function App() {
   // Timeframe filter for Market Pulse (D, W, M, Y)
   const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // view mode for Market Pulse cards: 'slider' (horizontal) on mobile vs 'list' (vertical)
-  const [pulseViewMode, setPulseViewMode] = React.useState<'slider'|'list'>('slider');
+  const [pulseViewMode, setPulseViewMode] = React.useState<'slider'|'list'>(() => {
+    try {
+      if (typeof window === 'undefined') return 'slider';
+      const saved = window.localStorage.getItem('pulse_view_mode');
+      return saved === 'list' ? 'list' : 'slider';
+    } catch (err) {
+      return 'slider';
+    }
+  });
   // Animation state for toggling view modes
   const [pulseViewAnimating, setPulseViewAnimating] = React.useState(false);
 
@@ -111,15 +119,23 @@ export default function App() {
     setPulseViewAnimating(true);
     setTimeout(() => {
       setPulseViewMode(view);
+      try { if (typeof window !== 'undefined') window.localStorage.setItem('pulse_view_mode', view); } catch (err) { /* ignore */ }
       // small delay for a smooth return to full opacity/scale
       setTimeout(() => setPulseViewAnimating(false), 160);
     }, 160);
   };
+
+  // Persist view mode choice
+  React.useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem('pulse_view_mode', pulseViewMode);
+    } catch (err) { /* ignore */ }
+  }, [pulseViewMode]);
   // Timeframe filter for Live Setup Scans (D, W, M, Y)
   const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
-  const [showDisclaimer, setShowDisclaimer] = React.useState(true);
-  const [showStopLossAlert, setShowStopLossAlert] = React.useState(true);
+  // Instead of inline alerts, disclaimers live in a collapsible section at the bottom
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
   // Modal chart timeframe state (for selectedPulse modal)
@@ -267,7 +283,6 @@ export default function App() {
               {/* Toggle between slider and list view for Market Pulse items */}
               <div className='flex justify-between items-center'>
                 <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
-                  <p className='font-bold'>Market Pulse</p>
                   <p className='text-[#999]'>Quick look at key market indicators</p>
                 </div>
                 <div className="lg:hidden mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
@@ -363,7 +378,10 @@ export default function App() {
               }
                 openKey={signalTimeframe}
             >
+              <p className='text-[#999]'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
+              <h3 className='my-4 text-lg'>Leads: 12/09/25</h3>
               <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:gap-4">
+
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
                 ) : (
@@ -614,40 +632,42 @@ export default function App() {
             </div>
           </InfoModal>
 
-          {/* Stop Loss Reminder */}
-          {showStopLossAlert && (
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label="Open stop loss details"
-              className="relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              onClick={() => setStopLossModalOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') setStopLossModalOpen(true);
-              }}
-            >
-              <p className="font-medium">
-                🛑 <b>Reminder</b>: Set appropriate stop losses to manage risk and protect capital.
-              </p>
+          {/* Disclaimers & Risk Notices (moved into a collapsible section at the bottom) */}
+          <CollapsibleSection
+            title={<span className="flex items-center gap-2"><Info className="w-5 h-5 text-orange-300" />Disclaimers & Risk Notices</span>}
+            infoButton={
+              <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
+                <button
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  aria-label="About disclaimers"
+                >
+                  <Info className="w-4 h-4 text-orange-300" />
+                </button>
+              </div>
+            }
+            openKey={'disclaimers'}
+          >
+            <div className="grid grid-cols-1 gap-3">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
+                <div className="flex-1">
+                  <strong className="block">Stop Loss Reminder</strong>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">A stop loss is used to limit an investor's loss on a position. Set one to help protect capital and manage risk.</p>
+                </div>
+                <div className="flex-shrink-0">
+                  <button className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700" aria-label="Open stop loss details" data-testid="stop-loss-open-btn" onClick={() => setStopLossModalOpen(true)}>Learn more</button>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
+                <div className="flex-1">
+                  <strong className="block">Legal Disclaimer</strong>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">This data is for informational/testing purposes only and does not constitute financial advice.</p>
+                </div>
+                <div className="flex-shrink-0">
+                  <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" aria-label="Open disclaimer details" data-testid="disclaimer-open-btn" onClick={() => setDisclaimerModalOpen(true)}>Learn more</button>
+                </div>
+              </div>
             </div>
-          )}          
-          {/* Legal Disclaimer */}
-          {showDisclaimer && (
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label="Open disclaimer details"
-                className="relative p-4 bg-orange-900/60 border border-orange-700/50 text-orange-100 text-xs text-center shadow-lg rounded-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                onClick={() => setDisclaimerModalOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') setDisclaimerModalOpen(true);
-                }}
-              >
-              <p className="font-medium">
-                ⚠️ <b>Disclaimer</b>: This data is for informational/testing purposes and is NOT financial advice.
-              </p>
-            </div>
-          )}
+          </CollapsibleSection>
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}

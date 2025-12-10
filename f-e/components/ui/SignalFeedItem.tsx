@@ -30,7 +30,6 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
   // base card border (grey, slim) to surround the card
   const cardBorder = 'border border-gray-200 dark:border-gray-700';
 
-  const { setModalOpen } = useUI();
   const { showToast } = useToast();
   const [added, setAdded] = React.useState(false);
   const [chartModalOpen, setChartModalOpen] = React.useState(false);
@@ -61,11 +60,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 ``
   return (
     <>
-      <div data-testid="signal-feed-item" className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full snap-start shrink-0 w-[88%] sm:w-auto min-h-[170px] sm:min-h-0`}> 
-        {/* Sentiment pill (top-right) */}
-        <div className={`absolute right-2 top-2 px-2 py-0.5 text-xs font-semibold rounded-full ${chipBorderColor} border bg-gray-50 dark:bg-gray-900/70 ${isBullish ? 'text-green-700' : type === 'Bearish' ? 'text-red-700' : 'text-yellow-600'}`}>
-          {type}
-        </div>
+      <div data-testid="signal-feed-item" className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full snap-start shrink-0 w-[88%] sm:w-auto min-h-[320px] sm:min-h-0`}> 
         <div className="flex justify-between items-start">
 
           {/* Left */}

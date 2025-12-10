@@ -69,4 +69,20 @@ describe('MarketPulseCard Timeframe badges', () => {
     await waitFor(() => expect(container.className).toMatch(/overflow-x-auto/));
     jest.useRealTimers();
   });
+
+  test('persists selected view mode to localStorage', async () => {
+    jest.useFakeTimers();
+    const { getByTestId } = render(<App />);
+    // Switch to list view
+    const listToggle = getByTestId('pulse-view-toggle-list');
+    fireEvent.click(listToggle);
+    jest.advanceTimersByTime(350);
+    await waitFor(() => expect(window.localStorage.getItem('pulse_view_mode')).toBe('list'));
+    // Switch back to slider
+    const sliderToggle = getByTestId('pulse-view-toggle-slider');
+    fireEvent.click(sliderToggle);
+    jest.advanceTimersByTime(350);
+    await waitFor(() => expect(window.localStorage.getItem('pulse_view_mode')).toBe('slider'));
+    jest.useRealTimers();
+  });
 });
