@@ -93,10 +93,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   // Voice selection moved to Settings -> Preferences -> Market Overview Voice
   const typingRef = React.useRef<number | null>(null);
   const [isTyping, setIsTyping] = React.useState(false);
-  const [fullSentimentModalOpen, setFullSentimentModalOpen] = React.useState(false);
-  const [modalDisplayedText, setModalDisplayedText] = React.useState<string>('');
-  const [modalTyping, setModalTyping] = React.useState(false);
-  const modalTypingRef = React.useRef<number | null>(null);
   const TYPING_SPEED = 5; // ms per char
   const [collapsed, setCollapsed] = React.useState(false);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
@@ -624,43 +620,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     };
   }, [summaryOverview]);
 
-  // Modal typewriter effect
-  React.useEffect(() => {
-    if (!fullSentimentModalOpen || !fullSentiment) {
-      // Keep displayed text while the modal plays its closing animation; cleanup handled in onAfterClose
-      return;
-    }
-
-    // cancel any previous modal typing
-    if (modalTypingRef.current) {
-      clearInterval(modalTypingRef.current);
-      modalTypingRef.current = null;
-    }
-
-    setModalDisplayedText('');
-    let i = 0;
-    setModalTyping(true);
-    modalTypingRef.current = window.setInterval(() => {
-      i += 1;
-      setModalDisplayedText(fullSentiment.slice(0, i));
-      if (i >= fullSentiment.length) {
-        if (modalTypingRef.current) {
-          clearInterval(modalTypingRef.current);
-          modalTypingRef.current = null;
-        }
-        setModalTyping(false);
-      }
-    }, TYPING_SPEED);
-
-    return () => {
-      if (modalTypingRef.current) {
-        clearInterval(modalTypingRef.current);
-        modalTypingRef.current = null;
-      }
-      setModalTyping(false);
-    };
-  }, [fullSentimentModalOpen, fullSentiment]);
-
   return (
     <div className={`market-overview-cli bg-black border border-zinc-800 rounded-xl p-4 shadow-sm ${collapsed ? 'collapsed' : ''}`} aria-expanded={!collapsed}>
       <div className="flex items-start justify-between gap-2 cli-header">
@@ -839,16 +798,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
-            title="View Full Sentiment Analysis"
-            className="view-sentiment-btn px-3 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors flex items-center gap-1"
-            onClick={() => setFullSentimentModalOpen(true)}
-            aria-label="View full sentiment analysis"
-          >
-            <Eye className="w-3 h-3" />
-            View Full Sentiment
-          </button>
-          <button
-            type="button"
             title="Regenerate Overview"
             className="regenerate-btn px-3 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
             onClick={regenerate}
@@ -866,45 +815,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           animation: blink 1s step-end infinite;
         }
       `}</style>
-
-      {/* Full Sentiment Modal */}
-      <InfoModal
-        open={fullSentimentModalOpen}
-        onClose={() => setFullSentimentModalOpen(false)}
-        verticalAlign="top"
-        title={
-          <>
-            <Eye className="w-6 h-6" />
-            Full Sentiment Analysis
-          </>
-        }
-        ariaLabel="Full sentiment analysis modal"
-        onAfterClose={() => {
-          // clear modal typing text only after animation ends and modal is fully closed
-          if (modalTypingRef.current) {
-            clearInterval(modalTypingRef.current);
-            modalTypingRef.current = null;
-          }
-          setModalDisplayedText('');
-          setModalTyping(false);
-        }}
-      >
-        <div className="max-w-4xl mx-auto">
-          {timeframe && (
-            <div className="mb-4 flex justify-start">
-              <span className="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
-                {timeframe === 'D' ? 'Sentiment of the Last Day' : timeframe === 'W' ? 'Sentiment of the Last Week' : timeframe === 'M' ? 'Sentiment of the Last Month' : 'Sentiment of the Last Year'}
-              </span>
-            </div>
-          )}
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-            {modalDisplayedText || 'No full sentiment analysis available.'}
-            {modalTyping && modalDisplayedText.length < (fullSentiment?.length ?? 0) && (
-              <span data-testid="modal-type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-700 dark:text-gray-300">|</span>
-            )}
-          </p>
-        </div>
-      </InfoModal>
 
       {/* InfoModal moved to parent */}
     </div>
