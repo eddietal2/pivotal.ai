@@ -76,7 +76,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-}
+  --overlay-line-a: rgba(16,91,146,0.45); /* #105B92 */
+  --overlay-line-b: rg}
 
 .dark {
   --background: oklch(0.145 0 0);
@@ -137,48 +138,3 @@
     animation: slide-up 0.3s ease-out;
   }
 }
-
-/* Home page: subtle animated gradient parallax pseudo-element */
-.home-parallax { position: relative; overflow: hidden; }
-.home-parallax::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1; /* behind page content */
-  pointer-events: none;
-  background: linear-gradient(120deg, rgba(16,91,146,0.06), rgba(6,182,212,0.04) 50%, rgba(16,91,146,0.08));
-  background-size: 300% 300%;
-  transform: translateY(calc(var(--app-parallax-offset, 0px) * 0.18));
-  transition: transform 120ms linear;
-  will-change: transform, background-position;
-  filter: blur(18px) contrast(1.03) saturate(1.05);
-  opacity: 0.95;
-  mix-blend-mode: overlay;
-}
-
-/* Dark theme variant */
-.dark .home-parallax::before {
-  background: linear-gradient(120deg, rgba(16,91,146,0.22), rgba(6,182,212,0.12) 50%, rgba(16,91,146,0.26));
-  opacity: 1;
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.home-parallax::before { animation: gradientShift 20s ease-in-out infinite; }
-
-/* Slight bottom shading to help blend with bottom overlay (non intrusive) */
-.home-parallax::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 220px;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.03));
-  mix-blend-mode: multiply;
-}
-
