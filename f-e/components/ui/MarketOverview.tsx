@@ -636,8 +636,8 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           >
             <Cpu
               data-testid="header-cpu-indicator"
-              data-state={loading ? 'loading' : isTyping ? 'typing' : 'idle'}
-                    className={`${loading ? 'text-gray-500 animate-pulse' : isTyping ? 'text-cyan-400 animate-pulse' : 'text-cyan-400'} w-5 h-5`}
+              data-state={loading ? 'loading' : isTyping ? 'typing' : speaking ? 'speaking' : 'idle'}
+                    className={`${loading ? 'text-gray-500 animate-pulse' : isTyping ? 'text-cyan-400 animate-pulse' : speaking ? 'text-green-400 animate-pulse' : 'text-cyan-400'} w-5 h-5`}
               aria-hidden
             />
             Market Pulse Overview
