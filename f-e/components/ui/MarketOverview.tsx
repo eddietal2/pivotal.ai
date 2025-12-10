@@ -2,6 +2,7 @@
 import React from 'react';
 import { Cpu, Eye, Minus, Maximize2, Mic } from 'lucide-react';
 import InfoModal from '../modals/InfoModal';
+import { useToast } from '@/components/context/ToastContext';
 // Info icon removed; parent will render info button/modal
 
 type PulseItem = {
@@ -101,7 +102,54 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const [collapsed, setCollapsed] = React.useState(false);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
   const headerTitleRef = React.useRef<HTMLHeadingElement | null>(null);
+  const { showToast } = useToast();
   const [voiceActive, setVoiceActive] = React.useState(false);
+  const voiceUtteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+
+  // Try to speak text immediately (preferred during a user gesture click for browser autoplay rules)
+  const trySpeakNow = (text: string, voiceName?: string | null) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text || text.length === 0) return;
+    try {
+      // Cancel any existing speech
+      try { window.speechSynthesis.cancel(); } catch (_) { /* ignore */ }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = navigator.language ?? 'en-US';
+      utterance.rate = 1.0; utterance.pitch = 1.0; utterance.volume = 1.0;
+      // Try to pick a voice immediately
+      try {
+        const vlist = window.speechSynthesis.getVoices();
+        voicesRef.current = vlist;
+        if (vlist && vlist.length > 0) setVoices(vlist);
+        // Prefer user-selected voice (by name), fallback to language match, then first
+        let chosenVoice: SpeechSynthesisVoice | undefined = undefined;
+        const preferName = voiceName ?? selectedVoiceName;
+        if (preferName) {
+          chosenVoice = vlist.find(v => v.name === preferName);
+        }
+        const lang = navigator.language ?? 'en-US';
+        if (!chosenVoice) chosenVoice = vlist.find(v => v.lang && v.lang.includes(lang));
+        if (!chosenVoice && vlist.length > 0) chosenVoice = vlist[0];
+        if (chosenVoice) {
+          utterance.voice = chosenVoice;
+          // store/display only the voice name
+          setSelectedVoiceName(chosenVoice.name);
+          try { window.localStorage.setItem('mkt_overview_selected_voice', chosenVoice.name); } catch (_) { /* ignore */ }
+        }
+      } catch (err) { /* ignore */ }
+      utterance.onstart = () => { setSpeaking(true); try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (_) {} };
+      utterance.onend = () => { setSpeaking(false); setVoiceActive(false); try { onVoiceToggle?.(false); } catch (_) {} };
+      utterance.onerror = () => { setSpeaking(false); setVoiceActive(false); try { onVoiceToggle?.(false); } catch (_) {} };
+      voiceUtteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      try { showToast?.('TTS failed', 'error'); } catch (_) { }
+    }
+  };
+  const [speaking, setSpeaking] = React.useState(false);
+  const voicesRef = React.useRef<SpeechSynthesisVoice[] | null>(null);
+  const [selectedVoiceName, setSelectedVoiceName] = React.useState<string | null>(null);
+  const [voices, setVoices] = React.useState<SpeechSynthesisVoice[]>([]);
 
   const regenerate = React.useCallback(async () => {
     // cancel any current typing
@@ -153,6 +201,199 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     const tfKey = (timeframe ?? 'D') as 'D'|'W'|'M'|'Y';
     setLastGeneratedMap((prev) => ({ ...prev, [tfKey]: new Date().toISOString() }));
   }, [pulses, timeframe]);
+
+  React.useEffect(() => {
+    // Initialize voice list and restore selected voice from localStorage (if any)
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    const tryLoadVoices = () => {
+      try {
+        const list = window.speechSynthesis.getVoices() || [];
+        voicesRef.current = list;
+        setVoices(list);
+        // restore selected voice name from localStorage
+        try {
+          const stored = window.localStorage.getItem('mkt_overview_selected_voice');
+          if (stored && list.some(v => v.name === stored)) {
+            setSelectedVoiceName(stored);
+          }
+        } catch (_) { /* ignore */ }
+      } catch (err) { /* ignore */ }
+    };
+    tryLoadVoices();
+    // If voices are not loaded yet, listen for voiceschanged
+    const onVoicesChanged = () => tryLoadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+    };
+  }, []);
+
+  // Handle voice activation: speak the current overview text when toggled on, cancel when off.
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      // Not supported in this environment
+      if (voiceActive) {
+        setVoiceActive(false);
+        try { showToast?.('Speech synthesis not available in this browser', 'error'); } catch (e) { /* ignore */ }
+      }
+      return;
+    }
+
+    // Cancel any existing speech when voiceActive toggles off.
+    if (!voiceActive) {
+      try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+      if (voiceUtteranceRef.current) {
+        voiceUtteranceRef.current.onend = null;
+        voiceUtteranceRef.current.onerror = null;
+        voiceUtteranceRef.current = null;
+      }
+      setSpeaking(false);
+      return;
+    }
+
+    // Build the text to speak: prefer the displayed (typewriter) overview, then the summary, then the full sentiment.
+    const textToSpeak = (displayedOverview && displayedOverview.length > 0) ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
+    // If already speaking or already created the utterance, don't recreate — avoids repeated creation while typing.
+    if (voiceUtteranceRef.current || (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking)) {
+      return;
+    }
+    if (!textToSpeak || textToSpeak.length === 0) {
+      // Nothing to say yet. Keep voiceActive true and wait for the text to be available.
+      try { showToast?.('No overview to read yet — will speak when ready', 'info'); } catch (e) { /* ignore */ }
+      return;
+    }
+
+    // Create an utterance and start speaking
+    try {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = navigator.language ?? 'en-US';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      utterance.onend = () => {
+        setVoiceActive(false);
+        setSpeaking(false);
+        try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
+        try { showToast?.('Finished speaking', 'success'); } catch (e) { /* ignore */ }
+        voiceUtteranceRef.current = null;
+      };
+      utterance.onstart = () => {
+        setSpeaking(true);
+        try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (e) { /* ignore */ }
+      };
+      utterance.onboundary = (e) => {
+        // debug boundary events to confirm speech progress
+        // console.debug('Speech boundary', e);
+      };
+      utterance.onerror = (e) => {
+        setVoiceActive(false);
+        setSpeaking(false);
+        try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
+        try { showToast?.('Error speaking overview', 'error'); } catch (e) { /* ignore */ }
+        voiceUtteranceRef.current = null;
+      };
+      // Select a voice if available
+      try {
+        const vlist = window.speechSynthesis.getVoices();
+        voicesRef.current = vlist;
+        let picked: SpeechSynthesisVoice | undefined = undefined;
+        if (vlist && vlist.length > 0) {
+          const lang = navigator.language ?? 'en-US';
+          picked = vlist.find((v) => v.lang && v.lang.includes(lang));
+          if (!picked) picked = vlist[0];
+        }
+        if (picked) {
+          // If user has a stored selection, prefer it
+          if (selectedVoiceName) {
+            const byName = voicesRef.current?.find(v => v.name === selectedVoiceName);
+            if (byName) {
+              utterance.voice = byName;
+            } else {
+              utterance.voice = picked;
+              setSelectedVoiceName(picked.name);
+              try { window.localStorage.setItem('mkt_overview_selected_voice', picked.name); } catch (_) { /* ignore */ }
+            }
+          } else {
+            utterance.voice = picked;
+            setSelectedVoiceName(picked.name);
+            try { window.localStorage.setItem('mkt_overview_selected_voice', picked.name); } catch (_) { /* ignore */ }
+          }
+        } else if (selectedVoiceName) {
+          // If user previously selected a voice by name, prefer it
+          const byName = voicesRef.current?.find(v => v.name === selectedVoiceName);
+          if (byName) {
+            utterance.voice = byName;
+          }
+        }
+        // Debug log
+        try { console.debug && console.debug('TTS voices available', vlist.map((v) => `${v.name} (${v.lang})`)); } catch (_) { /* ignore */ }
+        // if no voice list currently available, listen for voiceschanged and re-assign
+        if (!picked && vlist.length === 0) {
+          const onVoicesChanged = () => {
+            try {
+              const loaded = window.speechSynthesis.getVoices();
+              voicesRef.current = loaded;
+              const lang = navigator.language ?? 'en-US';
+              const found = loaded.find(v => v.lang && v.lang.includes(lang));
+              if (found) {
+                utterance.voice = found;
+              }
+            } catch (err) { /* ignore */ }
+            window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+          };
+          window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+        }
+      } catch (err) {
+        // ignore voice picking errors
+      }
+      voiceUtteranceRef.current = utterance;
+      try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+      window.speechSynthesis.speak(utterance);
+      setSpeaking(true);
+      try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (e) { /* ignore */ }
+    } catch (err) {
+      // If SpeechSynthesis is unavailable or throws, try a short beep as fallback (must be user gesture) and disable voice flag.
+      setVoiceActive(false);
+      try { onVoiceToggle?.(false); } catch (e) { /* ignore */ }
+      try { showToast?.('TTS error; playing short beep as fallback', 'warning'); } catch (_) { /* ignore */ }
+      try { playBeep(); } catch (e) { /* ignore */ }
+    }
+
+    return () => {
+      try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+      if (voiceUtteranceRef.current) {
+        voiceUtteranceRef.current.onend = null;
+        voiceUtteranceRef.current.onerror = null;
+        voiceUtteranceRef.current = null;
+      }
+    };
+  }, [voiceActive, displayedOverview, summaryOverview, fullSentiment, selectedVoiceName]);
+
+  // Helper to play a short beep using WebAudio API (as fallback when TTS fails)
+  const playBeep = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 600;
+      g.gain.value = 0.0012; // subtle
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      setTimeout(() => {
+        try { o.stop(); } catch (e) { /* ignore */ }
+      }, 250);
+    } catch (e) {
+      // ignore audio errors
+    }
+  };
 
   React.useEffect(() => {
     // generate initial overview on mount and whenever pulses or timeframe change
@@ -299,10 +540,86 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
                 try { onVoiceToggle?.(nv); } catch (err) { /* ignore */ }
                 return nv;
               });
+              // Prefer starting speech immediately if text is available and the user clicked the button
+              const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
+              if (immediateText && immediateText.length > 0) {
+                trySpeakNow(immediateText, selectedVoiceName);
+              } else {
+                try { showToast?.('No overview yet; will speak when ready', 'info'); } catch (_e) { /* ignore */ }
+              }
             }}
           >
             <Mic className="w-4 h-4" />
+            {speaking && (
+              <span className="ml-2 inline-block w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden />
+            )}
           </button>
+          <button
+            type="button"
+            aria-label="Test voice"
+            title="Test voice"
+            className="ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring text-xs"
+            data-testid="market-overview-voice-test"
+            onClick={() => {
+              if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                try { showToast?.('Speech synthesis not available', 'error'); } catch (_) { /* ignore */ }
+                return;
+              }
+              try {
+                const t = new SpeechSynthesisUtterance('Testing Market Overview voice');
+                const vlist = window.speechSynthesis.getVoices();
+                if (vlist && vlist.length > 0) {
+                  // Prefer the selected voice if available
+                  const byName = selectedVoiceName ? vlist.find(v => v.name === selectedVoiceName) : undefined;
+                  if (byName) {
+                    t.voice = byName;
+                  } else {
+                    const lang = navigator.language || 'en-US';
+                    const found = vlist.find(v => v.lang && v.lang.includes(lang));
+                    if (found) t.voice = found;
+                  }
+                }
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(t);
+                try { showToast?.('Testing voice now', 'info'); } catch (_) { /* ignore */ }
+              } catch (err) {
+                try { showToast?.('Cannot speak test', 'error'); } catch (_) { /* ignore */ }
+              }
+            }}
+          >
+            Test
+          </button>
+          {voices.length > 0 && (
+            <label className="text-xs ml-2 text-gray-400 flex items-center gap-2">
+              Voice
+              <select
+                aria-label="Select voice"
+                className="ml-1 bg-transparent text-xs text-gray-400 border border-transparent focus:border-gray-300 rounded p-1"
+                value={selectedVoiceName ?? ''}
+                onChange={(e) => {
+                  const name = e.target.value || null;
+                  setSelectedVoiceName(name);
+                  try { window.localStorage.setItem('mkt_overview_selected_voice', name ?? ''); } catch (_) { /* ignore */ }
+                  try { showToast?.(`Selected voice: ${name ?? 'Default'}`, 'info'); } catch (_) {}
+                  // If the UI is currently speaking, restart the speech with the newly selected voice
+                  try {
+                    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                      try { window.speechSynthesis.cancel(); } catch (_) { /* ignore */ }
+                      const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
+                      if (immediateText && immediateText.length > 0) {
+                        trySpeakNow(immediateText, name);
+                      }
+                    }
+                  } catch (_) { /* ignore */ }
+                }}
+              >
+                <option value="">Default</option>
+                {voices.map((v) => (
+                  <option key={`${v.name}-${v.lang}`} value={v.name}>{`${v.name} (${v.lang})`}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <span className="cli-close-anim" aria-hidden />
       </div>

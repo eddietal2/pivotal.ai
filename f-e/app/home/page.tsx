@@ -276,7 +276,7 @@ export default function App() {
                   <MarketOverview
                     pulses={filteredPulse}
                     timeframe={pulseTimeframe}
-                    devOverview='long'
+                    devOverview='placeholder'
                     onOpenInfo={() => setInfoModalOpen(true)}
                     onStateChange={(s) => setOverviewCpuState(s)}
                   />
