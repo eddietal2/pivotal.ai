@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from '@/app/home/page';
 import { fireEvent } from '@testing-library/react';
 
@@ -46,6 +46,27 @@ describe('MarketPulseCard Timeframe badges', () => {
     // Advance timers to allow fallback to trigger
     jest.advanceTimersByTime(500);
     expect(document.body.dataset.modalCount).toBe('0');
+    jest.useRealTimers();
+  });
+
+  test('toggle between slider and list view updates container layout', async () => {
+    jest.useFakeTimers();
+    const { getByTestId } = render(<App />);
+    const container = getByTestId('market-pulse-container');
+    // Default should be slider (overflow-x-auto present)
+    expect(container.className).toMatch(/overflow-x-auto/);
+    // Click to switch to list view
+    const listToggle = getByTestId('pulse-view-toggle-list');
+    fireEvent.click(listToggle);
+    // Advance timers for the animation and final mode switch
+    jest.advanceTimersByTime(350);
+    // Wait for class to update
+    await waitFor(() => expect(container.className).toMatch(/flex-col/));
+    // Switch back to slider to verify toggle is reversible
+    const sliderToggle = getByTestId('pulse-view-toggle-slider');
+    fireEvent.click(sliderToggle);
+    jest.advanceTimersByTime(350);
+    await waitFor(() => expect(container.className).toMatch(/overflow-x-auto/));
     jest.useRealTimers();
   });
 });

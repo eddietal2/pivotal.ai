@@ -8,7 +8,7 @@ import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useToast } from '@/components/context/ToastContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid } from 'lucide-react';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
@@ -100,6 +100,21 @@ export default function App() {
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Timeframe filter for Market Pulse (D, W, M, Y)
   const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
+  // view mode for Market Pulse cards: 'slider' (horizontal) on mobile vs 'list' (vertical)
+  const [pulseViewMode, setPulseViewMode] = React.useState<'slider'|'list'>('slider');
+  // Animation state for toggling view modes
+  const [pulseViewAnimating, setPulseViewAnimating] = React.useState(false);
+
+  const handleSetPulseViewMode = (view: 'slider'|'list') => {
+    if (view === pulseViewMode) return;
+    // Start a short fade/scale animation, switch mode mid-way
+    setPulseViewAnimating(true);
+    setTimeout(() => {
+      setPulseViewMode(view);
+      // small delay for a smooth return to full opacity/scale
+      setTimeout(() => setPulseViewAnimating(false), 160);
+    }, 160);
+  };
   // Timeframe filter for Live Setup Scans (D, W, M, Y)
   const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
@@ -249,7 +264,38 @@ export default function App() {
                   />
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Toggle between slider and list view for Market Pulse items */}
+              <div className='flex justify-between items-center'>
+                <div className='lg:h-16 items-center justify-start flex pt-1 mr-4'>
+                  <p>Market Pulse</p>
+                </div>
+                <div className="lg:hidden mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
+                  {/* Grid View */}
+                  <button
+                      type="button"
+                      className={`p-2 rounded ${pulseViewMode === 'slider' ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                      aria-pressed={pulseViewMode === 'slider'}
+                      aria-label="Slider view"
+                      data-testid="pulse-view-toggle-slider"
+                      onClick={() => handleSetPulseViewMode('slider')}
+                    >
+                      <Grid className="w-4 h-4" />
+                  </button>
+                  {/* List View */}
+                  <button
+                      type="button"
+                      className={`p-2 rounded ${pulseViewMode === 'list' ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                      aria-pressed={pulseViewMode === 'list'}
+                      aria-label="List view"
+                      data-testid="pulse-view-toggle-list"
+                      onClick={() => handleSetPulseViewMode('list')}
+                    >
+                      <List className="w-4 h-4" />
+                  </button>
+              </div>
+              </div>
+              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory' : 'flex flex-col gap-4'} sm:grid sm:grid-cols-3 sm:gap-4 ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
+                
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
                 ) : (
@@ -316,7 +362,7 @@ export default function App() {
               }
                 openKey={signalTimeframe}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:gap-4">
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
                 ) : (

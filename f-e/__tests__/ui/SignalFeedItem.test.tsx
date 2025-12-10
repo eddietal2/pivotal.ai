@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
+import { SignalFeedSkeleton } from '@/components/ui/skeletons';
 
 // Mock useToast from ToastContext
 const mockShowToast = jest.fn();
@@ -10,7 +11,7 @@ jest.mock('@/components/context/ToastContext', () => ({
 
 describe('SignalFeedItem', () => {
   test('clicking Add to Watchlist triggers a success toast', () => {
-    render(
+    const { container } = render(
       <SignalFeedItem
         ticker="TSLA"
         signal="Test signal"
@@ -25,11 +26,34 @@ describe('SignalFeedItem', () => {
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
     expect(mockShowToast).toHaveBeenCalledWith('Added to watchlist', 'success');
+
+    // signal feed item should have a mobile min-height set
+    const root = screen.getByTestId('signal-feed-item');
+    expect(root).toBeInTheDocument();
+    expect(root.className).toContain('min-h-[170px]');
   });
 });
 
-test('Chart modal contains a timeline filter and updates timeframe', () => {
+test('renders the sentiment pill (top-right) with the correct label', () => {
   render(
+    <SignalFeedItem
+      ticker="TSLA"
+      signal="Test signal"
+      confluence={["Test1"]}
+      timeframe="1D"
+      change={'-1.2%'}
+      type={'Bullish'}
+    />
+  );
+
+  const pill = screen.getByText(/Bullish/i);
+  expect(pill).toBeInTheDocument();
+  // Ensure it's near the top-right by checking style class exists (not exact layout test)
+  expect(pill.closest('div')).toHaveClass('rounded-full');
+});
+
+test('Chart modal contains a timeline filter and updates timeframe', () => {
+  const { container } = render(
     <SignalFeedItem
       ticker="TSLA"
       signal="Test signal"
@@ -58,6 +82,9 @@ test('Chart modal contains a timeline filter and updates timeframe', () => {
   expect(timeframePillHeader).toBeInTheDocument();
   expect(timeframePillHeader).toHaveTextContent(/In the Last Day/);
 
+  // root element should have min-height class on mobile
+  expect(container.firstChild).toHaveClass('min-h-[220px]');
+
   // Timeline filter buttons should be present and affect the timeframe text
   const weekFilter = screen.getByTestId('modal-chart-filter-1W');
   expect(weekFilter).toBeInTheDocument();
@@ -67,4 +94,9 @@ test('Chart modal contains a timeline filter and updates timeframe', () => {
   expect(chartPlaceholder).toHaveTextContent(/1W/);
   expect(timeframePill).toHaveTextContent(/In the Last Week/);
   expect(timeframePillHeader).toHaveTextContent(/In the Last Week/);
+});
+
+test('SignalFeedSkeleton has the same min-height class used by SignalFeedItem to ensure consistent mobile heights', () => {
+  const { container } = render(<SignalFeedSkeleton />);
+  expect(container.firstChild).toHaveClass('min-h-[220px]');
 });
