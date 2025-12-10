@@ -327,7 +327,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               {/* Typewriter dot (green) — reserved space with padding to prevent layout shift */}
             
               {/* Display overlay text */}
-              <span className="inline-block pl-0 lg:text-lg text-gray-200">{displayedOverview}</span>
+              <span className="inline-block lg:text-[1em] text-gray-200">{displayedOverview}</span>
             {/* caret while typing */}
             {displayedOverview.length < (summaryOverview?.length ?? 0) && (
               <span data-testid="type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-900 dark:text-gray-100">|</span>
