@@ -18,7 +18,7 @@ export default function BottomNav() {
   if (modalOpen) return null;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#105B92]/60 backdrop-blur-sm z-50">
       <div className="flex items-center justify-around px-2 py-2">
         {navLinks.map((link) => {
           const Icon = link.icon;
