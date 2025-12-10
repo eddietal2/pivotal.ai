@@ -45,7 +45,29 @@ In conclusion, the full ${timeframeContext} sentiment analysis provides traders 
   return { summary, fullSentiment };
 }
 
-export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateChange }: { pulses: PulseItem[]; timeframe?: 'D'|'W'|'M'|'Y'; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; }) {
+export const DEV_OVERVIEW_SHORT = `Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations.`;
+
+export const DEV_OVERVIEW_LONG = `The global market environment continues to evolve in a complex interplay of macroeconomic variables, sector rotations, and investor sentiment. In the short term, equities have experienced measured gains led by innovation sectors like AI, cloud services, and software providers. These gains have been driven by favorable earnings reports, robust forward guidance, and continued enterprise investment in digital transformation. Nevertheless, the landscape remains heterogeneous: cyclical sectors such as energy, industrials and some financials are demonstrating divergent behavior due to unique supply dynamics, interest-rate sensitivity, and regulatory constraints.
+
+Monetary policy remains central to how investors position portfolios. When central banks shift or signal a policy stance, it re-prices assets across fixed income, cash, equities, and FX—prompting recalibration of discount rates, growth expectations, and yield curves. Importantly, the term structure of interest rates informs relative valuation across sectors; long-duration growth names are sensitive to yield changes, while financials often react asymmetrically to steepening or flattening curves. In practice, monitoring the flow of information and central bank commentary is vital for anticipating rapid repricing events.
+
+Volatility metrics and options market signals are indispensable tools for assessing market health. Changes in implied volatility, term-structure squeezes, and unusual derivative positioning (such as concentrated open interest or pronounced skew) can signal the market’s appetite for risk and hint at potential inflection points. Traders should watch for converging indicators across surface-level breadth, the volume-weighted directional flow, and order book liquidity—especially during macro-data releases and geopolitical events that can change assumptions overnight.
+
+Macroeconomic data continues to surprise on both sides, and it pays to separate noise from sustained trends. Employment, inflation, and consumption figures will shape both sentiment and fundamental expectations. Earnings season provides real-time microeconomic input—guidance changes, margin dynamics and demand signals point toward durable shifts in sector strength. Where possible, triangulate macro prints with micro-level indicators, such as industry-specific surveys and business-cycle measures, for a more robust view.
+
+Risk management and trade construction cannot be overstated. In environments where downside risk is non-trivial, applying rigorous position sizing, layered stop mechanisms, and targeted hedges are essential. Managing the convexity of risk through options, or by constructing multi-legged strategies, can help balance potential returns while limiting downside exposure. For longer-term allocations, diversification across sources of return and uncorrelated strategies aids in reducing vulnerability to single-market shocks.
+
+Cross-asset relationships and international flow dynamics add further complexity. FX movements, commodity changes and cross-border capital flows can alter the relative attractiveness of domestic versus international assets. For example, a strengthening USD often pressures commodity-linked equities and multi-national exporters, while regional policy shifts and tariffs may create idiosyncratic winners and losers. Investors should evaluate correlation matrices across asset classes to understand where dispersion might create trade opportunities or amplify risk.
+
+Sector rotation is a durable theme in many market cycles. Rotations from growth to value or from cyclical to defensive sectors can be driven by re-pricing of rate expectations, momentum shifts, or capital reallocation as macro forecasts update. Identifying the early signals of rotation—such as improving breadth, leadership across mid-caps, and sector-relative strength—can provide an edge. Coupling technical confirmation with a fundamental thesis helps avoid chasing noisy trends.
+
+On the structural side, regulatory and fiscal policy can have long-term consequences for sector profitability and investor behavior. Shifts in tax policy, incentives for certain types of capital expenditures, or regulation that impacts earnings quality can all catalyze multi-period re-rating events. Traders and strategists should interpret headline policy actions through the lens of long-term profitability and capital allocation changes rather than short-term market noise.
+
+Execution and microstructure nuance matters more as stress increases. Large passive flows, ETF rebalances, and concentrated liquidity can amplify moves. When market liquidity thins, modest flows can cause outsized price movement. Practical considerations—such as executing trades across time windows, monitoring market depth, and using limit orders to reduce slippage—help protect returns. For systematic players, the interaction between execution strategy, signal persistence, and slippage must be integral to risk management.
+
+Finally, contingency planning through scenario analysis helps manage surprise events. A robust approach considers multiple macro and market outcomes (e.g., inflation surprise, geopolitical escalation, or a sudden liquidity squeeze) and constructs hedging layers or contingency triggers to respond methodically. In user interfaces, this long-form content is ideal for stress-testing text rendering, UI overflow, typing animations, and accessibility considerations. It should reveal layout boundaries, overflow behaviors, and modal interactions under heavy content conditions, helping ensure a resilient, accessible presentation of long-form market insights.`;
+
+export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateChange, devOverview }: { pulses: PulseItem[]; timeframe?: 'D'|'W'|'M'|'Y'; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; devOverview?: 'placeholder' | 'long'; }) {
   const [summaryOverview, setSummaryOverview] = React.useState<string | null>(null);
   const [fullSentiment, setFullSentiment] = React.useState<string | null>(null);
   const [displayedOverview, setDisplayedOverview] = React.useState<string>('');
@@ -93,6 +115,29 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       setFullSentiment('No data available for the selected timeframe.');
       setLoading(false);
       onStateChange?.({ loading: false, isTyping: false });
+      return;
+    }
+    if (devOverview === 'placeholder') {
+      // Use the short dev text
+      setLoading(false);
+      setSummaryOverview(DEV_OVERVIEW_SHORT);
+      setFullSentiment(DEV_OVERVIEW_SHORT);
+      // allow the typewriter effect to run by clearing displayedOverview
+      setDisplayedOverview('');
+      onStateChange?.({ loading: false, isTyping: false });
+      const tfKey = (timeframe ?? 'D') as 'D'|'W'|'M'|'Y';
+      setLastGeneratedMap((prev) => ({ ...prev, [tfKey]: new Date().toISOString() }));
+      return;
+    }
+
+    if (devOverview === 'long') {
+      setLoading(false);
+      setSummaryOverview(DEV_OVERVIEW_LONG);
+      setFullSentiment(DEV_OVERVIEW_LONG);
+      setDisplayedOverview('');
+      onStateChange?.({ loading: false, isTyping: false });
+      const tfKey = (timeframe ?? 'D') as 'D'|'W'|'M'|'Y';
+      setLastGeneratedMap((prev) => ({ ...prev, [tfKey]: new Date().toISOString() }));
       return;
     }
     setLoading(true);
@@ -259,7 +304,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
             Generating Market Overview…
           </span>
           {/* Displayed overview (typing) element with fade */}
-            <span className={`inline-block transition-opacity duration-200 ease-out ${displayedOverview.length > 0 ? 'opacity-100' : 'opacity-0'}`}>
+            <span className={`inline-block transition-opacity duration-200 ease-out whitespace-pre-line break-words ${displayedOverview.length > 0 ? 'opacity-100' : 'opacity-0'}`}>
               {/* Typewriter dot (green) — reserved space with padding to prevent layout shift */}
             
               {/* Display overlay text */}

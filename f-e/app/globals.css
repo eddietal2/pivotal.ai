@@ -148,8 +148,8 @@
 }
 
 /* MarketOverview: CLI wrapper hover UX */
-.market-overview-cli { position: relative; z-index: 0; transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 260ms ease, opacity 200ms ease; transform-origin: center bottom; will-change: transform, box-shadow; }
-.market-overview-cli:hover, .market-overview-cli:focus-within { transform: translateY(-6px) scale(1.01); box-shadow: 0 16px 40px rgba(16,91,146,0.09), 0 6px 12px rgba(0,0,0,0.45); }
+.market-overview-cli { position: relative; z-index: 0; transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 260ms ease, opacity 200ms ease, padding 180ms ease; transform-origin: center bottom; will-change: transform, box-shadow; box-sizing: border-box; }
+.market-overview-cli:hover, .market-overview-cli:focus-within { transform: translateY(-6px); padding: calc(1rem + 0.5rem); box-shadow: 0 16px 40px rgba(16,91,146,0.09), 0 6px 12px rgba(0,0,0,0.45); }
 .market-overview-cli::before { content: ""; pointer-events: none; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; box-shadow: 0 0 0 1px rgba(16,91,146,0.05) inset; transition: box-shadow 260ms ease, opacity 220ms ease; opacity: 0; }
 .market-overview-cli:hover::before, .market-overview-cli:focus-within::before { opacity: 1; box-shadow: 0 0 18px rgba(16,91,146,0.18), 0 0 120px rgba(6,182,212,0.06); }
 .market-overview-cli::after { content: ""; position: absolute; left: -30%; top: 0; bottom: 0; width: 60%; pointer-events: none; z-index: 2; mix-blend-mode: overlay; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 55%, rgba(255,255,255,0) 100%); opacity: 0; transform: translateX(0); transition: opacity 360ms ease; }
