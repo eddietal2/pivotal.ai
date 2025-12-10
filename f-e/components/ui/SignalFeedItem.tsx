@@ -60,8 +60,9 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
 ``
   return (
     <>
-      <div data-testid="signal-feed-item" className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 hover:shadow-2xl flex flex-col h-full snap-start shrink-0 w-[88%] sm:w-auto min-h-[320px] sm:min-h-0`}> 
-        <div className="flex justify-between items-start">
+      <div data-testid="signal-feed-item" className={`relative p-5 lg:p-4 ${cardBorder} ${bgColor} transition duration-300 item-press flex flex-col h-full snap-start shrink-0 w-[88%] sm:w-auto min-h-[320px] sm:min-h-0`}> 
+        <div className="item-press-inner relative flex flex-col h-full">
+          <div className="flex justify-between items-start">
 
           {/* Left */}
           <div className="flex items-baseline">
@@ -75,7 +76,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
               {timeframe}
             </span>
           </div>
-        </div>
+          </div>
 
         <p className={`mt-2 text-lg lg:text-base font-semibold text-yellow-400`}>{signal}</p>
         <span className='my-4'>
@@ -92,7 +93,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-auto flex gap-2 pt-3 border-t border-gray-700/50">
+          <div className="mt-auto flex gap-2 pt-3 border-t border-gray-700/50">
           <button
             className={`flex items-center gap-1.5 px-3 py-1.5 lg:px-2 lg:py-1 text-xs font-medium ${added ? 'text-green-800 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700/50' : 'text-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50'} rounded-lg transition-colors`}
             onClick={() => {
@@ -113,6 +114,7 @@ export default function SignalFeedItem({ ticker, signal, confluence, timeframe, 
           >
             View Chart
           </button>
+          </div>
         </div>
       </div>
       {/* Chart Modal */}

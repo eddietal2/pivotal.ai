@@ -24,15 +24,17 @@ export default function WatchListItem({ ticker, price, change = 0, sparkline = [
       data-testid={`watchlist-item-${ticker}`}
       type="button"
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press"
       aria-label={`More info about ${ticker}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="item-press-inner relative">
+        <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-gray-400">{ticker}</p>
         {/* timeframe chip */}
         {timeframe && (
           <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
         )}
+        </div>
       </div>
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-3">

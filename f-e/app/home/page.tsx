@@ -670,8 +670,8 @@ export default function App() {
             openKey={'disclaimers'}
           >
             <div className="grid grid-cols-1 gap-3">
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
-                <div className="flex-1">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
+                <div className="item-press-inner relative flex-1">
                   <strong className="block flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-400" />Stop Loss Reminder</strong>
                   <p className="text-sm text-gray-600 dark:text-gray-300">A stop loss is used to limit an investor's loss on a position. Set one to help protect capital and manage risk.</p>
                 </div>
@@ -679,8 +679,8 @@ export default function App() {
                   <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-red-700" aria-label="Open stop loss details" data-testid="stop-loss-open-btn" onClick={() => setStopLossModalOpen(true)}>Learn more</button>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
-                <div className="flex-1">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
+                <div className="item-press-inner relative flex-1">
                   <strong className="block flex items-center gap-2"><FileText className="w-4 h-4 text-indigo-300" />Legal Disclaimer</strong>
                   <p className="text-sm text-gray-600 dark:text-gray-300">This data is for informational/testing purposes only and does not constitute financial advice.</p>
                 </div>
@@ -688,8 +688,8 @@ export default function App() {
                   <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" aria-label="Open disclaimer details" data-testid="disclaimer-open-btn" onClick={() => setDisclaimerModalOpen(true)}>Learn more</button>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
-                <div className="flex-1">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
+                <div className="item-press-inner relative flex-1">
                   <strong className="block flex items-center gap-2"><Cpu className="w-4 h-4 text-gray-600" />AI Usage</strong>
                   <p className="text-sm text-gray-600 dark:text-gray-300">This app uses language models (LLMs) to summarize market data and provide context for signals. Learn more about how this works and the model limitations.</p>
                 </div>
