@@ -24,7 +24,7 @@ export default function TopNav() {
     : '/login/logo-v1.png';
 
   return (
-    <nav className="hidden lg:px-64 md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 dark:bg-[#105B92]/60 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+    <nav className="hidden lg:px-64 md:flex fixed top-0 left-0 right-0 z-50 bg-white/6 dark:bg-[#08202d]/40 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/home" className="relative" style={{ width: '120px', height: '24px' }}>
@@ -48,7 +48,7 @@ export default function TopNav() {
                 <Button
                   variant={isActive ? 'default' : 'ghost'}
                   size="sm"
-                  className={`gap-2 ${!isActive ? 'bg-transparent text-[#999] hover:bg-[#999999] hover:text-white' : 'bg-[#105B92] text-white'}`}
+                  className={`gap-2 ${!isActive ? 'bg-transparent text-[#98a0a8] hover:bg-[#164e64] hover:text-white' : 'bg-gradient-to-br from-[#0e74a7] to-[#1fa0c8] text-white shadow-sm'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {link.name}
