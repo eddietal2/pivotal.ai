@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Cpu, Eye, Minus, Maximize2 } from 'lucide-react';
+import { Cpu, Eye, Minus, Maximize2, Mic } from 'lucide-react';
 import InfoModal from '../modals/InfoModal';
 // Info icon removed; parent will render info button/modal
 
@@ -67,7 +67,7 @@ Execution and microstructure nuance matters more as stress increases. Large pass
 
 Finally, contingency planning through scenario analysis helps manage surprise events. A robust approach considers multiple macro and market outcomes (e.g., inflation surprise, geopolitical escalation, or a sudden liquidity squeeze) and constructs hedging layers or contingency triggers to respond methodically. In user interfaces, this long-form content is ideal for stress-testing text rendering, UI overflow, typing animations, and accessibility considerations. It should reveal layout boundaries, overflow behaviors, and modal interactions under heavy content conditions, helping ensure a resilient, accessible presentation of long-form market insights.`;
 
-export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateChange, devOverview }: { pulses: PulseItem[]; timeframe?: 'D'|'W'|'M'|'Y'; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; devOverview?: 'placeholder' | 'long'; }) {
+export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateChange, devOverview, onVoiceToggle }: { pulses: PulseItem[]; timeframe?: 'D'|'W'|'M'|'Y'; onOpenInfo?: () => void; onStateChange?: (s: { loading: boolean; isTyping: boolean }) => void; devOverview?: 'placeholder' | 'long'; onVoiceToggle?: (active: boolean) => void; }) {
   const [summaryOverview, setSummaryOverview] = React.useState<string | null>(null);
   const [fullSentiment, setFullSentiment] = React.useState<string | null>(null);
   const [displayedOverview, setDisplayedOverview] = React.useState<string>('');
@@ -101,6 +101,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const [collapsed, setCollapsed] = React.useState(false);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
   const headerTitleRef = React.useRef<HTMLHeadingElement | null>(null);
+  const [voiceActive, setVoiceActive] = React.useState(false);
 
   const regenerate = React.useCallback(async () => {
     // cancel any current typing
@@ -283,6 +284,24 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
             data-testid="market-overview-collapse"
           >
             {collapsed ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+          </button>
+          {/* Voice / Mic Toggle */}
+          <button
+            type="button"
+            aria-label={voiceActive ? 'Stop voice summary' : 'Start voice summary'}
+            aria-pressed={voiceActive}
+            title={voiceActive ? 'Stop voice summary' : 'Voice summary'}
+            data-testid="market-overview-voice-toggle"
+            className={`ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring ${voiceActive ? 'bg-cyan-600 text-white' : ''}`}
+            onClick={() => {
+              setVoiceActive((v) => {
+                const nv = !v;
+                try { onVoiceToggle?.(nv); } catch (err) { /* ignore */ }
+                return nv;
+              });
+            }}
+          >
+            <Mic className="w-4 h-4" />
           </button>
         </div>
         <span className="cli-close-anim" aria-hidden />
