@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Cpu, Eye } from 'lucide-react';
+import { Cpu, Eye, Minus, Maximize2 } from 'lucide-react';
 import InfoModal from '../modals/InfoModal';
 // Info icon removed; parent will render info button/modal
 
@@ -76,6 +76,9 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const [modalTyping, setModalTyping] = React.useState(false);
   const modalTypingRef = React.useRef<number | null>(null);
   const TYPING_SPEED = 5; // ms per char
+  const [collapsed, setCollapsed] = React.useState(false);
+  const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  const headerTitleRef = React.useRef<HTMLHeadingElement | null>(null);
 
   const regenerate = React.useCallback(async () => {
     // cancel any current typing
@@ -185,10 +188,19 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   }, [fullSentimentModalOpen, fullSentiment]);
 
   return (
-    <div className="market-overview-cli bg-black border border-zinc-800 rounded-xl p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
+    <div className={`market-overview-cli bg-black border border-zinc-800 rounded-xl p-4 shadow-sm ${collapsed ? 'collapsed' : ''}`} aria-expanded={!collapsed}>
+      <div className="flex items-start justify-between gap-2 cli-header">
         <div className="flex flex-col">
-          <h5 className="text-sm font-bold text-yellow-300 font-mono flex items-center gap-2">
+          <h5
+            ref={headerTitleRef}
+            role="button"
+            tabIndex={0}
+            aria-controls="market-overview-body"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((c) => !c)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed((c) => !c); } }}
+            className="market-overview-title text-sm font-bold text-yellow-300 font-mono flex items-center gap-2"
+          >
             <Cpu
               data-testid="header-cpu-indicator"
               data-state={loading ? 'loading' : isTyping ? 'typing' : 'idle'}
@@ -198,8 +210,12 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
             Market Pulse Overview
             <span className="ai-badge ml-2 px-1 py-0.5 text-[10px] rounded bg-white/5 text-cyan-300 border border-zinc-800 font-mono">AI</span>
           </h5>
+          {/* Hint shown when collapsed so user knows how to restore */}
+          <div className="maximize-hint text-xs text-gray-400 mt-1" aria-hidden>
+            Maximize to see overview
+          </div>
           {timeframe && (
-              <div className="mt-2 flex flex-col items-start gap-1">
+              <div className="mt-2 flex flex-col items-start gap-1 market-overview-meta">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/5 text-cyan-300 border border-zinc-800">
                   {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
@@ -209,12 +225,25 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+          <div className="header-controls flex items-center gap-2">
           {/* Header area: extra controls (info managed by parent) */}
+          <button
+            type="button"
+            aria-label={collapsed ? 'Open Market Overview' : 'Minimize Market Overview'}
+            aria-expanded={!collapsed}
+            aria-controls="market-overview-body"
+            title={collapsed ? 'Open' : 'Minimize'}
+            className="collapse-toggle ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring"
+            onClick={() => setCollapsed((c) => !c)}
+            data-testid="market-overview-collapse"
+          >
+            {collapsed ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+          </button>
         </div>
+        <span className="cli-close-anim" aria-hidden />
       </div>
 
-      <div className="mt-3">
+      <div ref={bodyRef} id="market-overview-body" className="market-overview-body mt-3">
         <p className="text-sm text-gray-300" aria-live="polite">
           {/* Placeholder (loading) element with fade */}
           <span
@@ -246,7 +275,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           <button
             type="button"
             title="View Full Sentiment Analysis"
-            className="px-3 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors flex items-center gap-1"
+            className="view-sentiment-btn px-3 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors flex items-center gap-1"
             onClick={() => setFullSentimentModalOpen(true)}
             aria-label="View full sentiment analysis"
           >
@@ -256,7 +285,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           <button
             type="button"
             title="Regenerate Overview"
-            className="px-3 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+            className="regenerate-btn px-3 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
             onClick={regenerate}
             aria-label="Regenerate market overview"
           >

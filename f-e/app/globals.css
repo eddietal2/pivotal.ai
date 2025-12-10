@@ -161,3 +161,32 @@
 
 .market-overview-cli:hover .typewriter-caret, .market-overview-cli:focus-within .typewriter-caret { color: #e6fbff; opacity: 1; transform: translateY(-1px); }
 
+/* Collapsible effect for MarketOverview - AppleCLI-like */
+.market-overview-cli { overflow: visible; }
+.market-overview-body { overflow: hidden; max-height: 9999px; transition: max-height 420ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease, padding 320ms ease, transform 420ms cubic-bezier(.25,.8,.25,1); }
+.market-overview-cli.collapsed { transform-origin: top left; transform: scale(0.985) translateY(2px); opacity: 0.95; }
+.market-overview-cli.collapsed .market-overview-body { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+.market-overview-cli .cli-header { transition: border-radius 260ms ease, transform 220ms ease; }
+.market-overview-cli.collapsed .cli-header { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+
+/* Add a subtle close animation (mini-window close) */
+.market-overview-cli .cli-close-anim { position: absolute; right: 12px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.02); transform-origin: center; opacity: 0; transition: transform 240ms ease, opacity 240ms ease; }
+.market-overview-cli.collapsed .cli-close-anim { opacity: 1; transform: translateY(-8px) scale(0.5); background: linear-gradient(90deg, rgba(16,91,146,0.12), rgba(6,182,212,0.08)); box-shadow: 0 6px 28px rgba(6,182,212,0.06); }
+
+/* When collapsed hide everything except the CPU icon, title text, and AI tag */
+.market-overview-cli.collapsed .market-overview-meta, .market-overview-cli.collapsed .cli-close-anim { display: none !important; }
+.market-overview-cli.collapsed .view-sentiment-btn, .market-overview-cli.collapsed .regenerate-btn { display: none !important; }
+.market-overview-cli .collapse-toggle { transition: transform 200ms ease, opacity 200ms ease; }
+.market-overview-cli.collapsed .collapse-toggle { transform: rotate(0deg) scale(1.05); opacity: 1; }
+.market-overview-cli.collapsed .collapse-toggle { background: linear-gradient(90deg, rgba(16,91,146,0.1), rgba(6,182,212,0.06)); color: #bdf7ff; box-shadow: 0 6px 20px rgba(6,182,212,0.06); }
+.market-overview-cli .maximize-hint { display: none; opacity: 0; transform-origin: top left; }
+.market-overview-cli.collapsed .maximize-hint { display: block; opacity: 0.95; transform: translateY(0); transition: opacity 240ms ease, transform 260ms ease; color: rgba(255,255,255,0.55); }
+.market-overview-cli .header-controls { z-index: 3; display: inline-flex; align-items: center; }
+.collapse-toggle { display: inline-flex; align-items: center; justify-content: center; }
+.collapse-toggle:focus { outline: none; box-shadow: 0 0 0 4px rgba(6,182,212,0.06); border-radius: 6px; }
+.market-overview-cli.collapsed .header-controls > :not(.collapse-toggle) { display: none !important; }
+.market-overview-cli.collapsed .market-overview-title { cursor: pointer; }
+.market-overview-cli .market-overview-title { outline: none; }
+.market-overview-cli .market-overview-title:focus { outline: none; box-shadow: 0 0 0 3px rgba(6,182,212,0.06); border-radius: 6px; }
+
+
