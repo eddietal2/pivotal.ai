@@ -81,7 +81,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     try {
       const d = new Date(iso);
       const time = d.toLocaleTimeString();
-      // Weekday, mm/dd/yy
       const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -91,7 +90,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       return new Date(iso).toLocaleString();
     }
   };
-  // Info modal is handled by parent; accept onOpenInfo callback
+  // Voice selection moved to Settings -> Preferences -> Market Overview Voice
   const typingRef = React.useRef<number | null>(null);
   const [isTyping, setIsTyping] = React.useState(false);
   const [fullSentimentModalOpen, setFullSentimentModalOpen] = React.useState(false);
@@ -554,72 +553,6 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               <span className="ml-2 inline-block w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden />
             )}
           </button>
-          <button
-            type="button"
-            aria-label="Test voice"
-            title="Test voice"
-            className="ml-2 p-1 rounded text-gray-300 hover:bg-zinc-800 focus:outline-none focus:ring text-xs"
-            data-testid="market-overview-voice-test"
-            onClick={() => {
-              if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-                try { showToast?.('Speech synthesis not available', 'error'); } catch (_) { /* ignore */ }
-                return;
-              }
-              try {
-                const t = new SpeechSynthesisUtterance('Testing Market Overview voice');
-                const vlist = window.speechSynthesis.getVoices();
-                if (vlist && vlist.length > 0) {
-                  // Prefer the selected voice if available
-                  const byName = selectedVoiceName ? vlist.find(v => v.name === selectedVoiceName) : undefined;
-                  if (byName) {
-                    t.voice = byName;
-                  } else {
-                    const lang = navigator.language || 'en-US';
-                    const found = vlist.find(v => v.lang && v.lang.includes(lang));
-                    if (found) t.voice = found;
-                  }
-                }
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(t);
-                try { showToast?.('Testing voice now', 'info'); } catch (_) { /* ignore */ }
-              } catch (err) {
-                try { showToast?.('Cannot speak test', 'error'); } catch (_) { /* ignore */ }
-              }
-            }}
-          >
-            Test
-          </button>
-          {voices.length > 0 && (
-            <label className="text-xs ml-2 text-gray-400 flex items-center gap-2">
-              Voice
-              <select
-                aria-label="Select voice"
-                className="ml-1 bg-transparent text-xs text-gray-400 border border-transparent focus:border-gray-300 rounded p-1"
-                value={selectedVoiceName ?? ''}
-                onChange={(e) => {
-                  const name = e.target.value || null;
-                  setSelectedVoiceName(name);
-                  try { window.localStorage.setItem('mkt_overview_selected_voice', name ?? ''); } catch (_) { /* ignore */ }
-                  try { showToast?.(`Selected voice: ${name ?? 'Default'}`, 'info'); } catch (_) {}
-                  // If the UI is currently speaking, restart the speech with the newly selected voice
-                  try {
-                    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                      try { window.speechSynthesis.cancel(); } catch (_) { /* ignore */ }
-                      const immediateText = displayedOverview && displayedOverview.length > 0 ? displayedOverview : (summaryOverview ?? fullSentiment ?? '');
-                      if (immediateText && immediateText.length > 0) {
-                        trySpeakNow(immediateText, name);
-                      }
-                    }
-                  } catch (_) { /* ignore */ }
-                }}
-              >
-                <option value="">Default</option>
-                {voices.map((v) => (
-                  <option key={`${v.name}-${v.lang}`} value={v.name}>{`${v.name} (${v.lang})`}</option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
         <span className="cli-close-anim" aria-hidden />
       </div>

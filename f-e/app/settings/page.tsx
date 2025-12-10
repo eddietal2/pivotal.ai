@@ -3,6 +3,7 @@
 import { useTheme } from '@/components/context/ThemeContext';
 import { useToast } from '@/components/context/ToastContext';
 import { Sun, Moon, Bell, BellOff, X } from 'lucide-react';
+// Added for Market Overview Voice selection
 import { useState, useEffect } from 'react';
 import { redirectTo } from '@/lib/redirect';
 
@@ -32,6 +33,10 @@ export default function SettingsPage() {
   
   // Logout state
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Market Overview Voice preferences
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedMvVoice, setSelectedMvVoice] = useState<string | null>(null);
 
   // Check authentication and load user data on mount
   useEffect(() => {
@@ -102,6 +107,27 @@ export default function SettingsPage() {
     };
     
     loadUserData();
+  }, []);
+
+  // Load available speech synthesis voices and restore selected voice from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const tryLoadVoices = () => {
+      try {
+        const vlist = window.speechSynthesis.getVoices() || [];
+        setVoices(vlist);
+        try {
+          const stored = window.localStorage.getItem('mkt_overview_selected_voice');
+          if (stored && vlist.some(v => v.name === stored)) {
+            setSelectedMvVoice(stored);
+          }
+        } catch (_) { /* ignore */ }
+      } catch (e) { /* ignore */ }
+    };
+    tryLoadVoices();
+    const onVoicesChanged = () => tryLoadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
   }, []);
 
   // Email validation function
@@ -520,7 +546,7 @@ export default function SettingsPage() {
 
           {/* Display Settings */}
           <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4">Display Settings</h2>
+          <h2 className="text-lg font-semibold mb-4">Preferences</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Customize the appearance of the application
           </p>
@@ -551,6 +577,71 @@ export default function SettingsPage() {
                   </>
                 )}
               </button>
+            </div>
+            <hr className="border-gray-200 dark:border-gray-700" />
+
+            {/* Market Overview Voice */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium">Market Overview Voice</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Select the voice used for the Market Overview TTS (Text-to-Speech)</p>
+              </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 mr-2 whitespace-nowrap">
+                  Current Voice: <span className="font-semibold">{selectedMvVoice ?? 'Default'}</span>
+                </div>
+                <div className="min-w-[220px]">
+                  <select
+                    aria-label="Select market overview voice"
+                    className="w-full bg-transparent text-sm text-[#777] border border-gray-200 dark:border-gray-700 rounded px-3 py-1"
+                    style={{ fontSize: '130%' }}
+                    value={selectedMvVoice ?? ''}
+                    onChange={(e) => {
+                      const name = e.target.value || null;
+                      setSelectedMvVoice(name);
+                      try { window.localStorage.setItem('mkt_overview_selected_voice', name ?? ''); } catch (_) { /* ignore */ }
+                      try { showToast?.(`Selected Market Overview voice: ${name ?? 'Default'}`, 'info'); } catch (_) {}
+                    }}
+                  >
+                    <option value="">Default</option>
+                    {voices.map(v => (
+                      <option key={`${v.name}-${v.lang}`} value={v.name}>{`${v.name} (${v.lang})`}</option>
+                    ))}
+                  </select>
+                </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                
+                <div className="flex-shrink-0">
+                  <button
+                    type="button"
+                    aria-label="Test market overview voice"
+                    onClick={() => {
+                      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                        try { showToast?.('Speech synthesis not available', 'error'); } catch (_) {}
+                        return;
+                      }
+                      try {
+                        const t = new SpeechSynthesisUtterance('This is a test for Market Overview voice');
+                        const vlist = window.speechSynthesis.getVoices();
+                        const byName = selectedMvVoice ? vlist.find(v => v.name === selectedMvVoice) : undefined;
+                        if (byName) t.voice = byName;
+                        else {
+                          const lang = navigator.language || 'en-US';
+                          const found = vlist.find(v => v.lang && v.lang.includes(lang));
+                          if (found) t.voice = found;
+                        }
+                        window.speechSynthesis.cancel();
+                        window.speechSynthesis.speak(t);
+                        try { showToast?.('Testing Market Overview voice', 'info'); } catch (_) {}
+                      } catch (e) {
+                        try { showToast?.('Cannot speak test', 'error'); } catch (_) {}
+                      }
+                    }}
+                    className="px-3 py-1 text-sm rounded bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap"
+                  >
+                    Test
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           </div>
