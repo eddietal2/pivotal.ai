@@ -8,7 +8,7 @@ import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useToast } from '@/components/context/ToastContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText } from 'lucide-react';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
@@ -97,6 +97,7 @@ export default function App() {
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
   const [disclaimerModalOpen, setDisclaimerModalOpen] = React.useState(false);
   const [stopLossModalOpen, setStopLossModalOpen] = React.useState(false);
+  const [aiUsageModalOpen, setAiUsageModalOpen] = React.useState(false);
   const [overviewCpuState, setOverviewCpuState] = React.useState({ loading: false, isTyping: false });
   // Timeframe filter for Market Pulse (D, W, M, Y)
   const [pulseTimeframe, setPulseTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
@@ -592,6 +593,36 @@ export default function App() {
             </div>
           </InfoModal>
 
+          {/* AI Usage Modal (detailed) */}
+          <InfoModal
+            open={aiUsageModalOpen}
+            onClose={() => setAiUsageModalOpen(false)}
+            title={<><Info className="w-6 h-6 text-gray-600" />AI Usage</>}
+            ariaLabel="AI Usage"
+          >
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-lg font-bold text-gray-900 dark:text-indigo-300 mb-2">How AI is used</h5>
+                <p className="text-sm text-gray-700 dark:text-gray-300">This application uses language models to summarize market data, provide contextual notes about signals, and support UI summaries. The outputs are produced by third-party LLMs or local inference systems depending on configuration.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Limitations & behavior</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">LLMs are probabilistic and may produce incorrect or misleading information (hallucinations). They can reflect biases present in training data and should not be relied upon as authoritative financial advice. Always cross-check with charts, numerical data, and consult a licensed professional for trading decisions.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Privacy & data</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">We do not submit personally-identifying information to LLMs unless explicitly stated. Aggregated and non-identifying telemetry may be used to evaluate and improve models. Avoid pasting sensitive personal or account details in places that may be sent to third-party services.</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h5 className="text-sm font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Recommendations</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Treat AI summaries as a convenience and starting point for analysis. Verify important conclusions using the provided charts, raw data, and other trusted sources before acting.</p>
+              </div>
+              <div className="text-right">
+                <button type="button" className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setAiUsageModalOpen(false)}>I Understand</button>
+              </div>
+            </div>
+          </InfoModal>
+
           {/* Info Modal for Live Setup Scans (refactored into InfoModal) */}
           <InfoModal
             open={signalFeedInfoOpen}
@@ -634,36 +665,35 @@ export default function App() {
 
           {/* Disclaimers & Risk Notices (moved into a collapsible section at the bottom) */}
           <CollapsibleSection
-            title={<span className="flex items-center gap-2"><Info className="w-5 h-5 text-orange-300" />Disclaimers & Risk Notices</span>}
-            infoButton={
-              <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                <button
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                  aria-label="About disclaimers"
-                >
-                  <Info className="w-4 h-4 text-orange-300" />
-                </button>
-              </div>
-            }
+            title={<span className="flex items-center gap-2">Disclaimers & Risk Notices</span>}
             openKey={'disclaimers'}
           >
             <div className="grid grid-cols-1 gap-3">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
                 <div className="flex-1">
-                  <strong className="block">Stop Loss Reminder</strong>
+                  <strong className="block flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-400" />Stop Loss Reminder</strong>
                   <p className="text-sm text-gray-600 dark:text-gray-300">A stop loss is used to limit an investor's loss on a position. Set one to help protect capital and manage risk.</p>
                 </div>
                 <div className="flex-shrink-0">
-                  <button className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700" aria-label="Open stop loss details" data-testid="stop-loss-open-btn" onClick={() => setStopLossModalOpen(true)}>Learn more</button>
+                  <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-red-700" aria-label="Open stop loss details" data-testid="stop-loss-open-btn" onClick={() => setStopLossModalOpen(true)}>Learn more</button>
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
                 <div className="flex-1">
-                  <strong className="block">Legal Disclaimer</strong>
+                  <strong className="block flex items-center gap-2"><FileText className="w-4 h-4 text-indigo-300" />Legal Disclaimer</strong>
                   <p className="text-sm text-gray-600 dark:text-gray-300">This data is for informational/testing purposes only and does not constitute financial advice.</p>
                 </div>
                 <div className="flex-shrink-0">
                   <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" aria-label="Open disclaimer details" data-testid="disclaimer-open-btn" onClick={() => setDisclaimerModalOpen(true)}>Learn more</button>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3">
+                <div className="flex-1">
+                  <strong className="block flex items-center gap-2"><Cpu className="w-4 h-4 text-gray-600" />AI Usage</strong>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">This app uses language models (LLMs) to summarize market data and provide context for signals. Learn more about how this works and the model limitations.</p>
+                </div>
+                <div className="flex-shrink-0">
+                  <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-gray-900" aria-label="Open AI usage details" data-testid="ai-usage-open-btn" onClick={() => setAiUsageModalOpen(true)}>Learn more</button>
                 </div>
               </div>
             </div>
@@ -671,7 +701,7 @@ export default function App() {
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
-      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen || stopLossModalOpen) && (
+      {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen || stopLossModalOpen || aiUsageModalOpen) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
           {/* ...existing BottomNav code... */}
         </div>
