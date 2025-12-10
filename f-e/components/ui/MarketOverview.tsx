@@ -185,10 +185,10 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   }, [fullSentimentModalOpen, fullSentiment]);
 
   return (
-    <div className="bg-black border border-zinc-800 rounded-xl p-4 shadow-sm">
+    <div className="market-overview-cli bg-black border border-zinc-800 rounded-xl p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
-          <h5 className="text-sm font-bold text-gray-100 font-mono flex items-center gap-2">
+          <h5 className="text-sm font-bold text-yellow-300 font-mono flex items-center gap-2">
             <Cpu
               data-testid="header-cpu-indicator"
               data-state={loading ? 'loading' : isTyping ? 'typing' : 'idle'}
@@ -196,7 +196,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               aria-hidden
             />
             Market Pulse Overview
-            <span className="ml-2 px-1 py-0.5 text-[10px] rounded bg-white/5 text-cyan-300 border border-zinc-800 font-mono">AI</span>
+            <span className="ai-badge ml-2 px-1 py-0.5 text-[10px] rounded bg-white/5 text-cyan-300 border border-zinc-800 font-mono">AI</span>
           </h5>
           {timeframe && (
               <div className="mt-2 flex flex-col items-start gap-1">
