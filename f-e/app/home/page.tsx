@@ -266,8 +266,9 @@ export default function App() {
               </div>
               {/* Toggle between slider and list view for Market Pulse items */}
               <div className='flex justify-between items-center'>
-                <div className='lg:h-16 items-center justify-start flex pt-1 mr-4'>
-                  <p>Market Pulse</p>
+                <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
+                  <p className='font-bold'>Market Pulse</p>
+                  <p className='text-[#999]'>Quick look at key market indicators</p>
                 </div>
                 <div className="lg:hidden mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
                   {/* Grid View */}
