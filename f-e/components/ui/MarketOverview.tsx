@@ -113,6 +113,8 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     try {
       // Cancel any existing speech
       try { window.speechSynthesis.cancel(); } catch (_) { /* ignore */ }
+      // Clear any existing fallback interval
+      try { if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; } } catch (_) { /* ignore */ }
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = navigator.language ?? 'en-US';
       utterance.rate = 1.0; utterance.pitch = 1.0; utterance.volume = 1.0;
@@ -137,11 +139,97 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           try { window.localStorage.setItem('mkt_overview_selected_voice', chosenVoice.name); } catch (_) { /* ignore */ }
         }
       } catch (err) { /* ignore */ }
-      utterance.onstart = () => { setSpeaking(true); setIsPaused(false); try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (_) {} };
-      utterance.onend = () => { setSpeaking(false); setVoiceActive(false); setIsPaused(false); try { onVoiceToggle?.(false); } catch (_) {} };
-      utterance.onerror = () => { setSpeaking(false); setVoiceActive(false); setIsPaused(false); try { onVoiceToggle?.(false); } catch (_) {} };
+        utterance.onstart = () => {
+        setSpeaking(true);
+        setIsPaused(false);
+        setSpokenCharIndex(null);
+        utteranceTextRef.current = text;
+        hasBoundaryRef.current = false;
+        utteranceStartTimeRef.current = Date.now();
+        currentFallbackIndexRef.current = 0;
+        lastUpdatedIndexRef.current = null;
+        pauseUntilRef.current = null;
+        isPausingRef.current = false;
+        try {
+          if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
+          fallbackIntervalRef.current = window.setInterval(() => {
+            try {
+              if (hasBoundaryRef.current) return;
+              if (isPausingRef.current) {
+                if (pauseUntilRef.current && Date.now() > pauseUntilRef.current) {
+                  isPausingRef.current = false;
+                  pauseUntilRef.current = null;
+                } else {
+                  // Stay at current index
+                  setSpokenCharIndex(currentFallbackIndexRef.current);
+                  return;
+                }
+              }
+              currentFallbackIndexRef.current = Math.min((utteranceTextRef.current?.length || 0) - 1, currentFallbackIndexRef.current + 1);
+              const estIndex = currentFallbackIndexRef.current;
+              if (utteranceTextRef.current && utteranceTextRef.current[estIndex] && utteranceTextRef.current[estIndex].match(/[.,!?]/) && !hasBoundaryRef.current) {
+                isPausingRef.current = true;
+                pauseUntilRef.current = Date.now() + BOUNDARY_PAUSE_THRESHOLD;
+                lastUpdatedIndexRef.current = estIndex;
+              }
+              setSpokenCharIndex(estIndex);
+            } catch (_) { /* ignore */ }
+          }, 40);
+        } catch (_) { /* ignore */ }
+        try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (_) {}
+      };
+      utterance.onend = () => {
+        setSpeaking(false);
+        setVoiceActive(false);
+        setIsPaused(false);
+        setSpokenCharIndex(null);
+        utteranceTextRef.current = null;
+        utteranceStartTimeRef.current = null;
+        hasBoundaryRef.current = false;
+        lastUpdatedIndexRef.current = null;
+        pauseUntilRef.current = null;
+        currentFallbackIndexRef.current = 0;
+        isPausingRef.current = false;
+        if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
+        try { onVoiceToggle?.(false); } catch (_) {}
+      };
+      utterance.onerror = () => {
+        setSpeaking(false);
+        setVoiceActive(false);
+        setIsPaused(false);
+        setSpokenCharIndex(null);
+        utteranceTextRef.current = null;
+        utteranceStartTimeRef.current = null;
+        hasBoundaryRef.current = false;
+        lastUpdatedIndexRef.current = null;
+        pauseUntilRef.current = null;
+        currentFallbackIndexRef.current = 0;
+        isPausingRef.current = false;
+        if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
+        try { onVoiceToggle?.(false); } catch (_) {}
+      };
       utterance.onpause = () => { setIsPaused(true); };
       utterance.onresume = () => { setIsPaused(false); };
+      utterance.onboundary = (e: any) => {
+        try {
+          hasBoundaryRef.current = true;
+          const index = e.charIndex;
+          // Check if previous char is punctuation
+          if (index > 0 && text[index - 1] && text[index - 1].match(/[.,!?]/)) {
+            if (!pauseUntilRef.current) {
+              pauseUntilRef.current = Date.now() + BOUNDARY_PAUSE_THRESHOLD;
+              lastUpdatedIndexRef.current = index - 1; // Pause at punctuation
+            }
+            if (Date.now() < pauseUntilRef.current) {
+              setSpokenCharIndex(lastUpdatedIndexRef.current);
+              return;
+            } else {
+              pauseUntilRef.current = null;
+            }
+          }
+          setSpokenCharIndex(index);
+        } catch (_) { /* ignore */ }
+      };
       voiceUtteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     } catch (err) {
@@ -149,9 +237,42 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
     }
   };
   const [speaking, setSpeaking] = React.useState(false);
+  const [spokenCharIndex, setSpokenCharIndex] = React.useState<number | null>(null);
+  const utteranceTextRef = React.useRef<string | null>(null);
+  const fallbackIntervalRef = React.useRef<number | null>(null);
+  const hasBoundaryRef = React.useRef(false);
+  const utteranceStartTimeRef = React.useRef<number | null>(null);
+  const lastUpdatedIndexRef = React.useRef<number | null>(null);
+  const pauseUntilRef = React.useRef<number | null>(null);
+  const currentFallbackIndexRef = React.useRef(0);
+  const isPausingRef = React.useRef(false);
+  const PER_CHAR_MS = 40; // ms per char used as a heuristic for fallback progress
+  const BOUNDARY_PAUSE_THRESHOLD = 2000; // ms to pause highlight at punctuation
   const voicesRef = React.useRef<SpeechSynthesisVoice[] | null>(null);
   const [selectedVoiceName, setSelectedVoiceName] = React.useState<string | null>(null);
   const [voices, setVoices] = React.useState<SpeechSynthesisVoice[]>([]);
+
+  // Helper to render the displayed overview with current word highlighted based on spokenCharIndex
+  const renderHighlightedText = (text: string) => {
+    if (!text || text.length === 0) return null;
+    // Match tokens (word + following whitespace) so we preserve spacing
+    const regex = /\S+\s*/g;
+    const matches = Array.from(text.matchAll(regex)).map((m) => m[0]);
+    let acc = 0;
+    return matches.map((tok, idx) => {
+      const start = acc;
+      const end = acc + tok.length; // exclusive
+      const isHighlighted = spokenCharIndex !== null && spokenCharIndex >= start && spokenCharIndex < end;
+      acc += tok.length;
+      // Make highlight classes theme-aware for light/dark mode using Tailwind
+      const highlightClass = isHighlighted ? 'text-cyan-600 bg-cyan-100 dark:text-cyan-300 dark:bg-cyan-900/10 rounded px-1 py-0.5' : '';
+      return (
+        <span key={idx} className={highlightClass}>
+          {tok}
+        </span>
+      );
+    });
+  };
 
   const regenerate = React.useCallback(async () => {
     // cancel any current typing
@@ -252,6 +373,11 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       }
       setSpeaking(false);
       setIsPaused(false);
+      setSpokenCharIndex(null);
+      utteranceTextRef.current = null;
+      utteranceStartTimeRef.current = null;
+      hasBoundaryRef.current = false;
+      if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
       return;
     }
 
@@ -279,6 +405,14 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         setVoiceActive(false);
         setSpeaking(false);
         setIsPaused(false);
+        utteranceTextRef.current = null;
+        utteranceStartTimeRef.current = null;
+        hasBoundaryRef.current = false;
+        lastUpdatedIndexRef.current = null;
+        pauseUntilRef.current = null;
+        currentFallbackIndexRef.current = 0;
+        isPausingRef.current = false;
+        if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
         try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
         try { showToast?.('Finished speaking', 'success'); } catch (e) { /* ignore */ }
         voiceUtteranceRef.current = null;
@@ -286,18 +420,58 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       utterance.onstart = () => {
         setSpeaking(true);
         setIsPaused(false);
+        setSpokenCharIndex(null);
+        utteranceTextRef.current = textToSpeak;
+        hasBoundaryRef.current = false;
+        utteranceStartTimeRef.current = Date.now();
+        try {
+          if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
+          fallbackIntervalRef.current = window.setInterval(() => {
+            try {
+              if (hasBoundaryRef.current) return;
+              const start = utteranceStartTimeRef.current ?? Date.now();
+              const elapsed = Date.now() - start;
+              const estIndex = Math.min((utteranceTextRef.current?.length ?? 1) - 1, Math.floor(elapsed / PER_CHAR_MS));
+              setSpokenCharIndex(estIndex);
+            } catch (_) { /* ignore */ }
+          }, 150);
+        } catch (_) { /* ignore */ }
         try { showToast?.(`Speaking Market Overview (${utterance.voice?.name ?? 'Default'})`, 'info'); } catch (e) { /* ignore */ }
       };
       utterance.onpause = () => { setIsPaused(true); };
       utterance.onresume = () => { setIsPaused(false); };
-      utterance.onboundary = (e) => {
-        // debug boundary events to confirm speech progress
-        // console.debug('Speech boundary', e);
+      utterance.onboundary = (e: any) => {
+        try {
+          hasBoundaryRef.current = true;
+          const index = e.charIndex;
+          // Check if previous char is punctuation
+          if (index > 0 && textToSpeak[index - 1] && textToSpeak[index - 1].match(/[.,!?]/)) {
+            if (!pauseUntilRef.current) {
+              pauseUntilRef.current = Date.now() + BOUNDARY_PAUSE_THRESHOLD;
+              lastUpdatedIndexRef.current = index - 1; // Pause at punctuation
+            }
+            if (Date.now() < pauseUntilRef.current) {
+              setSpokenCharIndex(lastUpdatedIndexRef.current);
+              return;
+            } else {
+              pauseUntilRef.current = null;
+            }
+          }
+          setSpokenCharIndex(index);
+        } catch (_) { /* ignore */ }
       };
       utterance.onerror = (e) => {
         setVoiceActive(false);
         setSpeaking(false);
         setIsPaused(false);
+        utteranceTextRef.current = null;
+        utteranceStartTimeRef.current = null;
+        hasBoundaryRef.current = false;
+        lastUpdatedIndexRef.current = null;
+        pauseUntilRef.current = null;
+        currentFallbackIndexRef.current = 0;
+        isPausingRef.current = false;
+        if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
         try { onVoiceToggle?.(false); } catch (err) { /* ignore */ }
         try { showToast?.('Error speaking overview', 'error'); } catch (e) { /* ignore */ }
         voiceUtteranceRef.current = null;
@@ -376,6 +550,11 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         voiceUtteranceRef.current.onerror = null;
         voiceUtteranceRef.current = null;
       }
+      // Clear any fallback interval in case the effect unmounts
+      if (fallbackIntervalRef.current) { clearInterval(fallbackIntervalRef.current); fallbackIntervalRef.current = null; }
+      utteranceTextRef.current = null;
+      utteranceStartTimeRef.current = null;
+      hasBoundaryRef.current = false;
     };
   }, [voiceActive, displayedOverview, summaryOverview, fullSentiment, selectedVoiceName]);
 
@@ -649,7 +828,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               {/* Typewriter dot (green) — reserved space with padding to prevent layout shift */}
             
               {/* Display overlay text */}
-              <span className="inline-block lg:text-[1.15em] text-gray-200">{displayedOverview}</span>
+              <span className="inline-block lg:text-[1.15em] text-gray-200">{renderHighlightedText(displayedOverview)}</span>
             {/* caret while typing */}
             {displayedOverview.length < (summaryOverview?.length ?? 0) && (
               <span data-testid="type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-900 dark:text-gray-100">|</span>
