@@ -29,7 +29,7 @@ export default function BottomNav() {
               href={link.href}
               className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
                 isActive
-                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950'
+                  ? 'text-[#105B92] dark:text-blue-400 bg-blue-50 dark:bg-transparent'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
