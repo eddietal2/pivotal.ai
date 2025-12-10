@@ -24,16 +24,16 @@ export function MarketPulseSkeleton() {
 // Skeleton for MarketOverview
 export function MarketOverviewSkeleton() {
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm dark:shadow-lg animate-pulse">
+    <div className="bg-black border border-zinc-800 rounded-xl p-4 shadow-sm animate-pulse">
       <div className="flex items-start justify-between gap-2">
         <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
       </div>
       <div className="mt-3">
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+        <div className="h-4 bg-zinc-700 rounded w-full mb-2"></div>
+        <div className="h-4 bg-zinc-700 rounded w-3/4"></div>
       </div>
       <div className="mt-4">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+        <div className="h-8 bg-zinc-700 rounded w-24"></div>
       </div>
     </div>
   );

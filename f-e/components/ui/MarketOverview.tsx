@@ -185,22 +185,23 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   }, [fullSentimentModalOpen, fullSentiment]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm dark:shadow-lg">
+    <div className="bg-black border border-zinc-800 rounded-xl p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
-          <h5 className="text-sm font-bold text-gray-900 dark:text-gray-200 flex items-center gap-2">
+          <h5 className="text-sm font-bold text-gray-100 font-mono flex items-center gap-2">
             <Cpu
               data-testid="header-cpu-indicator"
               data-state={loading ? 'loading' : isTyping ? 'typing' : 'idle'}
-              className={`${loading ? 'text-gray-500 dark:text-gray-400 animate-pulse' : isTyping ? 'text-orange-600 dark:text-orange-300 animate-pulse' : 'text-green-600 dark:text-green-300'} w-5 h-5`}
+                    className={`${loading ? 'text-gray-500 animate-pulse' : isTyping ? 'text-cyan-400 animate-pulse' : 'text-cyan-400'} w-5 h-5`}
               aria-hidden
             />
-            AI Market Overview
+            Market Pulse Overview
+            <span className="ml-2 px-1 py-0.5 text-[10px] rounded bg-white/5 text-cyan-300 border border-zinc-800 font-mono">AI</span>
           </h5>
           {timeframe && (
-            <div className="mt-2 flex flex-col items-start gap-1">
+              <div className="mt-2 flex flex-col items-start gap-1">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700">
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/5 text-cyan-300 border border-zinc-800">
                   {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
                 </span>
               </div>
@@ -214,7 +215,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       </div>
 
       <div className="mt-3">
-        <p className="text-sm text-gray-700 dark:text-gray-300" aria-live="polite">
+        <p className="text-sm text-gray-300" aria-live="polite">
           {/* Placeholder (loading) element with fade */}
           <span
             className={`inline-flex items-center gap-2 overflow-hidden transition-all duration-200 ease-out ${loading && displayedOverview.length === 0 ? 'h-auto w-auto opacity-100' : 'h-0 w-0 opacity-0'}`}
@@ -222,8 +223,8 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           >
             {loading && (
               <span data-testid="loading-dot" aria-hidden className="relative inline-flex mr-2 h-3 w-3 align-middle">
-                <span className="absolute inline-flex h-3 w-3 rounded-full bg-gray-400/70 dark:bg-gray-500/70 opacity-70 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500" />
+                <span className="absolute inline-flex h-3 w-3 rounded-full bg-cyan-400/70 opacity-70 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
               </span>
             )}
             Generating Market Overview…
@@ -233,7 +234,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
               {/* Typewriter dot (green) — reserved space with padding to prevent layout shift */}
             
               {/* Display overlay text */}
-              <span className="inline-block pl-0 lg:text-lg text-gray-900 dark:text-gray-100">{displayedOverview}</span>
+              <span className="inline-block pl-0 lg:text-lg text-gray-200">{displayedOverview}</span>
             {/* caret while typing */}
             {displayedOverview.length < (summaryOverview?.length ?? 0) && (
               <span data-testid="type-caret" aria-hidden className="ml-1 typewriter-caret text-gray-900 dark:text-gray-100">|</span>
@@ -245,7 +246,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           <button
             type="button"
             title="View Full Sentiment Analysis"
-            className="px-3 py-1 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors flex items-center gap-1"
+            className="px-3 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors flex items-center gap-1"
             onClick={() => setFullSentimentModalOpen(true)}
             aria-label="View full sentiment analysis"
           >
