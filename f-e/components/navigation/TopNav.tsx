@@ -48,7 +48,7 @@ export default function TopNav() {
                 <Button
                   variant={isActive ? 'default' : 'ghost'}
                   size="sm"
-                  className={`gap-2 ${!isActive ? 'bg-transparent text-[#98a0a8] hover:bg-[#164e64] hover:text-white' : 'bg-gradient-to-br from-[#0e74a7] to-[#1fa0c8] text-white shadow-sm'}`}
+                  className={`gap-2 font-raleway ${!isActive ? 'bg-transparent text-[#98a0a8] hover:bg-[#164e64] hover:text-white' : 'bg-gradient-to-br from-[#0e74a7] to-[#1fa0c8] text-white shadow-sm'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {link.name}
