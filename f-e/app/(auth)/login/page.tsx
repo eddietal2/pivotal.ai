@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { redirectTo } from '@/lib/redirect';
 
-const MAGIC_LINK_API_ENDPOINT = 'http://127.0.0.1:8000/auth/magic-link';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
+const MAGIC_LINK_API_ENDPOINT = `${BACKEND_URL}/auth/magic-link`;
 
 // Helper function (moved the regex outside for efficiency)
 function isValidEmail(email: string): boolean {
@@ -65,7 +67,7 @@ export default function LoginPage() {
                         } catch (e) { /* ignore in tests */ }
             
             log('Auth data stored, redirecting to home...');
-            redirectTo('http://192.168.1.68:3000/home');
+            redirectTo(`${BASE_URL}/home`);
             return;
         }
         
@@ -75,7 +77,7 @@ export default function LoginPage() {
         
         if (user && existingToken) {
             log('User already authenticated, redirecting to home...');
-            redirectTo('http://192.168.1.68:3000/home');
+            redirectTo(`${BASE_URL}/home`);
         }
     }, []); // Empty dependency array [] ensures this runs only once on mount
 
@@ -185,7 +187,7 @@ export default function LoginPage() {
         }
     }
 	 // Google OAuth Sign-In Handler
-	const GOOGLE_AUTH_REDIRECT_URL = 'http://127.0.0.1:8000/auth/google-oauth'; 
+	const GOOGLE_AUTH_REDIRECT_URL = `${BACKEND_URL}/auth/google-oauth`; 
     const handleGoogleSignIn = () => {
         // Redirect to the Django/backend Google OAuth endpoint via helper
         redirectTo(GOOGLE_AUTH_REDIRECT_URL);
