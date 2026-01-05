@@ -75,6 +75,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://192.168.1.68:3000", # <-- This is where your frontend's address is specified.
+    "https://pivotal-ai-web-app.vercel.app",  # Production frontend
 ]
 
 # Set to True if your frontend needs to send cookies, authentication headers, or tokens.
@@ -186,3 +187,6 @@ EMAIL_HOST_PASSWORD = getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
 EMAIL_USE_SSL = getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
 DEFAULT_FROM_EMAIL = getenv('DEFAULT_FROM_EMAIL', 'eddie@finalbossxr.com')
+
+# Frontend URL for redirects
+FRONTEND_URL = getenv('FRONTEND_URL', 'http://192.168.1.68:3000')

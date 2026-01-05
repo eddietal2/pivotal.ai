@@ -266,7 +266,7 @@ def send_magic_link_email(request):
             
             # Redirect to frontend with tokens in URL (will be stored by frontend)
             frontend_url = (
-                f"http://192.168.1.68:3000/login?"
+                f"{settings.FRONTEND_URL}/login?"
                 f"token={str(session_token)}&"
                 f"email={email}&"
                 f"user_id={user.id}&"
@@ -700,7 +700,7 @@ def google_oauth_callback(request):
 
         # Build frontend redirect URL and include token
         frontend_url = (
-            f"http://192.168.1.68:3000/login?"
+            f"{settings.FRONTEND_URL}/login?"
             f"token={str(session_token)}&"
             f"email={user.email}&"
             f"user_id={user.id}&"

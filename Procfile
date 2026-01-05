@@ -1,0 +1,1 @@
+web: cd b-e && gunicorn --bind 0.0.0.0:$PORT pivotal_api.wsgi:application
