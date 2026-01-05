@@ -1,5 +1,5 @@
 [build]
-buildCommand = "uv venv --relocatable && uv sync --locked --no-dev --no-editable"
+buildCommand = "uv sync --locked --no-dev --no-editable"
 
 [deploy]
-startCommand = "uv run gunicorn pivotal_api.wsgi:application --bind 0.0.0.0:$PORT"
+startCommand = ".venv/bin/gunicorn pivotal_api.wsgi:application --bind 0.0.0.0:$PORT"
