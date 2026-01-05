@@ -76,6 +76,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://192.168.1.68:3000", # <-- This is where your frontend's address is specified.
     "https://pivotal-ai-web-app.vercel.app",  # Production frontend
+    "https://pivotalai-production.up.railway.app",  # Production Railway app
 ]
 
 # Set to True if your frontend needs to send cookies, authentication headers, or tokens.
