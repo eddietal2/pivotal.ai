@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure--x!9!+14#yw^id_%zde!yh_k09nr^b*69u^ub3%@^m6veh79b2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['pivotalai-production.up.railway.app', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -76,7 +76,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://192.168.1.68:3000", # <-- This is where your frontend's address is specified.
     "https://pivotal-ai-web-app.vercel.app",  # Production frontend
-    "https://pivotalai-production.up.railway.app",  # Production Railway app
 ]
 
 # Set to True if your frontend needs to send cookies, authentication headers, or tokens.
