@@ -143,6 +143,10 @@ export default function App() {
   const [modalChartTimeframe, setModalChartTimeframe] = React.useState<'24H'|'1D'|'1W'|'1M'|'1Y'>(() => '1D');
   const { showToast } = useToast();
 
+  // Track open state of sections
+  const [marketPulseOpen, setMarketPulseOpen] = React.useState(true);
+  const [signalFeedOpen, setSignalFeedOpen] = React.useState(true);
+
   // Simulate loading on mount
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 2000); // 2 second loading simulation
@@ -235,7 +239,7 @@ export default function App() {
                   Market Pulse
                 </span>
               }
-              infoButton={
+              infoButton={marketPulseOpen ? (
                 <div className="flex items-center gap-2">
                   {/* Overview info button (shows MarketOverview modal even when collapsed) */}
                   <button
@@ -265,8 +269,9 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-              }
+              ) : null}
                 openKey={pulseTimeframe}
+              onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
             >
               {/* Render MarketOverview inside collapsible */}
                 <div className="mb-4">
@@ -349,7 +354,7 @@ export default function App() {
                   Live Setup Scans
                 </span>
               }
-              infoButton={
+              infoButton={signalFeedOpen ? (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -377,8 +382,9 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-              }
+              ) : null}
                 openKey={signalTimeframe}
+              onOpenChange={(isOpen) => setSignalFeedOpen(isOpen)}
             >
               <p className='text-[#999]'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
               <h3 className='my-4 text-lg'>Leads: 12/09/25</h3>

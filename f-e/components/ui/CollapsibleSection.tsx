@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean }) {
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void }) {
   const [open, setOpen] = React.useState<boolean>(() => defaultOpen ?? true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -8,7 +8,9 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
   // toggle using animation on the content
   const toggle = () => {
     if (!contentRef.current) {
-      setOpen((v) => !v);
+      const newOpen = !open;
+      setOpen(newOpen);
+      onOpenChange?.(newOpen);
       return;
     }
     const el = contentRef.current;
@@ -30,6 +32,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
       };
       el.addEventListener('transitionend', handler as any);
       setOpen(false);
+      onOpenChange?.(false);
     } else {
       // Open: make sure it's displayed and animate from 0 to scrollHeight
       el.style.display = 'block';
@@ -50,6 +53,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
       };
       el.addEventListener('transitionend', handler as any);
       setOpen(true);
+      onOpenChange?.(true);
     }
   };
 
@@ -76,6 +80,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
     if (prevOpenKeyRef.current !== undefined && prevOpenKeyRef.current !== openKey) {
       // Open on change
       setOpen(true);
+      onOpenChange?.(true);
     }
     prevOpenKeyRef.current = openKey;
   }, [openKey]);
