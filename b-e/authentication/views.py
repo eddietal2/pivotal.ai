@@ -658,7 +658,7 @@ def google_oauth_callback(request):
         token_response = requests.post(token_url, data=token_data)
         token_response.raise_for_status()
         token_json = token_response.json()
-        access_token = token_json.get('access_token')
+        access_token = token_json.get('access_token');
         
         if not access_token:
             return JsonResponse({
@@ -1252,5 +1252,7 @@ def delete_account(request):
         'status': 'error',
         'message': 'Invalid request method. Only DELETE requests are allowed.'
     }, status=405)
+
+print(f"DEBUG: FRONTEND_URL = {settings.FRONTEND_URL}")
 
 
