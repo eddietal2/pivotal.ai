@@ -176,15 +176,28 @@ export function NewsArticleModalSkeleton() {
   );
 }
 
-// Skeleton used for day modal while loading catalysts/events for a day
-export function DayModalSkeleton() {
+// Skeleton for Disclaimers & Risk Notices section
+export function DisclaimersSkeleton() {
   return (
-    <div data-testid="day-modal-skeleton" className="p-4 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-pulse">
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-2"></div>
-      <div className="space-y-3">
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+    <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <div className="flex items-center justify-between gap-2">
+        <button className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800">
+        </button>
+      </div>
+      <div className="mt-4">
+        <div className="grid grid-cols-1 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 animate-pulse">
+              <div className="flex-1">
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
