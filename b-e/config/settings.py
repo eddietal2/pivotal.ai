@@ -13,8 +13,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from os import getenv
 from dotenv import load_dotenv
-# Load variables from a .env file, if present
-load_dotenv()
+# Load variables from a .env file, if DATABASE_URL is not set
+if not getenv('DATABASE_URL'):
+    load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
