@@ -826,7 +826,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
         }
       `}</style>
 
-      {/* Fullscreen Modal */}
+      {/* Fullscreen Market Pulse Modal */}
       {fullscreenOpen && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
