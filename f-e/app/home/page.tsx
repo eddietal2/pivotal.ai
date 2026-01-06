@@ -224,6 +224,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
 
+      {/* Custom scrollbar styles */}
+      <style>
+        {`
+          .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;  /* Chrome, Safari and Opera */
+          }
+        `}
+      </style>
+
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
@@ -292,17 +305,21 @@ export default function App() {
                 <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
                   <p className='text-[#999]'>Quick look at key market indicators</p>
                 </div>
-                <div className="lg:hidden mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
-                  {/* Grid View */}
+                <div className="mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
+                  {/* Slide View */}
                   <button
                       type="button"
                       className={`p-2 rounded ${pulseViewMode === 'slider' ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                       aria-pressed={pulseViewMode === 'slider'}
-                      aria-label="Slider view"
+                      aria-label="Slide view"
                       data-testid="pulse-view-toggle-slider"
                       onClick={() => handleSetPulseViewMode('slider')}
                     >
-                      <Grid className="w-4 h-4" />
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 stroke-current">
+                        <path d="M6 8C6 5.17157 6 3.75736 6.87868 2.87868C7.75736 2 9.17157 2 12 2C14.8284 2 16.2426 2 17.1213 2.87868C18 3.75736 18 5.17157 18 8V16C18 18.8284 18 20.2426 17.1213 21.1213C16.2426 22 14.8284 22 12 22C9.17157 22 7.75736 22 6.87868 21.1213C6 20.2426 6 18.8284 6 16V8Z" stroke="currentColor" strokeWidth="1.5"/>
+                        <path opacity="0.5" d="M18 19.5C19.4001 19.5 20.1002 19.5 20.635 19.2275C21.1054 18.9878 21.4878 18.6054 21.7275 18.135C22 17.6002 22 16.9001 22 15.5V8.5C22 7.09987 22 6.3998 21.7275 5.86502C21.4878 5.39462 21.1054 5.01217 20.635 4.77248C20.1002 4.5 19.4001 4.5 18 4.5" stroke="currentColor" strokeWidth="1.5"/>
+                        <path opacity="0.5" d="M6 19.5C4.59987 19.5 3.8998 19.5 3.36502 19.2275C2.89462 18.9878 2.51217 18.6054 2.27248 18.135C2 17.6002 2 16.9001 2 15.5V8.5C2 7.09987 2 6.3998 2.27248 5.86502C2.51217 5.39462 2.89462 5.01217 3.36502 4.77248C3.8998 4.5 4.59987 4.5 6 4.5" stroke="currentColor" strokeWidth="1.5"/>
+                      </svg>
                   </button>
                   {/* List View */}
                   <button
@@ -317,25 +334,26 @@ export default function App() {
                   </button>
               </div>
               </div>
-              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory' : 'flex flex-col gap-4'} sm:grid sm:grid-cols-3 sm:gap-4 ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
+              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory' : 'flex flex-col gap-4'} ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
                 
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
                 ) : (
                   filteredPulse.map((pulse, index) => (
-                    <WatchListItem
-                      key={index}
-                      ticker={pulse.index}
-                      price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
-                      change={typeof pulse.change === 'string' ? parseFloat(pulse.change.replace('%', '')) : (pulse.change as any)}
-                      sparkline={pulse.trend}
-                      timeframe={pulse.timeframe}
-                      afterHours={pulse.afterHours}
-                      onClick={() => {
-                        setSelectedPulse(pulse);
-                        setModalOpen(true);
-                      }}
-                    />
+                    <div key={index} className={`flex-shrink-0 ${pulseViewMode === 'slider' ? 'w-64 h-32' : 'w-full'}`}>
+                      <WatchListItem
+                        ticker={pulse.index}
+                        price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
+                        change={typeof pulse.change === 'string' ? parseFloat(pulse.change.replace('%', '')) : (pulse.change as any)}
+                        sparkline={pulse.trend}
+                        timeframe={pulse.timeframe}
+                        afterHours={pulse.afterHours}
+                        onClick={() => {
+                          setSelectedPulse(pulse);
+                          setModalOpen(true);
+                        }}
+                      />
+                    </div>
                   ))
                 )}
               {/* Market Pulse Info Modal (renders outside the collapsible content so it shows even when collapsed) */}

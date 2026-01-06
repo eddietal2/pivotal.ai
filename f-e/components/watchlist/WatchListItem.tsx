@@ -24,7 +24,7 @@ export default function WatchListItem({ ticker, price, change = 0, sparkline = [
       data-testid={`watchlist-item-${ticker}`}
       type="button"
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press"
+      className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press"
       aria-label={`More info about ${ticker}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
     >
       <div className="item-press-inner relative">
@@ -44,7 +44,7 @@ export default function WatchListItem({ ticker, price, change = 0, sparkline = [
               <Sparkline data={sparkline} width={72} height={28} stroke={sparkStroke} className="rounded" gradient={true} fillOpacity={0.12} />
             )}
           </div>
-          <span className="text-xl font-bold text-gray-900 dark:text-white">{price}</span>
+          <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{price}</span>
         </div>
         <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
           {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}

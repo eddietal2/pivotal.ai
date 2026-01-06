@@ -552,7 +552,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
       utteranceStartTimeRef.current = null;
       hasBoundaryRef.current = false;
     };
-  }, [voiceActive, displayedOverview, summaryOverview, fullSentiment, selectedVoiceName]);
+  }, [voiceActive, summaryOverview, fullSentiment, selectedVoiceName]);
 
   // Helper to play a short beep using WebAudio API (as fallback when TTS fails)
   const playBeep = () => {
