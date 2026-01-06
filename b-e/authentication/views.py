@@ -593,7 +593,7 @@ def google_oauth_redirect(request):
     
     # Get Google OAuth credentials from settings/environment
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
-    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://pivotalai-production.up.railway.app/auth/google-callback')
     
     if not client_id:
         return JsonResponse({
