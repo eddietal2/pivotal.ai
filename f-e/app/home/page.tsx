@@ -334,7 +334,7 @@ export default function App() {
                   </button>
               </div>
               </div>
-              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory' : 'flex flex-col gap-4'} ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
+              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto scrollbar-thin snap-x snap-mandatory' : 'flex flex-col gap-4'} ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
                 
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
