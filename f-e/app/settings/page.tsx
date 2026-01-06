@@ -7,6 +7,8 @@ import { Sun, Moon, Bell, BellOff, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { redirectTo } from '@/lib/redirect';
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
+
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
@@ -82,7 +84,7 @@ export default function SettingsPage() {
         
         if (!userString || !token) {
           // User is not authenticated, redirect to login
-          redirectTo('http://192.168.1.68:3000/login');
+          redirectTo(`${BASE_URL}/login`);
           return;
         }
         
@@ -218,7 +220,7 @@ export default function SettingsPage() {
         setTimeout(() => {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          redirectTo('http://192.168.1.68:3000/login');
+          redirectTo(`${BASE_URL}/login`);
         }, 2000);
       } else {
         // Handle error responses
@@ -266,7 +268,7 @@ export default function SettingsPage() {
         
         // Redirect to login page after a short delay
         setTimeout(() => {
-          redirectTo('http://192.168.1.68:3000/login');
+          redirectTo(`${BASE_URL}/login`);
         }, 1000);
       } else if (response.status === 401) {
         // Handle unauthorized - token expired or invalid
@@ -274,7 +276,7 @@ export default function SettingsPage() {
         setTimeout(() => {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          redirectTo('http://192.168.1.68:3000/login');
+          redirectTo(`${BASE_URL}/login`);
         }, 2000);
       } else {
         // Handle error responses
@@ -301,7 +303,7 @@ export default function SettingsPage() {
     
     // Redirect to login page after toast is visible
     setTimeout(() => {
-      redirectTo('http://192.168.1.68:3000/login');
+      redirectTo(`${BASE_URL}/login`);
     }, 1500);
   };
 
@@ -383,7 +385,7 @@ export default function SettingsPage() {
         setTimeout(() => {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          redirectTo('http://192.168.1.68:3000/login');
+          redirectTo(`${BASE_URL}/login`);
         }, 2000);
       } else {
         // Handle error responses
