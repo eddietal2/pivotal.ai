@@ -641,7 +641,7 @@ def google_oauth_callback(request):
     # Get credentials from environment
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
     client_secret = getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
-    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/auth/google-callback')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://pivotalai-production.up.railway.app/auth/google-callback')
     
     # Exchange authorization code for access token
     token_url = 'https://oauth2.googleapis.com/token'
