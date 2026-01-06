@@ -15,6 +15,7 @@ dependencies = [
     "psycopg-binary==3.3.1",
     "python-dotenv==1.2.1",
     "redis>=4.5.0",
+    "pandas>=2.0.0",
     "requests>=2.25.0",
     "sqlparse==0.5.4",
     "typing_extensions==4.15.0",
