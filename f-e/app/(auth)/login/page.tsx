@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { redirectTo } from '@/lib/redirect';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://pivotalai-production.up.railway.app';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
 const MAGIC_LINK_API_ENDPOINT = `${BACKEND_URL}/auth/magic-link`;
 
