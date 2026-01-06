@@ -21,6 +21,9 @@ dependencies = [
     "tzdata==2025.2",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["config"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
