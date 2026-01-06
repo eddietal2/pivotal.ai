@@ -13,6 +13,7 @@ services:
       - "5432:5432"  # Expose port 5432 for external access (e.g., debugging)
     volumes:
       - postgres_data:/var/lib/postgresql/data  # Persistent data volume
+      - ./db/init:/docker-entrypoint-initdb.d  # Mount init scripts
     healthcheck:  # Ensure DB is ready before starting dependent services
       test: ["CMD-SHELL", "pg_isready -U user -d pivotal_db"]
       interval: 10s
@@ -22,8 +23,11 @@ services:
   # Redis service for Celery task queuing
   redis:
     image: redis:7  # Official Redis 7 image
+    command: redis-server /etc/redis/redis.conf  # Use custom config
     ports:
       - "6379:6379"  # Expose port 6379 for Celery broker
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf  # Mount config file
     healthcheck:  # Ensure Redis is ready
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -45,7 +49,7 @@ services:
   # Celery worker service for background tasks
   worker:
     build: .  # Build from local Dockerfile
-    command: uv run celery -A pivotal_api worker --beat  # Run Celery with Beat scheduler
+    command: uv run celery -A config worker --beat  # Run Celery with Beat scheduler
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/pivotal_db  # DB connection
       - REDIS_URL=redis://redis:6379  # Redis connection
