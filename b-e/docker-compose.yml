@@ -1,0 +1,60 @@
+# Docker Compose configuration for Pivotal.ai backend
+# Defines multi-container services: DB, Redis, API, and Worker
+
+services:
+  # PostgreSQL database service
+  db:
+    image: postgres:15  # Official PostgreSQL 15 image
+    environment:
+      POSTGRES_DB: pivotal_db  # Database name
+      POSTGRES_USER: user  # DB username
+      POSTGRES_PASSWORD: password  # DB password
+    ports:
+      - "5432:5432"  # Expose port 5432 for external access (e.g., debugging)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistent data volume
+    healthcheck:  # Ensure DB is ready before starting dependent services
+      test: ["CMD-SHELL", "pg_isready -U user -d pivotal_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis service for Celery task queuing
+  redis:
+    image: redis:7  # Official Redis 7 image
+    ports:
+      - "6379:6379"  # Expose port 6379 for Celery broker
+    healthcheck:  # Ensure Redis is ready
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django API service (main web app)
+  api:
+    build: .  # Build from local Dockerfile
+    ports:
+      - "8000:8000"  # Expose port 8000 for web access
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/pivotal_db  # DB connection
+      - REDIS_URL=redis://redis:6379  # Redis connection for Celery
+    depends_on:
+      db:  # Wait for DB to be healthy
+        condition: service_healthy
+
+  # Celery worker service for background tasks
+  worker:
+    build: .  # Build from local Dockerfile
+    command: uv run celery -A pivotal_api worker --beat  # Run Celery with Beat scheduler
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/pivotal_db  # DB connection
+      - REDIS_URL=redis://redis:6379  # Redis connection
+    depends_on:
+      db:  # Wait for DB to be healthy
+        condition: service_healthy
+      redis:  # Wait for Redis to be healthy
+        condition: service_healthy
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:  # Stores DB data across container restarts
