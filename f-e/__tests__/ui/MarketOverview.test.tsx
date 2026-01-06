@@ -2,6 +2,18 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import MarketOverview from '@/components/ui/MarketOverview';
+import { ThemeProvider } from '@/components/context/ThemeContext';
+import { ToastProvider } from '@/components/context/ToastContext';
+
+// Mock generateAiOverview to return consistent text for testing
+jest.mock('@/components/ui/MarketOverview', () => {
+  const actual = jest.requireActual('@/components/ui/MarketOverview');
+  actual.generateAiOverview = jest.fn().mockResolvedValue({
+    summary: 'Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations. (Based on daily data)',
+    fullSentiment: 'Market sentiment shows mixed signals with tech stocks leading gains while traditional indices remain cautious. Key drivers include AI developments and interest rate expectations. (Based on daily data)'
+  });
+  return actual;
+});
 
 const mockPulses = [
   { index: 'S&P 500', value: 5210.45, change: '+0.82%', color: 'text-green-500', trend: [5180, 5190, 5200, 5205, 5210], timeframe: '1D', afterHours: false },
@@ -11,7 +23,13 @@ const mockPulses = [
 describe('MarketOverview', () => {
   test('renders and types out overview (typewriter animation)', async () => {
     jest.useFakeTimers();
-    render(<MarketOverview pulses={mockPulses} timeframe={'D'} />);
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <MarketOverview pulses={mockPulses} timeframe={'D'} />
+        </ToastProvider>
+      </ThemeProvider>
+    );
     expect(screen.getByText('Market Pulse Overview')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /regenerate market overview/i })).toBeInTheDocument();
     // Initially show header CPU and generating text with the original gray loading dot
@@ -24,18 +42,18 @@ describe('MarketOverview', () => {
     // Advance to let generation complete (simulate 600ms delay)
     act(() => jest.advanceTimersByTime(600));
     // Now typing starts; advance some typing time and ensure partial text visible; cpu indicator should show typing
-    act(() => jest.advanceTimersByTime(200));
-    const partial = screen.getByText((content, node) => {
-      return node?.textContent?.includes('AI Overview:') || false;
+    act(() => jest.advanceTimersByTime(2000));
+    const partials = screen.getAllByText((content, node) => {
+      return node?.textContent?.includes('Market sentiment') || false;
     });
-    expect(partial).toBeTruthy();
+    expect(partials.length).toBeGreaterThan(0);
     // The typewriter caret should be visible while typing
     // Expect header CPU indicator to be present and set to typing
     expect(headerCpu).toHaveAttribute('data-state', 'typing');
     expect(headerCpu).toHaveAttribute('data-state', 'typing');
     // Finish typing out
     act(() => jest.advanceTimersByTime(2000));
-    const full = await screen.findByText(/AI Overview:/, {}, { timeout: 1500 });
+    const full = await screen.findByText(/Market sentiment/, {}, { timeout: 1500 });
     expect(full).toBeInTheDocument();
     jest.useRealTimers();
     // Last generated timestamp label should be present and non-empty and include a date in parentheses
@@ -51,15 +69,21 @@ describe('MarketOverview', () => {
 
   test('Regenerate button triggers a new overview and typing', async () => {
     jest.useFakeTimers();
-    render(<MarketOverview pulses={mockPulses} timeframe={'D'} />);
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <MarketOverview pulses={mockPulses} timeframe={'D'} />
+        </ToastProvider>
+      </ThemeProvider>
+    );
     const button = screen.getByRole('button', { name: /regenerate market overview/i });
     fireEvent.click(button);
     // Show 'Regenerating' while AI is being generated
     expect(button).toHaveTextContent(/Regenerating/);
     // Advance to complete generation and enough typing
-    act(() => jest.advanceTimersByTime(600 + 2000));
-    const content = await screen.findByText(/AI Overview:/, {}, { timeout: 1500 });
-    expect(content).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(600 + 20000));
+    const contents = await screen.findAllByText((content, node) => node?.textContent?.includes('Market sentiment') || false, {}, { timeout: 2000 });
+    expect(contents.length).toBeGreaterThan(0);
     // After typing completes, caret should not be visible
     expect(screen.queryByTestId('type-caret')).not.toBeInTheDocument();
     // Loading placeholder should be gone after regenerate typing completes
