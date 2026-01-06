@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Cpu, Eye, Minus, Maximize2, Mic, Play, Pause, RefreshCw } from 'lucide-react';
+import { Cpu, Eye, Minus, Maximize2, Mic, Play, Pause, RefreshCw, X } from 'lucide-react';
 import InfoModal from '../modals/InfoModal';
 import { useToast } from '@/components/context/ToastContext';
 // Info icon removed; parent will render info button/modal
@@ -95,6 +95,7 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
   const [isTyping, setIsTyping] = React.useState(false);
   const TYPING_SPEED = 5; // ms per char
   const [collapsed, setCollapsed] = React.useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = React.useState(false);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
   const headerTitleRef = React.useRef<HTMLHeadingElement | null>(null);
   const { showToast } = useToast();
@@ -805,6 +806,15 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           >
             {loading ? 'Regenerating…' : 'Regenerate'}
           </button>
+          <button
+            type="button"
+            title="View Fullscreen"
+            className="view-sentiment-btn px-3 py-1 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+            onClick={() => setFullscreenOpen(true)}
+            aria-label="View market overview in fullscreen"
+          >
+            <Eye className="w-3 h-3" />
+          </button>
         </div>
       <style jsx>{`
         @keyframes blink {
@@ -815,6 +825,39 @@ export default function MarketOverview({ pulses, timeframe, onOpenInfo, onStateC
           animation: blink 1s step-end infinite;
         }
       `}</style>
+
+      {/* Fullscreen Modal */}
+      {fullscreenOpen && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Cpu className="w-6 h-6 text-cyan-400" />
+                Market Pulse Overview
+                <span className="ml-2 px-2 py-1 text-xs rounded bg-cyan-600/20 text-cyan-300 border border-cyan-600/30">AI</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFullscreenOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                aria-label="Close fullscreen view"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {timeframe && (
+              <div className="mb-4">
+                <span className="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-cyan-600/20 text-cyan-300 border border-cyan-600/30">
+                  {timeframe === 'D' ? 'In the Last Day' : timeframe === 'W' ? 'In the Last Week' : timeframe === 'M' ? 'In the Last Month' : 'In the Last Year'}
+                </span>
+              </div>
+            )}
+            <div className="text-gray-200 leading-relaxed whitespace-pre-line">
+              {displayedOverview || summaryOverview || fullSentiment || 'No overview available yet.'}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* InfoModal moved to parent */}
     </div>
