@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ChevronRight } from 'lucide-react';
 
 const PivyPage: React.FC = () => {
   // State to toggle between List and Slide views
@@ -15,6 +16,37 @@ const PivyPage: React.FC = () => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
     return () => clearTimeout(timer);
   }, []);
+
+  // Sample data for PivyChats
+  const pivyChats = [
+    {
+      title: 'This is a very long title that should test the maximum length for display purposes and see how it wraps.',
+      date: '01/07/26',
+      recentTime: '10:30 AM',
+      messages: [
+        { text: 'Hello, how are you?', sender: 'User', time: '10:25 AM' },
+        { text: 'I\'m good, thanks!', sender: 'AI', time: '10:30 AM' },
+      ],
+    },
+    {
+      title: 'Weather Update',
+      date: '01/06/26',
+      recentTime: '5:15 PM',
+      messages: [
+        { text: 'What\'s the weather like?', sender: 'User', time: '5:10 PM' },
+        { text: 'It\'s sunny today.', sender: 'AI', time: '5:15 PM' },
+      ],
+    },
+    {
+      title: 'Fun Time',
+      date: '01/05/26',
+      recentTime: '2:45 PM',
+      messages: [
+        { text: 'Tell me a joke.', sender: 'User', time: '2:40 PM' },
+        { text: 'Why did the chicken cross the road? To get to the other side!', sender: 'AI', time: '2:45 PM' },
+      ],
+    },
+  ];
 
   return (
     <div>
@@ -135,8 +167,27 @@ const PivyPage: React.FC = () => {
           </div>
         ) : (
           <div>
-            <h2>List (view)</h2>
-            {/* List content */}
+            <ul className="space-y-4">
+              {pivyChats.map((chat, index) => (
+                <li key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                    </div>
+                    <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
+                    <div className="space-y-1">
+                      {chat.messages.slice(-1).map((msg, msgIndex) => (
+                        <div key={msgIndex} className="text-sm">
+                          <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 ml-4" />
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </main>
