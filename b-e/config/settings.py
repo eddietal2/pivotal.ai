@@ -49,8 +49,8 @@ INSTALLED_APPS = [
     'corsheaders',  # for handling CORS
 
     # custom apps
-    'authentication',
-    'financial_data',
+    # 'authentication',
+    # 'financial_data',
 ]
 
 MIDDLEWARE = [
