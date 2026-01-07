@@ -28,6 +28,7 @@ const PivyPage: React.FC = () => {
   const [viewModeExpanded, setViewModeExpanded] = useState(false);
   const [notificationsExpanded, setNotificationsExpanded] = useState(false);
   const [timeframeExpanded, setTimeframeExpanded] = useState(false);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
   const [timeframeType, setTimeframeType] = useState('month');
 
   useEffect(() => {
@@ -248,12 +249,13 @@ const PivyPage: React.FC = () => {
                   <h3 className="text-lg font-semibold">Pivy Chat Settings</h3>
                 </div>
                 <div className="flex gap-2">
-                  {(timeframeExpanded ? 1 : 0) + (viewModeExpanded ? 1 : 0) + (notificationsExpanded ? 1 : 0) > 0 && (
+                  {(timeframeExpanded ? 1 : 0) + (viewModeExpanded ? 1 : 0) + (notificationsExpanded ? 1 : 0) + (aboutExpanded ? 1 : 0) > 0 && (
                     <button 
                       onClick={() => {
                         setTimeframeExpanded(false);
                         setViewModeExpanded(false);
                         setNotificationsExpanded(false);
+                        setAboutExpanded(false);
                       }}
                       className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
                     >
@@ -412,6 +414,21 @@ const PivyPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* About Pivy Chat */}
+              <button 
+                className='text-2xl mt-4 pt-2 border-t border-gray-300 dark:border-gray-700 flex items-center justify-between w-full text-left'
+                onClick={() => setAboutExpanded(!aboutExpanded)}
+              >
+                <h3>About Pivy Chat</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${aboutExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {aboutExpanded && (
+                <div className="mt-2">
+                  <p className="text-gray-600 dark:text-gray-300">Pivy Chat is an AI-powered trading assistant that provides real-time insights, market analysis, and personalized recommendations to help you make informed trading decisions. Stay ahead of the market with intelligent conversations and data-driven advice.</p>
+                </div>
+              )}
+
             </div>
 
             {/* Close button of Bottom Drawer */}
