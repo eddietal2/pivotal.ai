@@ -8,12 +8,13 @@ import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useToast } from '@/components/context/ToastContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton } from '@/components/ui/skeletons';
+import Link from 'next/link';
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
@@ -438,18 +439,29 @@ export default function App() {
                 openKey={pulseTimeframe}
               onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
             >
-              {/* Render MarketOverview inside collapsible */}
+              {/* Render PivyChat for today inside collapsible */}
                 <div className="mb-4">
                 {isLoading ? (
                   <MarketOverviewSkeleton />
                 ) : (
-                  <MarketOverview
-                    pulses={filteredPulse}
-                    timeframe={pulseTimeframe}
-                    devOverview='placeholder'
-                    onOpenInfo={() => setInfoModalOpen(true)}
-                    onStateChange={(s) => setOverviewCpuState(s)}
-                  />
+                  <Link href="/pivy/chat/0">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-48">
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">01/07/26</span>
+                          <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">10:30 AM</span>
+                        </div>
+                        <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">This is a very long title that should test the maximum length for display purposes and see how it wraps.</h3>
+                        <div className="space-y-1">
+                          <div className="text-sm">
+                            <span className="font-medium">🤖</span> I'm good, thanks! <span className="text-xs text-gray-400">(10:30 AM)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
+                    </div>
+                  </Link>
                 )}
               </div>
               {/* Toggle between slider and list view for Market Pulse items */}

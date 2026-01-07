@@ -136,7 +136,8 @@ const PivyChatInstancePage: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 transform transition-transform duration-500 overflow-hidden ${mounted && !isExiting ? 'translate-y-0' : 'translate-y-full'}`}>
+    <div className={`min-h-screen transform transition-all duration-500 overflow-hidden ${mounted && !isExiting ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+      <div className="absolute inset-0 bg-gray-50 dark:bg-gray-900 z-[-1]"></div>
       {/* Header */}
       <header className="bg-gray-100 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center">
         <button 

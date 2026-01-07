@@ -99,7 +99,10 @@ const PivyPage: React.FC = () => {
 
       {/* Message Alert */}
       {isAlertVisible && (
-        <div className={`bg-yellow-100 dark:bg-yellow-900 p-4 border-b border-yellow-200 dark:border-yellow-700 flex justify-between items-center transform transition-transform duration-300 z-0 ${isAlertClosing ? '-translate-y-full' : 'translate-y-0'}`}>
+        <div 
+          className={`bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700 flex justify-between items-center transform transition-all duration-300 z-0 ${isAlertClosing ? 'max-h-0 p-0 opacity-0' : 'max-h-20 p-4'}`}
+          style={{ overflow: 'hidden' }}
+        >
           <p className="text-yellow-800 dark:text-yellow-200">Welcome to Pivy! Start a new conversation or browse existing chats.</p>
           <button 
             onClick={() => {
@@ -114,14 +117,14 @@ const PivyPage: React.FC = () => {
       )}
 
       {/* Views */}
-      <main className="p-4">
+      <main className={isSlideView ? "" : "p-4"}>
         {isSwitching ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="animate-spin w-8 h-8 text-gray-500" />
           </div>
         ) : (
           isSlideView ? (
-            <div className="h-[50vh] md:h-auto pl-6 relative">
+            <div className="h-[60vh] md:h-auto relative">
               <div className="overflow-x-auto h-full">
                 <div className="flex space-x-4 p-4 h-full items-start">
                   {loading ? (
@@ -144,7 +147,7 @@ const PivyPage: React.FC = () => {
                     // PivyChats in horizontal slider
                     pivyChats.map((chat, index) => (
                       <Link key={index} href={`/pivy/chat/${index}`}>
-                        <div className="min-w-[250px] bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-full">
+                        <div className="min-w-[250px] h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between">
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
