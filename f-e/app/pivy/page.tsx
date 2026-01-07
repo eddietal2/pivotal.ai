@@ -10,7 +10,7 @@ const PivyPage: React.FC = () => {
 
   // State to toggle between List and Slide views
   // true for Slide view, false for List view
-  const [isSlideView, setIsSlideView] = useState(false); // Start with List view to show skeleton
+  const [isSlideView, setIsSlideView] = useState(true); // Start with List view to show skeleton
   const [selectedYear, setSelectedYear] = useState(2023);
   const [selectedMonth, setSelectedMonth] = useState(1);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -115,9 +115,50 @@ const PivyPage: React.FC = () => {
           </div>
         ) : (
           isSlideView ? (
-            <div>
-              <h2>Slide</h2>
-              {/* Slide content */}
+            <div className="h-[50vh] md:h-auto pl-6 relative">
+              <div className="overflow-x-auto h-full">
+                <div className="flex space-x-4 p-4 h-full items-start">
+                  {loading ? (
+                    // Skeleton for PivyChats in horizontal slider
+                    Array.from({ length: 3 }, (_, index) => (
+                      <div key={index} className="min-w-[300px] bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <div className="flex-1 animate-pulse">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+                            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                          </div>
+                          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                          <div className="space-y-1">
+                            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    // PivyChats in horizontal slider
+                    pivyChats.map((chat, index) => (
+                      <div key={index} className="min-w-[250px] bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                          </div>
+                          <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
+                          <div className="space-y-1">
+                            {chat.messages.slice(-1).map((msg, msgIndex) => (
+                              <div key={msgIndex} className="text-sm">
+                                <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white/80 to-transparent dark:from-gray-900/80 dark:to-transparent blur-sm pointer-events-none"></div>
             </div>
           ) : (
             <div>
