@@ -6,12 +6,14 @@ import ListViewIllustration from '../../components/illustrations/ListViewIllustr
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
 
 const PivyPage: React.FC = () => {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
   // State to toggle between List and Slide views
   // true for Slide view, false for List view
   const [isSlideView, setIsSlideView] = useState(false); // Start with List view to show skeleton
-  const [selectedYear, setSelectedYear] = useState('2023');
-  const [selectedMonth, setSelectedMonth] = useState('January');
-  const [selectedWeek, setSelectedWeek] = useState('1');
+  const [selectedYear, setSelectedYear] = useState(2023);
+  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const [loading, setLoading] = useState(true); // Set to true initially to show skeleton
   const [isSwitching, setIsSwitching] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -20,6 +22,8 @@ const PivyPage: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [viewModeExpanded, setViewModeExpanded] = useState(false);
   const [notificationsExpanded, setNotificationsExpanded] = useState(false);
+  const [timeframeExpanded, setTimeframeExpanded] = useState(false);
+  const [timeframeType, setTimeframeType] = useState('month');
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
@@ -71,7 +75,7 @@ const PivyPage: React.FC = () => {
             <CandleStickAnim />
           </div>
           <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-sm font-medium rounded">
-            {isSlideView ? 'Week 1, January' : 'January, 2026'}
+            {timeframeType === 'week' ? `Week ${selectedWeek}, ${months[selectedMonth - 1]}` : `${months[selectedMonth - 1]}, ${selectedYear}`}
           </span>
         </div>
         <div>
@@ -184,23 +188,102 @@ const PivyPage: React.FC = () => {
         >
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4">
+
               {/* Header of Bottom Drawer */}
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                   <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   <h3 className="text-lg font-semibold">Pivy Chat Settings</h3>
                 </div>
-                <button 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  ✕
-                </button>
+                <div className="flex gap-2">
+                  {(timeframeExpanded ? 1 : 0) + (viewModeExpanded ? 1 : 0) + (notificationsExpanded ? 1 : 0) > 0 && (
+                    <button 
+                      onClick={() => {
+                        setTimeframeExpanded(false);
+                        setViewModeExpanded(false);
+                        setNotificationsExpanded(false);
+                      }}
+                      className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                    >
+                      Collapse All
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
+
+              {/* Timeframe */}
+              <button 
+                className='text-2xl mt-4 flex items-center justify-between w-full text-left'
+                onClick={() => setTimeframeExpanded(!timeframeExpanded)}
+              >
+                <h3>Timeframe</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${timeframeExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {timeframeExpanded && (
+                <div className="mt-2">
+                  <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${timeframeType === 'week' ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => {
+                        setTimeframeType('week');
+                        setIsSlideView(true);
+                      }}
+                    >
+                      Week
+                    </button>
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${timeframeType === 'month' ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => {
+                        setTimeframeType('month');
+                        setIsSlideView(false);
+                      }}
+                    >
+                      Month
+                    </button>
+                  </div>
+                  <div className="mt-4">
+                    {timeframeType === 'week' ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-lg">Current Week {selectedWeek} of {months[selectedMonth - 1]}</span>
+                        <select 
+                          value={selectedWeek} 
+                          onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
+                          className="bg-gray-200 dark:bg-gray-700 rounded px-2 py-1"
+                        >
+                          {Array.from({length: 5}, (_, i) => (
+                            <option key={i+1} value={i+1}>{i+1}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-lg">Current Month: {months[selectedMonth - 1]} {selectedYear}</span>
+                        <input 
+                          type="month" 
+                          value={`${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`} 
+                          onChange={(e) => {
+                            const [year, month] = e.target.value.split('-');
+                            setSelectedYear(parseInt(year));
+                            setSelectedMonth(parseInt(month));
+                          }}
+                          className="bg-gray-200 dark:bg-gray-700 rounded px-2 py-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
 
               {/* View Mode */}
               <button 
-                className='text-2xl mt-4 flex items-center justify-between w-full text-left'
+                className='text-2xl mt-4 pt-2 border-t border-gray-300 dark:border-gray-700 flex items-center justify-between w-full text-left'
                 onClick={() => setViewModeExpanded(!viewModeExpanded)}
               >
                 <h3>View Mode</h3>
@@ -213,6 +296,7 @@ const PivyPage: React.FC = () => {
                       className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isSlideView ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => {
                         setIsSlideView(false);
+                        setTimeframeType('month');
                         setIsSwitching(true);
                         setIsDrawerOpen(false);
                         setTimeout(() => setIsSwitching(false), 1200);
@@ -225,6 +309,7 @@ const PivyPage: React.FC = () => {
                       className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isSlideView ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => {
                         setIsSlideView(true);
+                        setTimeframeType('week');
                         setIsSwitching(true);
                         setIsDrawerOpen(false);
                         setTimeout(() => setIsSwitching(false), 1200);
