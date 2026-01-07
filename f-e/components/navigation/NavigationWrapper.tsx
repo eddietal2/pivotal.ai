@@ -10,6 +10,9 @@ export default function NavigationWrapper() {
   // Hide navigation on auth pages (login, signup)
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/';
   
+  // Hide BottomNav on pivy/chat pages
+  const hideBottomNav = pathname.startsWith('/pivy/chat');
+  
   if (isAuthPage) {
     return null;
   }
@@ -20,7 +23,7 @@ export default function NavigationWrapper() {
       <TopNav />
       
       {/* Bottom Navigation - Mobile Only */}
-      <BottomNav />
+      {!hideBottomNav && <BottomNav />}
     </>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Loader2, Plus, Settings, ChevronDown, Layout } from 'lucide-react';
+import Link from 'next/link';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
 import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
@@ -137,23 +138,25 @@ const PivyPage: React.FC = () => {
                   ) : (
                     // PivyChats in horizontal slider
                     pivyChats.map((chat, index) => (
-                      <div key={index} className="min-w-[250px] bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-full">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                      <Link key={index} href={`/pivy/chat/${index}`}>
+                        <div className="min-w-[250px] bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-full">
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                            </div>
+                            <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
+                            <div className="space-y-1">
+                              {chat.messages.slice(-1).map((msg, msgIndex) => (
+                                <div key={msgIndex} className="text-sm">
+                                  <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
-                          <div className="space-y-1">
-                            {chat.messages.slice(-1).map((msg, msgIndex) => (
-                              <div key={msgIndex} className="text-sm">
-                                <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
-                              </div>
-                            ))}
-                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
-                      </div>
+                      </Link>
                     ))
                   )}
                 </div>
@@ -181,23 +184,25 @@ const PivyPage: React.FC = () => {
                   ))
                 ) : (
                   pivyChats.map((chat, index) => (
-                    <li key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                    <Link key={index} href={`/pivy/chat/${index}`} className="block mt-4 mb-4">
+                      <li className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                          </div>
+                          <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
+                          <div className="space-y-1">
+                            {chat.messages.slice(-1).map((msg, msgIndex) => (
+                              <div key={msgIndex} className="text-sm">
+                                <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
-                        <div className="space-y-1">
-                          {chat.messages.slice(-1).map((msg, msgIndex) => (
-                            <div key={msgIndex} className="text-sm">
-                              <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 ml-4" />
-                    </li>
+                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 ml-4" />
+                      </li>
+                    </Link>
                   ))
                 )}
               </ul>
