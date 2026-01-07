@@ -10,7 +10,7 @@ import { useTheme } from '@/components/context/ThemeContext';
 const navLinks = [
   { name: 'Home', href: '/home', icon: Home },
   { name: 'Watchlist', href: '/watchlist', icon: LineChart },
-  { name: 'News', href: '/news', icon: Newspaper },
+  { name: 'Pivy', href: '/pivy', icon: Newspaper },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

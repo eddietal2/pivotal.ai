@@ -19,6 +19,26 @@ import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, Discla
 
 // --- MOCK DATA ---
 
+// Mapping of display names to API tickers
+const tickerMapping: Record<string, string> = {
+  'S&P 500': '^GSPC',
+  'DOW': '^DJI',
+  'Nasdaq': '^IXIC',
+  'VIX (Fear Index)': '^VIX',
+  '10-Yr Yield': '^TNX',
+  'Bitcoin': 'BTC-USD',
+  'Gold': 'GC=F',
+  'Silver': 'SI=F',
+  'Crude Oil': 'CL=F',
+  'Russell 2000': '^RUT',
+  '2-Yr Yield': '^IRX',
+  'Ethereum': 'ETH-USD',
+  'Copper': 'HG=F',
+  'Natural Gas': 'NG=F',
+  'CALL/PUT Ratio': 'CPC=F', // Placeholder
+  'AAII Retailer Investor Sentiment': 'AAII', // Placeholder
+};
+
 // Mock data for the Real-time Confluence Feed (The most important component)
 const mockSignals = [
   {
@@ -159,6 +179,9 @@ export default function App() {
   });
   // Animation state for toggling view modes
   const [pulseViewAnimating, setPulseViewAnimating] = React.useState(false);
+  // Real market data state
+  const [realMarketData, setRealMarketData] = React.useState<Record<string, any>>({});
+  const [marketDataLoading, setMarketDataLoading] = React.useState(false);
 
   const handleSetPulseViewMode = (view: 'slider'|'list') => {
     if (view === pulseViewMode) return;
@@ -253,6 +276,47 @@ export default function App() {
     return match ?? selectedPulse;
   }, [selectedPulse, modalChartTimeframe]);
   
+  // Fetch real market data
+  const fetchRealMarketData = React.useCallback(async () => {
+    setMarketDataLoading(true);
+    try {
+      const data: Record<string, any> = {};
+      
+      // Fetch data for each unique ticker
+      const uniqueTickers = [...new Set(Object.values(tickerMapping))];
+      
+      for (const ticker of uniqueTickers) {
+        try {
+          // Fetch price data
+          const priceResponse = await fetch(`/api/financial/data/?ticker=${ticker}&type=price`);
+          const priceData = await priceResponse.json();
+          
+          // Fetch RV data
+          const rvResponse = await fetch(`/api/financial/data/?ticker=${ticker}&type=rv`);
+          const rvData = await rvResponse.json();
+          
+          data[ticker] = {
+            price: priceData,
+            rv: rvData
+          };
+        } catch (error) {
+          console.error(`Error fetching data for ${ticker}:`, error);
+        }
+      }
+      
+      setRealMarketData(data);
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+    } finally {
+      setMarketDataLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount
+  React.useEffect(() => {
+    fetchRealMarketData();
+  }, [fetchRealMarketData]);
+  
   // Example descriptions for each index
   const pulseDescriptions: Record<string, string> = {
     'S&P 500': 'The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States. It is widely regarded as the best single gauge of large-cap U.S. equities.',
@@ -272,8 +336,40 @@ export default function App() {
     'Natural Gas': 'Natural Gas is a fossil fuel used for heating, electricity generation, and industrial processes. Its price is influenced by weather patterns, supply levels, and energy demand.',
   };
 
-  // Filter pulses by chosen timeframe
-  const filteredPulse = React.useMemo(() => mockPulse.filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe), [pulseTimeframe]);
+  // Filter pulses by chosen timeframe and merge with real data
+  const filteredPulse = React.useMemo(() => {
+    return mockPulse
+      .filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe)
+      .map((pulse) => {
+        const ticker = tickerMapping[pulse.index];
+        const realData = ticker && realMarketData[ticker];
+        
+        if (realData) {
+          // Use real data
+          const priceData = realData.price;
+          const rvData = realData.rv;
+          
+          // Calculate change percentage (simplified - using first and last close)
+          let changePercent = 0;
+          if (priceData.closes && priceData.closes.length > 1) {
+            const firstClose = priceData.closes[0];
+            const lastClose = priceData.latest.close;
+            changePercent = ((lastClose - firstClose) / firstClose) * 100;
+          }
+          
+          return {
+            ...pulse,
+            value: priceData.latest.close,
+            change: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+            color: changePercent >= 0 ? 'text-green-500' : 'text-red-500',
+            trend: priceData.closes.slice(-20), // Use last 20 closes for sparkline
+            rv: rvData ? `${rvData.daily_rv}x (${rvData.daily_grade})` : undefined
+          };
+        }
+        
+        return pulse; // Fallback to mock data
+      });
+  }, [pulseTimeframe, realMarketData]);
   // Filter signals by chosen timeframe
   const filteredSignals = React.useMemo(() => mockSignals.filter((s) => normalizeTimeframe(s.timeframe) === signalTimeframe), [signalTimeframe]);
 
@@ -392,7 +488,7 @@ export default function App() {
               </div>
               <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto scrollbar-thin snap-x snap-mandatory' : 'flex flex-col gap-4'} ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
                 
-                {isLoading ? (
+                {isLoading || marketDataLoading ? (
                   Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
                 ) : (
                   filteredPulse.map((pulse, index) => (
