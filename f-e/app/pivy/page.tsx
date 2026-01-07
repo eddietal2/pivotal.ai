@@ -9,6 +9,10 @@ import CandleStickAnim from '../../components/ui/CandleStickAnim';
 const PivyPage: React.FC = () => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+  // Get today's date in MM/DD/YY format
+  const today = new Date();
+  const todayStr = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+
   // State to toggle between List and Slide views
   // true for Slide view, false for List view
   const [isSlideView, setIsSlideView] = useState(true); // Start with List view to show skeleton
@@ -143,6 +147,7 @@ const PivyPage: React.FC = () => {
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                              {chat.date === todayStr && <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>}
                               <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
                             </div>
                             <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
@@ -189,6 +194,7 @@ const PivyPage: React.FC = () => {
                         <div className="flex-1">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                            {chat.date === todayStr && <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>}
                             <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
                           </div>
                           <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
