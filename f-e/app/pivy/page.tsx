@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Loader2, Plus } from 'lucide-react';
+import { ChevronRight, Loader2, Plus, Settings } from 'lucide-react';
 
 const PivyPage: React.FC = () => {
   // State to toggle between List and Slide views
@@ -15,6 +15,7 @@ const PivyPage: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
@@ -199,25 +200,43 @@ const PivyPage: React.FC = () => {
           ) : (
             <div>
               <ul className="space-y-4">
-                {pivyChats.map((chat, index) => (
-                  <li key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                {loading ? (
+                  // Skeleton for PivyChats
+                  Array.from({ length: 3 }, (_, index) => (
+                    <li key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+                      <div className="flex-1 animate-pulse">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                        </div>
+                        <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                        <div className="space-y-1">
+                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                        </div>
                       </div>
-                      <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
-                      <div className="space-y-1">
-                        {chat.messages.slice(-1).map((msg, msgIndex) => (
-                          <div key={msgIndex} className="text-sm">
-                            <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
-                          </div>
-                        ))}
+                    </li>
+                  ))
+                ) : (
+                  pivyChats.map((chat, index) => (
+                    <li key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer flex justify-between items-center">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{chat.date}</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{chat.recentTime}</span>
+                        </div>
+                        <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">{chat.title}</h3>
+                        <div className="space-y-1">
+                          {chat.messages.slice(-1).map((msg, msgIndex) => (
+                            <div key={msgIndex} className="text-sm">
+                              <span className="font-medium">{msg.sender === 'AI' ? '🤖' : msg.sender + ':'}</span> {msg.text} <span className="text-xs text-gray-400">({msg.time})</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 ml-4" />
-                  </li>
-                ))}
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 ml-4" />
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           )
@@ -225,35 +244,110 @@ const PivyPage: React.FC = () => {
       </main>
 
       {/* Floating Button */}
-      <div className="fixed bottom-28 right-4 z-50">
-        <button 
-          className="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
-          onClick={() => setIsDrawerOpen(true)}
-        >
-          <Plus className="w-6 h-6" />
-        </button>
-      </div>
+      {!isDrawerOpen && (
+        <div className="fixed bottom-28 right-4 z-50">
+          <button 
+            className="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+            onClick={() => setIsDrawerOpen(true)}
+          >
+            <Settings className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      )}
 
       {/* Bottom Drawer */}
       <div 
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[99] transition-opacity ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsDrawerOpen(false)}
       >
         <div 
-          className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 rounded-t-lg shadow-lg z-50 transform transition-transform min-h-[50vh] ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed inset-0 bg-white/80 dark:bg-gray-800/20 backdrop-blur-lg shadow-lg z-[100] transform transition-transform ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">New Chat</h3>
-            <button 
-              onClick={() => setIsDrawerOpen(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              ✕
-            </button>
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Header of Bottom Drawer */}
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <h3 className="text-lg font-semibold">Pivy Chat Settings</h3>
+                </div>
+                <button 
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* View Mode */}
+              <h3 className='text-2xl mt-4'>View Mode</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                <div className='h-2'></div>
+                <b>Slide View</b>: Shows chats in Week/Month format. You'll be able to see all chats in a given week
+                <div>
+                  {/* Slide View Illustration */}
+                </div>
+                <br /><br />
+                <b>List View</b>: Shows chats in Month/Year format. You'll be able to see all chats in a given month.
+                <div>
+                  {/* List View Illustration */}
+                </div>
+              </p>
+              <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                <button 
+                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  onClick={() => {
+                    setIsEnabled(false);
+                    setIsSwitching(true);
+                    setTimeout(() => setIsSwitching(false), 1200);
+                  }}
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'List'}
+                </button>
+                <button 
+                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  onClick={() => {
+                    setIsEnabled(true);
+                    setIsSwitching(true);
+                    setTimeout(() => setIsSwitching(false), 1200);
+                  }}
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'Slide'}
+                </button>
+              </div>
+
+              {/* Notifications */}
+              <h3 className='text-2xl mt-4 pt-2 border-t border-gray-300 dark:border-gray-700'>Notifications</h3>
+              <p className="text-gray-600 dark:text-gray-300">Each trading day's Pivy Chat will send chat notifications throughout the day.</p>
+              <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                <button 
+                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  onClick={() => setNotificationsEnabled(true)}
+                >
+                  On
+                </button>
+                <button 
+                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  onClick={() => setNotificationsEnabled(false)}
+                >
+                  Off
+                </button>
+              </div>
+            </div>
+
+            {/* Close button of Bottom Drawer */}
+            <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+              <button 
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-300">Start a new conversation here.</p>
-          {/* Add more content as needed */}
         </div>
       </div>
     </div>
