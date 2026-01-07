@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, Loader2, Plus, Settings, ChevronDown } from 'lucide-react';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
 import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
+import CandleStickAnim from '../../components/ui/CandleStickAnim';
 
 const PivyPage: React.FC = () => {
   // State to toggle between List and Slide views
   // true for Slide view, false for List view
-  const [isEnabled, setIsEnabled] = useState(false); // Start with List view to show skeleton
+  const [isSlideView, setIsSlideView] = useState(false); // Start with List view to show skeleton
   const [selectedYear, setSelectedYear] = useState('2023');
   const [selectedMonth, setSelectedMonth] = useState('January');
   const [selectedWeek, setSelectedWeek] = useState('1');
@@ -65,110 +66,13 @@ const PivyPage: React.FC = () => {
       `}</style>
       {/* Header */}
       <header className="bg-gray-100 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center z-10 relative">
-        <div className="flex gap-2">
-          <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-xs font-medium rounded">
-            {/* {isEnabled ? 'List' : 'Slide'} */}
-            {isEnabled ? 'YR/MN' : 'WK/MN'}
+        <div className="flex gap-2 items-center">
+          <div className="w-[30px] h-[30px] relative bottom-6.5 mr-2">
+            <CandleStickAnim />
+          </div>
+          <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-sm font-medium rounded">
+            {isSlideView ? 'Week 1, January' : 'January, 2026'}
           </span>
-          {isEnabled ? (
-            // List View Selection
-            <>
-              <section className="flex-1 min-w-[60px]">
-                {loading ? (
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 animate-pulse rounded"></div>
-                ) : (
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    className="custom-select w-full text-md font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none"
-                  >
-                    <option value="2025">2026</option>
-                  </select>
-                )}
-              </section>
-              <section className="flex-1 min-w-[80px]">
-                {loading ? (
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 animate-pulse rounded"></div>
-                ) : (
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="custom-select w-full text-md font-semibold text-black dark:text-white bg-transparent border-none outline-none"
-                  >
-                    <option value="January">January</option>
-                    <option value="February">February</option>
-                    <option value="March">March</option>
-                    <option value="April">April</option>
-                    <option value="May">May</option>
-                    <option value="June">June</option>
-                    <option value="July">July</option>
-                    <option value="August">August</option>
-                    <option value="September">September</option>
-                    <option value="October">October</option>
-                    <option value="November">November</option>
-                    <option value="December">December</option>
-                  </select>
-                )}
-              </section>
-            </>
-          ) : (
-            // Slide View Selection
-            <>
-              <section className="flex-1 min-w-[60px]">
-                {loading ? (
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 animate-pulse rounded"></div>
-                ) : (
-                  <select
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(e.target.value)}
-                    className="custom-select w-full text-md font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none"
-                  >
-                    {Array.from({ length: 52 }, (_, i) => (
-                      <option key={i + 1} value={(i + 1).toString()}>Week {i + 1}</option>
-                    ))}
-                  </select>
-                )}
-              </section>
-              <section className="flex-1 min-w-[80px]">
-                {loading ? (
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 animate-pulse rounded"></div>
-                ) : (
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="custom-select w-full text-md font-semibold text-black dark:text-white bg-transparent border-none outline-none"
-                  >
-                    <option value="January">January</option>
-                    <option value="February">February</option>
-                    <option value="March">March</option>
-                    <option value="April">April</option>
-                    <option value="May">May</option>
-                    <option value="June">June</option>
-                    <option value="July">July</option>
-                    <option value="August">August</option>
-                    <option value="September">September</option>
-                    <option value="October">October</option>
-                    <option value="November">November</option>
-                    <option value="December">December</option>
-                  </select>
-                )}
-              </section>
-            </>
-          )}
-        </div>
-        <div className="flex items-center">
-          <button 
-            className="px-4 sm:ml-2 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => {
-              setIsSwitching(true);
-              setTimeout(() => {
-                setIsEnabled(!isEnabled);
-                setIsSwitching(false);
-              }, 1200);
-            }}
-          >
-            View
-          </button>
         </div>
       </header>
 
@@ -195,7 +99,7 @@ const PivyPage: React.FC = () => {
             <Loader2 className="animate-spin w-8 h-8 text-gray-500" />
           </div>
         ) : (
-          isEnabled ? (
+          isSlideView ? (
             <div>
               <h2>Slide</h2>
               {/* Slide content */}
@@ -293,24 +197,13 @@ const PivyPage: React.FC = () => {
               </button>
               {viewModeExpanded && (
                 <div className="mt-2">
-                  <p className="text-gray-600 dark:text-gray-300">
-                    <div className='h-2'></div>
-                    <b>Slide View</b>: Shows chats in Week/Month format. You'll be able to see all chats in a given week - 5 slides per trading day a week.
-                    <div>
-                      <SlideViewIllustration />
-                    </div>
-                    <br /><br />
-                    <b>List View</b>: Shows chats in Month/Year format. You'll be able to see all chats in a given month - around 20 trading days a month in a list, maximum.
-                    <div>
-                      <ListViewIllustration />
-                    </div>
-                  </p>
                   <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                     <button 
-                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isSlideView ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => {
-                        setIsEnabled(false);
+                        setIsSlideView(false);
                         setIsSwitching(true);
+                        setIsDrawerOpen(false);
                         setTimeout(() => setIsSwitching(false), 1200);
                       }}
                       disabled={isSwitching}
@@ -318,10 +211,11 @@ const PivyPage: React.FC = () => {
                       {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'List'}
                     </button>
                     <button 
-                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isSlideView ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => {
-                        setIsEnabled(true);
+                        setIsSlideView(true);
                         setIsSwitching(true);
+                        setIsDrawerOpen(false);
                         setTimeout(() => setIsSwitching(false), 1200);
                       }}
                       disabled={isSwitching}
@@ -329,6 +223,17 @@ const PivyPage: React.FC = () => {
                       {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'Slide'}
                     </button>
                   </div>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    <div className='h-2'></div>
+                    <b>Slide View</b>: Shows chats in Week/Month format. You'll be able to see all chats in a given week - 5 slides per trading day a week.
+                    <div>
+                      <SlideViewIllustration />
+                    </div>
+                    <b>List View</b>: Shows chats in Month/Year format. You'll be able to see all chats in a given month - around 20 trading days a month in a list, maximum.
+                    <div>
+                      <ListViewIllustration />
+                    </div>
+                  </p>
                 </div>
               )}
 
@@ -345,13 +250,13 @@ const PivyPage: React.FC = () => {
                   <p className="text-gray-600 dark:text-gray-300">Each trading day's Pivy Chat will send chat notifications throughout the day.</p>
                   <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                     <button 
-                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${notificationsEnabled ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => setNotificationsEnabled(true)}
                     >
                       On
                     </button>
                     <button 
-                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!notificationsEnabled ? 'bg-amber-900 dark:bg-amber-800 text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                       onClick={() => setNotificationsEnabled(false)}
                     >
                       Off
