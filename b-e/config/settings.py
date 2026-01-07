@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'corsheaders',  # for handling CORS
 
     # custom apps
-    # 'authentication',
+    'authentication',
     # 'financial_data',
 ]
 
