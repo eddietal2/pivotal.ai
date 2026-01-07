@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2, Plus } from 'lucide-react';
 
 const PivyPage: React.FC = () => {
   // State to toggle between List and Slide views
@@ -12,6 +12,9 @@ const PivyPage: React.FC = () => {
   const [selectedWeek, setSelectedWeek] = useState('1');
   const [loading, setLoading] = useState(true); // Set to true initially to show skeleton
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAlertVisible, setIsAlertVisible] = useState(true);
+  const [isAlertClosing, setIsAlertClosing] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
@@ -57,7 +60,7 @@ const PivyPage: React.FC = () => {
         }
       `}</style>
       {/* Header */}
-      <header className="bg-gray-100 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <header className="bg-gray-100 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center z-10 relative">
         <div className="flex gap-2">
           <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-xs font-medium rounded">
             {/* {isEnabled ? 'List' : 'Slide'} */}
@@ -165,6 +168,22 @@ const PivyPage: React.FC = () => {
         </div>
       </header>
 
+      {/* Message Alert */}
+      {isAlertVisible && (
+        <div className={`bg-yellow-100 dark:bg-yellow-900 p-4 border-b border-yellow-200 dark:border-yellow-700 flex justify-between items-center transform transition-transform duration-300 z-0 ${isAlertClosing ? '-translate-y-full' : 'translate-y-0'}`}>
+          <p className="text-yellow-800 dark:text-yellow-200">Welcome to Pivy! Start a new conversation or browse existing chats.</p>
+          <button 
+            onClick={() => {
+              setIsAlertClosing(true);
+              setTimeout(() => setIsAlertVisible(false), 300);
+            }}
+            className="text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Views */}
       <main className="p-4">
         {isSwitching ? (
@@ -204,6 +223,39 @@ const PivyPage: React.FC = () => {
           )
         )}
       </main>
+
+      {/* Floating Button */}
+      <div className="fixed bottom-28 right-4 z-50">
+        <button 
+          className="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+          onClick={() => setIsDrawerOpen(true)}
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Bottom Drawer */}
+      <div 
+        className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsDrawerOpen(false)}
+      >
+        <div 
+          className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 rounded-t-lg shadow-lg z-50 transform transition-transform min-h-[50vh] ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">New Chat</h3>
+            <button 
+              onClick={() => setIsDrawerOpen(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-gray-600 dark:text-gray-300">Start a new conversation here.</p>
+          {/* Add more content as needed */}
+        </div>
+      </div>
     </div>
   );
 };
