@@ -1,7 +1,8 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Loader2, Plus, Settings } from 'lucide-react';
+import { ChevronRight, Loader2, Plus, Settings, ChevronDown } from 'lucide-react';
+import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
+import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
 
 const PivyPage: React.FC = () => {
   // State to toggle between List and Slide views
@@ -16,6 +17,8 @@ const PivyPage: React.FC = () => {
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [viewModeExpanded, setViewModeExpanded] = useState(false);
+  const [notificationsExpanded, setNotificationsExpanded] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
@@ -281,61 +284,81 @@ const PivyPage: React.FC = () => {
               </div>
 
               {/* View Mode */}
-              <h3 className='text-2xl mt-4'>View Mode</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                <div className='h-2'></div>
-                <b>Slide View</b>: Shows chats in Week/Month format. You'll be able to see all chats in a given week
-                <div>
-                  {/* Slide View Illustration */}
+              <button 
+                className='text-2xl mt-4 flex items-center justify-between w-full text-left'
+                onClick={() => setViewModeExpanded(!viewModeExpanded)}
+              >
+                <h3>View Mode</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${viewModeExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {viewModeExpanded && (
+                <div className="mt-2">
+                  <p className="text-gray-600 dark:text-gray-300">
+                    <div className='h-2'></div>
+                    <b>Slide View</b>: Shows chats in Week/Month format. You'll be able to see all chats in a given week - 5 slides per trading day a week.
+                    <div>
+                      <SlideViewIllustration />
+                    </div>
+                    <br /><br />
+                    <b>List View</b>: Shows chats in Month/Year format. You'll be able to see all chats in a given month - around 20 trading days a month in a list, maximum.
+                    <div>
+                      <ListViewIllustration />
+                    </div>
+                  </p>
+                  <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => {
+                        setIsEnabled(false);
+                        setIsSwitching(true);
+                        setTimeout(() => setIsSwitching(false), 1200);
+                      }}
+                      disabled={isSwitching}
+                    >
+                      {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'List'}
+                    </button>
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => {
+                        setIsEnabled(true);
+                        setIsSwitching(true);
+                        setTimeout(() => setIsSwitching(false), 1200);
+                      }}
+                      disabled={isSwitching}
+                    >
+                      {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'Slide'}
+                    </button>
+                  </div>
                 </div>
-                <br /><br />
-                <b>List View</b>: Shows chats in Month/Year format. You'll be able to see all chats in a given month.
-                <div>
-                  {/* List View Illustration */}
-                </div>
-              </p>
-              <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                <button 
-                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                  onClick={() => {
-                    setIsEnabled(false);
-                    setIsSwitching(true);
-                    setTimeout(() => setIsSwitching(false), 1200);
-                  }}
-                  disabled={isSwitching}
-                >
-                  {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'List'}
-                </button>
-                <button 
-                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${isEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                  onClick={() => {
-                    setIsEnabled(true);
-                    setIsSwitching(true);
-                    setTimeout(() => setIsSwitching(false), 1200);
-                  }}
-                  disabled={isSwitching}
-                >
-                  {isSwitching ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : 'Slide'}
-                </button>
-              </div>
+              )}
 
               {/* Notifications */}
-              <h3 className='text-2xl mt-4 pt-2 border-t border-gray-300 dark:border-gray-700'>Notifications</h3>
-              <p className="text-gray-600 dark:text-gray-300">Each trading day's Pivy Chat will send chat notifications throughout the day.</p>
-              <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                <button 
-                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                  onClick={() => setNotificationsEnabled(true)}
-                >
-                  On
-                </button>
-                <button 
-                  className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                  onClick={() => setNotificationsEnabled(false)}
-                >
-                  Off
-                </button>
-              </div>
+              <button 
+                className='text-2xl mt-4 pt-2 border-t border-gray-300 dark:border-gray-700 flex items-center justify-between w-full text-left'
+                onClick={() => setNotificationsExpanded(!notificationsExpanded)}
+              >
+                <h3>Notifications</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${notificationsExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {notificationsExpanded && (
+                <div className="mt-2">
+                  <p className="text-gray-600 dark:text-gray-300">Each trading day's Pivy Chat will send chat notifications throughout the day.</p>
+                  <div className="mt-4 flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => setNotificationsEnabled(true)}
+                    >
+                      On
+                    </button>
+                    <button 
+                      className={`flex-1 h-10 py-2 px-4 rounded-md transition-colors ${!notificationsEnabled ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      onClick={() => setNotificationsEnabled(false)}
+                    >
+                      Off
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Close button of Bottom Drawer */}
