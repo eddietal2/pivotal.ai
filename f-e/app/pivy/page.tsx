@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Loader2, Plus, Settings, ChevronDown } from 'lucide-react';
+import { ChevronRight, Loader2, Plus, Settings, ChevronDown, Layout } from 'lucide-react';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
 import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
@@ -73,6 +73,17 @@ const PivyPage: React.FC = () => {
           <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-sm font-medium rounded">
             {isSlideView ? 'Week 1, January' : 'January, 2026'}
           </span>
+        </div>
+        <div>
+          <button 
+            onClick={() => {
+              setIsDrawerOpen(true);
+              setViewModeExpanded(true);
+            }}
+            className="p-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            <Layout className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
