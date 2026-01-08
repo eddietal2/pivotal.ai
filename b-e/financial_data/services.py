@@ -90,9 +90,9 @@ class FinancialDataService:
             # Determine if after hours (outside 9:30 AM - 4:00 PM ET)
             eastern = pytz.timezone('US/Eastern')
             now = pd.Timestamp.now(tz=eastern)
-            is_after_hours = not (now.weekday() < 5 and 
-                                pd.Timestamp(now.date()).replace(hour=9, minute=30, tz=eastern) <= now <= 
-                                pd.Timestamp(now.date()).replace(hour=16, minute=0, tz=eastern))
+            market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
+            market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
+            is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
             
             # Calculate change (vs. 24 hours ago if available)
             change = 0.0
