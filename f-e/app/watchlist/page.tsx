@@ -314,7 +314,7 @@ export default function WatchlistPage() {
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
 
           {/* Fixed positioned market pulse header for Sticky Effect */}
-          {showFixedHeader && (
+          {showFixedHeader && !error && (
             <div className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="lg:px-64 px-4 sm:px-8 py-3">
                 <div className="flex items-center justify-between">
@@ -372,34 +372,17 @@ export default function WatchlistPage() {
                 <span className="flex items-center gap-2">
                   Market Pulse
                 </span>
+                
               }
               infoButton={marketPulseOpen ? (
                 <div className="flex items-center gap-2">
-                  {/* Overview info button */}
-                  <button
-                    type="button"
-                    className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                    title="Learn more about Market Overview"
-                    aria-label="More info about Market Overview"
-                  >
-                    <Info className="w-5 h-5 text-orange-300" />
-                  </button>
-                  {/* Timeframe filter */}
-                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                    {(['D','W','M','Y'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                        aria-pressed={pulseTimeframe === t}
-                        aria-label={`Show ${t} timeframe`}
-                        data-testid={`pulse-filter-${t}`}
-                        onClick={() => setPulseTimeframe(t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
+                  {!error || loading && (
+                    <div className='flex justify-between items-center'>
+                      <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
+                        <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
@@ -407,13 +390,14 @@ export default function WatchlistPage() {
               onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
             >
               {/* Toggle between slider and list view for Market Pulse items */}
-              <div className='flex justify-between items-center'>
-                <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
-                  <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
+              {!error || loading && (
+                <div className='flex justify-between items-center'>
+                  <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
+                    <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-4">
-                
                 {loading ? (
                   // Show loading skeletons for all expected tickers
                   Object.keys(tickerNames).map((ticker) => (
