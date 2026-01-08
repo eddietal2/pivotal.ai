@@ -163,7 +163,7 @@ export default function WatchlistPage() {
       
       // Call Python server directly (adjust URL/port as needed)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 60 second timeout
       
       const res = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,

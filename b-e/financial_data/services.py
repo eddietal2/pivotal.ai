@@ -3,7 +3,11 @@ import pandas as pd
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
 import os
+import threading
 # from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
+
+# Lock for yfinance calls to prevent concurrent access issues
+yf_lock = threading.Lock()
 
 # Market Indicator Symbols (yfinance format or FRED series):
 # ----------------------------------------------------------
@@ -119,7 +123,8 @@ class FinancialDataService:
                 import yfinance as yf
                 
                 # Fetch 2 days of 1-minute data (includes pre/post-market)
-                df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
+                with yf_lock:
+                    df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
                 if df.empty:
                     raise ValueError(f"No data found for ticker {ticker}")
                 
@@ -194,7 +199,8 @@ class FinancialDataService:
             if not ticker.startswith('DGS'):
                 import yfinance as yf
                 # Fetch 6 months of daily data
-                df = yf.download(ticker, period='6mo', interval='1d', progress=False)
+                with yf_lock:
+                    df = yf.download(ticker, period='6mo', interval='1d', progress=False)
                 if df.empty:
                     raise ValueError(f"No data for {ticker}")
                 
