@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
-import { ChevronRight, Loader2, Plus, Settings, ChevronDown, Layout } from 'lucide-react';
+import { ChevronRight, Loader2, Plus, Settings, ChevronDown, Layout, List } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
@@ -102,12 +102,22 @@ const PivyPageContent: React.FC = () => {
         <div>
           <button 
             onClick={() => {
-              setIsDrawerOpen(true);
-              setViewModeExpanded(true);
+              if (isSlideView) {
+                // Switch to List view
+                setIsSlideView(false);
+                setTimeframeType('month');
+              } else {
+                // Switch to Slide view
+                setIsSlideView(true);
+                setTimeframeType('week');
+              }
+              setIsSwitching(true);
+              setTimeout(() => setIsSwitching(false), 1200);
             }}
-            className="p-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            disabled={isSwitching}
+            className="p-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
           >
-            <Layout className="w-4 h-4" />
+            {isSlideView ? <List className="w-4 h-4" /> : <Layout className="w-4 h-4" />}
           </button>
         </div>
       </header>
