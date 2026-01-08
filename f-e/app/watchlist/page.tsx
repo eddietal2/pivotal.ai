@@ -84,6 +84,10 @@ export default function WatchlistPage() {
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   // Track open state of sections
   const [marketPulseOpen, setMarketPulseOpen] = useState(true);
+  // Track if fixed header should be shown
+  const [showFixedHeader, setShowFixedHeader] = useState(false);
+  
+  const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Normalize timeframe string to a category: D, W, M, Y
   const normalizeTimeframe = (tf?: string) => {
@@ -101,6 +105,23 @@ export default function WatchlistPage() {
     return mockPulse
       .filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe)
   }, [pulseTimeframe]);
+
+  // Handle scroll to show/hide fixed header
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      
+      // Show fixed header when user has scrolled down enough that the CollapsibleSection header
+      // would be out of view if it weren't sticky
+      // Lower threshold for more responsive behavior
+      setShowFixedHeader(scrollTop > 40);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    // Check initial state
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
@@ -121,9 +142,61 @@ export default function WatchlistPage() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
-          
+
+          {/* Fixed positioned market pulse header for Sticky Effect */}
+          {showFixedHeader && (
+            <div className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="lg:px-64 px-4 sm:px-8 py-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-lg font-semibold hover:bg-gray-800 px-2 py-1 rounded transition-colors"
+                    onClick={() => {
+                      setMarketPulseOpen(false);
+                      // Scroll to top if not already at top
+                      if (window.scrollY > 0) {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    aria-label="Collapse Market Pulse section"
+                  >
+                    <span className={`transition-transform duration-200 ${marketPulseOpen ? '' : 'rotate-180'}`}>▼</span>
+                    Market Pulse
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Overview info button */}
+                    <button
+                      type="button"
+                      className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                      title="Learn more about Market Overview"
+                      aria-label="More info about Market Overview"
+                    >
+                      <Info className="w-5 h-5 text-orange-300" />
+                    </button>
+                    {/* Timeframe filter */}
+                    <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
+                      {(['D','W','M','Y'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                          aria-pressed={pulseTimeframe === t}
+                          aria-label={`Show ${t} timeframe`}
+                          data-testid={`pulse-filter-${t}`}
+                          onClick={() => setPulseTimeframe(t)}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Global Market Pulse */}
-          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+          <div ref={collapsibleSectionRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
@@ -160,6 +233,7 @@ export default function WatchlistPage() {
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
+              open={marketPulseOpen}
               onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
             >
               {/* Toggle between slider and list view for Market Pulse items */}
