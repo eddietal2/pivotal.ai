@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange }: { title: React.ReactNode; infoButton?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void }) {
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange }: { title: React.ReactNode; infoButton?: React.ReactNode | ((open: boolean) => React.ReactNode); children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void }) {
   const [open, setOpen] = React.useState<boolean>(() => defaultOpen ?? true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -101,7 +101,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
         {/* Info button (separate, does not toggle collapse) */}
         {infoButton && (
           <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            {infoButton}
+            {typeof infoButton === 'function' ? infoButton(open) : infoButton}
           </div>
         )}
       </div>

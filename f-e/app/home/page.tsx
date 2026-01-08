@@ -14,8 +14,10 @@ import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton } from '@/components/ui/skeletons';
 import Link from 'next/link';
-import TypewriterText from '@/components/ui/TypewriterText';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
+import PivyChatCard from '@/components/home/PivyChatCard';
+import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
+import DisclaimersSection from '@/components/home/DisclaimersSection';
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
@@ -77,80 +79,7 @@ const mockSignals = [
   },
 ];
 
-// Mock data for the Global Market Pulse
-const mockPulse = [
-  // Daily data (D)
-  { index: 'S&P 500', value: 5210.45, change: '+0.82%', color: 'text-green-500', trend: [5180, 5190, 5200, 5205, 5210], timeframe: '1D', afterHours: false },
-  { index: 'DOW', value: 39850.20, change: '+0.65%', color: 'text-green-500', trend: [39500, 39600, 39700, 39800, 39850], timeframe: '1D', afterHours: false },
-  { index: 'Nasdaq', value: 16250.75, change: '+1.15%', color: 'text-green-500', trend: [16000, 16100, 16150, 16200, 16250], timeframe: '1D', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 50.20, change: '3.10%', color: 'text-green-500', trend: [16.1, 15.2, 14.0, 13.8, 56.2], timeframe: '1D', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 13.20, change: '-3.10%', color: 'text-green-500', trend: [16.1, 15.2, 14.0, 13.8, 13.2], timeframe: '1D', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 14.85, change: '-8.20%', color: 'text-green-500', trend: [18.5, 17.2, 16.1, 15.4, 14.8], timeframe: '1W', afterHours: false },
-  { index: '10-Yr Yield', value: 4.15, change: '+0.05%', color: 'text-red-500', trend: [4.05, 4.06, 4.10, 4.12, 4.15], timeframe: '1D', afterHours: false },
-  { index: 'Bitcoin', value: 43250.00, change: '+2.15%', color: 'text-green-500', trend: [41200, 42000, 42500, 43000, 43250], timeframe: '24H', afterHours: true },
-  { index: 'Gold', value: 2150.50, change: '+1.25%', color: 'text-green-500', trend: [2100, 2120, 2130, 2140, 2150], timeframe: '1D', afterHours: false },
-  { index: 'Silver', value: 28.75, change: '-0.50%', color: 'text-red-500', trend: [29.0, 28.8, 28.6, 28.5, 28.7], timeframe: '1D', afterHours: false },
-  { index: 'Crude Oil', value: 85.50, change: '+1.20%', color: 'text-green-500', trend: [83.0, 84.0, 84.5, 85.0, 85.5], timeframe: '1D', afterHours: false },
-  { index: 'Russell 2000', value: 2200.45, change: '+1.50%', color: 'text-green-500', trend: [2150, 2170, 2180, 2190, 2200], timeframe: '1D', afterHours: false },
-  { index: '2-Yr Yield', value: 4.25, change: '-0.02%', color: 'text-red-500', trend: [4.27, 4.26, 4.25, 4.24, 4.25], timeframe: '1D', afterHours: false },
-  { index: 'Ethereum', value: 3500.00, change: '+2.80%', color: 'text-green-500', trend: [3400, 3450, 3475, 3490, 3500], timeframe: '24H', afterHours: true },
-  { index: 'Copper', value: 4.50, change: '+1.10%', color: 'text-green-500', trend: [4.35, 4.40, 4.45, 4.48, 4.50], timeframe: '1D', afterHours: false },
-  { index: 'Natural Gas', value: 3.20, change: '-0.50%', color: 'text-red-500', trend: [3.25, 3.22, 3.20, 3.18, 3.20], timeframe: '1D', afterHours: false },
 
-  // Weekly data (W)
-  { index: 'S&P 500', value: 5185.32, change: '+2.45%', color: 'text-green-500', trend: [5120, 5140, 5160, 5170, 5185], timeframe: '1W', afterHours: false },
-  { index: 'DOW', value: 39500.10, change: '+1.80%', color: 'text-green-500', trend: [38800, 39000, 39200, 39400, 39500], timeframe: '1W', afterHours: false },
-  { index: 'Nasdaq', value: 16000.50, change: '+3.20%', color: 'text-green-500', trend: [15500, 15600, 15700, 15800, 16000], timeframe: '1W', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 48.50, change: '2.80%', color: 'text-green-500', trend: [15.5, 16.0, 16.5, 17.0, 48.5], timeframe: '1W', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 14.10, change: '-2.50%', color: 'text-red-500', trend: [16.5, 15.8, 15.0, 14.5, 14.1], timeframe: '1W', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 14.85, change: '-8.20%', color: 'text-green-500', trend: [18.5, 17.2, 16.1, 15.4, 14.8], timeframe: '1W', afterHours: false },
-  { index: '10-Yr Yield', value: 4.12, change: '+0.18%', color: 'text-red-500', trend: [3.95, 4.02, 4.08, 4.10, 4.12], timeframe: '1W', afterHours: false },
-  { index: 'Bitcoin', value: 42800.50, change: '+5.75%', color: 'text-green-500', trend: [39500, 40500, 41500, 42000, 42800], timeframe: '1W', afterHours: false },
-  { index: 'Gold', value: 2120.25, change: '+2.10%', color: 'text-green-500', trend: [2050, 2080, 2100, 2110, 2120], timeframe: '1W', afterHours: false },
-  { index: 'Silver', value: 27.90, change: '+1.20%', color: 'text-green-500', trend: [26.5, 27.0, 27.2, 27.5, 27.9], timeframe: '1W', afterHours: false },
-  { index: 'Crude Oil', value: 82.30, change: '+2.50%', color: 'text-green-500', trend: [78.0, 79.5, 80.5, 81.5, 82.3], timeframe: '1W', afterHours: false },
-  { index: 'Russell 2000', value: 2185.32, change: '+2.80%', color: 'text-green-500', trend: [2120, 2140, 2160, 2170, 2185], timeframe: '1W', afterHours: false },
-  { index: '2-Yr Yield', value: 4.22, change: '+0.15%', color: 'text-red-500', trend: [4.05, 4.12, 4.18, 4.20, 4.22], timeframe: '1W', afterHours: false },
-  { index: 'Ethereum', value: 3450.50, change: '+6.20%', color: 'text-green-500', trend: [31500, 32500, 33500, 34000, 34500], timeframe: '1W', afterHours: false },
-  { index: 'Copper', value: 4.35, change: '+2.50%', color: 'text-green-500', trend: [4.10, 4.15, 4.20, 4.30, 4.35], timeframe: '1W', afterHours: false },
-  { index: 'Natural Gas', value: 3.15, change: '+1.00%', color: 'text-green-500', trend: [3.05, 3.08, 3.10, 3.12, 3.15], timeframe: '1W', afterHours: false },
-
-  // Monthly data (M)
-  { index: 'S&P 500', value: 5120.78, change: '+4.12%', color: 'text-green-500', trend: [4850, 4920, 4980, 5050, 5120], timeframe: '1M', afterHours: false },
-  { index: 'DOW', value: 38500.45, change: '+3.50%', color: 'text-green-500', trend: [37500, 37800, 38000, 38200, 38500], timeframe: '1M', afterHours: false },
-  { index: 'Nasdaq', value: 15500.30, change: '+5.80%', color: 'text-green-500', trend: [14500, 14800, 15000, 15200, 15500], timeframe: '1M', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 45.30, change: '4.50%', color: 'text-green-500', trend: [14.0, 15.0, 16.0, 17.0, 45.3], timeframe: '1M', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 15.20, change: '-1.80%', color: 'text-red-500', trend: [17.0, 16.5, 16.0, 15.5, 15.2], timeframe: '1M', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 16.42, change: '-12.85%', color: 'text-green-500', trend: [22.1, 20.5, 19.2, 17.8, 16.4], timeframe: '1M', afterHours: false },
-  { index: '10-Yr Yield', value: 4.08, change: '+0.32%', color: 'text-red-500', trend: [3.78, 3.85, 3.92, 4.01, 4.08], timeframe: '1M', afterHours: false },
-  { index: 'Bitcoin', value: 41500.25, change: '+8.92%', color: 'text-green-500', trend: [36500, 37500, 38500, 39500, 41500], timeframe: '1M', afterHours: false },
-  { index: 'Gold', value: 2080.75, change: '+3.50%', color: 'text-green-500', trend: [1950, 2000, 2050, 2070, 2080], timeframe: '1M', afterHours: false },
-  { index: 'Silver', value: 26.40, change: '+2.80%', color: 'text-green-500', trend: [24.0, 24.5, 25.0, 25.5, 26.4], timeframe: '1M', afterHours: false },
-  { index: 'Crude Oil', value: 78.75, change: '+5.00%', color: 'text-green-500', trend: [70.0, 72.0, 74.0, 76.0, 78.8], timeframe: '1M', afterHours: false },
-  { index: 'Russell 2000', value: 2120.78, change: '+4.50%', color: 'text-green-500', trend: [1950, 2020, 2080, 2100, 2120], timeframe: '1M', afterHours: false },
-  { index: '2-Yr Yield', value: 4.05, change: '+0.45%', color: 'text-red-500', trend: [3.62, 3.75, 3.88, 3.98, 4.05], timeframe: '1M', afterHours: false },
-  { index: 'Ethereum', value: 33500.25, change: '+12.50%', color: 'text-green-500', trend: [28500, 29500, 30500, 31500, 33500], timeframe: '1M', afterHours: false },
-  { index: 'Copper', value: 4.20, change: '+6.00%', color: 'text-green-500', trend: [3.80, 3.90, 4.00, 4.10, 4.20], timeframe: '1M', afterHours: false },
-  { index: 'Natural Gas', value: 3.00, change: '+3.50%', color: 'text-green-500', trend: [2.80, 2.85, 2.90, 2.95, 3.00], timeframe: '1M', afterHours: false },
-
-  // Yearly data (Y)
-  { index: 'S&P 500', value: 4850.92, change: '+15.68%', color: 'text-green-500', trend: [4200, 4350, 4500, 4650, 4850], timeframe: '1Y', afterHours: false },
-  { index: 'DOW', value: 36000.00, change: '+12.50%', color: 'text-green-500', trend: [32000, 33000, 34000, 35000, 36000], timeframe: '1Y', afterHours: false },
-  { index: 'Nasdaq', value: 14000.00, change: '+20.00%', color: 'text-green-500', trend: [11500, 12000, 12500, 13000, 14000], timeframe: '1Y', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 40.00, change: '10.20%', color: 'text-green-500', trend: [10.0, 12.0, 15.0, 20.0, 40.0], timeframe: '1Y', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 16.50, change: '-5.00%', color: 'text-red-500', trend: [20.0, 18.5, 17.5, 17.0, 16.5], timeframe: '1Y', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 18.75, change: '-25.42%', color: 'text-green-500', trend: [28.5, 26.2, 24.1, 21.5, 18.7], timeframe: '1Y', afterHours: false },
-  { index: '10-Yr Yield', value: 3.95, change: '+0.85%', color: 'text-red-500', trend: [3.12, 3.25, 3.45, 3.75, 3.95], timeframe: '1Y', afterHours: false },
-  { index: 'Bitcoin', value: 38500.75, change: '+45.23%', color: 'text-green-500', trend: [26500, 28500, 30500, 33500, 38500], timeframe: '1Y', afterHours: false },
-  { index: 'Gold', value: 1950.00, change: '+10.00%', color: 'text-green-500', trend: [1750, 1800, 1850, 1900, 1950], timeframe: '1Y', afterHours: false },
-  { index: 'Silver', value: 24.00, change: '+15.50%', color: 'text-green-500', trend: [20.0, 21.0, 22.0, 23.0, 24.0], timeframe: '1Y', afterHours: false },
-  { index: 'Crude Oil', value: 75.00, change: '+12.00%', color: 'text-green-500', trend: [65.0, 67.0, 70.0, 72.0, 75.0], timeframe: '1Y', afterHours: false },
-  { index: 'Russell 2000', value: 1950.92, change: '+18.50%', color: 'text-green-500', trend: [1650, 1700, 1750, 1850, 1950], timeframe: '1Y', afterHours: false },
-  { index: '2-Yr Yield', value: 3.85, change: '+1.20%', color: 'text-red-500', trend: [3.45, 3.55, 3.65, 3.75, 3.85], timeframe: '1Y', afterHours: false },
-  { index: 'Ethereum', value: 31500.75, change: '+55.00%', color: 'text-green-500', trend: [20500, 22500, 24500, 28500, 31500], timeframe: '1Y', afterHours: false },
-  { index: 'Copper', value: 3.90, change: '+15.00%', color: 'text-green-500', trend: [3.40, 3.50, 3.60, 3.70, 3.90], timeframe: '1Y', afterHours: false },
-  { index: 'Natural Gas', value: 2.80, change: '+8.00%', color: 'text-green-500', trend: [2.50, 2.55, 2.60, 2.70, 2.80], timeframe: '1Y', afterHours: false },
-];
 
 // --- Using shared WatchListItem from components/watchlist
 
@@ -159,7 +88,6 @@ const mockPulse = [
 // 4. Main Application Layout
 export default function App() {
   const { modalOpen, setModalOpen } = useUI();
-  const [selectedPulse, setSelectedPulse] = React.useState<null | typeof mockPulse[0]>(null);
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
@@ -210,12 +138,10 @@ export default function App() {
   // Instead of inline alerts, disclaimers live in a collapsible section at the bottom
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
-  // Modal chart timeframe state (for selectedPulse modal)
-  const [modalChartTimeframe, setModalChartTimeframe] = React.useState<'24H'|'1D'|'1W'|'1M'|'1Y'>(() => '1D');
   const { showToast } = useToast();
 
   // Track open state of sections
-  const [titleTypingComplete, setTitleTypingComplete] = React.useState(false);
+
 
   // Simulate loading on mount
   React.useEffect(() => {
@@ -239,16 +165,7 @@ export default function App() {
     };
   }, [modalOpen]);
 
-  // When a pulse modal opens, initialize the modal chart timeframe to the selected pulse timeframe
-  React.useEffect(() => {
-    if (modalOpen && selectedPulse) {
-      const tf = selectedPulse.timeframe as '24H'|'1D'|'1W'|'1M'|'1Y' | undefined;
-      setModalChartTimeframe(tf ?? '1D');
-    }
-  }, [modalOpen, selectedPulse]);
-
-  // Compute display data for modal based on selectedPulse index and modal timeframe
-  // Normalize timeframe string to a category: D, W, M, Y (function moved up to be available for memo)
+  // Normalize timeframe string to a category: D, W, M, Y (kept for signal/timeframe helpers)
   const normalizeTimeframe = (tf?: string) => {
     if (!tf) return 'D';
     const t = tf.toUpperCase();
@@ -269,13 +186,6 @@ export default function App() {
     if (t === '1Y') return 'In the Last Year';
     return tf;
   };
-  const modalDisplayPulse = React.useMemo(() => {
-    if (!selectedPulse) return null;
-    const targetCat = normalizeTimeframe(modalChartTimeframe as string);
-    // find the first matching pulse with same index and timeframe category
-    const match = mockPulse.find((p) => p.index === selectedPulse.index && normalizeTimeframe(p.timeframe) === targetCat);
-    return match ?? selectedPulse;
-  }, [selectedPulse, modalChartTimeframe]);
   
   // Fetch real market data
   const fetchRealMarketData = React.useCallback(async () => {
@@ -337,40 +247,7 @@ export default function App() {
     'Natural Gas': 'Natural Gas is a fossil fuel used for heating, electricity generation, and industrial processes. Its price is influenced by weather patterns, supply levels, and energy demand.',
   };
 
-  // Filter pulses by chosen timeframe and merge with real data
-  const filteredPulse = React.useMemo(() => {
-    return mockPulse
-      .filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe)
-      .map((pulse) => {
-        const ticker = tickerMapping[pulse.index];
-        const realData = ticker && realMarketData[ticker];
-        
-        if (realData) {
-          // Use real data
-          const priceData = realData.price;
-          const rvData = realData.rv;
-          
-          // Calculate change percentage (simplified - using first and last close)
-          let changePercent = 0;
-          if (priceData.closes && priceData.closes.length > 1) {
-            const firstClose = priceData.closes[0];
-            const lastClose = priceData.latest.close;
-            changePercent = ((lastClose - firstClose) / firstClose) * 100;
-          }
-          
-          return {
-            ...pulse,
-            value: priceData.latest.close,
-            change: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
-            color: changePercent >= 0 ? 'text-green-500' : 'text-red-500',
-            trend: priceData.closes.slice(-20), // Use last 20 closes for sparkline
-            rv: rvData ? `${rvData.daily_rv}x (${rvData.daily_grade})` : undefined
-          };
-        }
-        
-        return pulse; // Fallback to mock data
-      });
-  }, [pulseTimeframe, realMarketData]);
+
   // Filter signals by chosen timeframe
   const filteredSignals = React.useMemo(() => mockSignals.filter((s) => normalizeTimeframe(s.timeframe) === signalTimeframe), [signalTimeframe]);
 
@@ -400,117 +277,33 @@ export default function App() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Today's Pivy Chat</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Catch up on today's conversation with your AI assistant.</p>
           </div>
-          {isLoading ? (
-            <MarketOverviewSkeleton />
-          ) : (
-            <Link href="/pivy/chat/0">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-48">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">01/07/26</span>
-                    <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">10:30 AM</span>
-                  </div>
-                  <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">
-                    <TypewriterText
-                      text="This is a very long title that should test the maximum length for display purposes and see how it wraps."
-                      speed={50}
-                      delay={500}
-                      className="inline"
-                      onComplete={() => setTitleTypingComplete(true)}
-                    />
-                  </h3>
-                  <div className="space-y-1">
-                    <div className="text-sm">
-                      <span className="font-medium">🤖</span>{' '}
-                      {titleTypingComplete && (
-                        <TypewriterText
-                          text="I'm good, thanks!"
-                          speed={80}
-                          delay={0}
-                          className="inline"
-                        />
-                      )}
-                      <span className="text-xs text-gray-400"> (10:30 AM)</span>
-                    </div>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
-              </div>
-            </Link>
-          )}
+
+          <PivyChatCard
+            isLoading={isLoading}
+            href="/pivy/chat/0"
+            date="01/07/26"
+            time="10:30 AM"
+            title="This is a very long title that should test the maximum length for display purposes and see how it wraps."
+            message="I'm good, thanks!"
+          />
           <div className="mt-6 text-right">
             <Link href="/pivy?drawer=open&about=open" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
               Learn more about Pivy Chat →
             </Link>
           </div>
           
+          {/* Spacer */}
           <div className='mt-4'></div>
 
           {/* Real-time Confluence Feed */}
-          {isLoading ? (
-            <SignalFeedSkeleton />
-          ) : (
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
-                  {/* <ListChecks className="w-6 h-6 text-indigo-400" /> */}
-                  Live Setup Scans
-                </span>
-              }
-              infoButton={signalFeedInfoOpen ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="p-1 rounded-full hover:bg-gray-800 transition"
-                    title="Learn more about Live Setup Scans"
-                    aria-label="More info about Live Setup Scans"
-                    onClick={() => setSignalFeedInfoOpen(true)}
-                  >
-                    <Info className="w-5 h-5 text-orange-300" />
-                  </button>
-                  {/* Timeframe filter */}
-                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                    {(['D','W','M','Y'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${signalTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                        aria-pressed={signalTimeframe === t}
-                        aria-label={`Show ${t} timeframe`}
-                        data-testid={`signal-filter-${t}`}
-                        onClick={() => setSignalTimeframe(t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-                openKey={signalTimeframe}
-              onOpenChange={(isOpen) => setSignalFeedInfoOpen(isOpen)}
-            >
-              <p className='text-[#999]'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
-              <h3 className='my-4 text-lg'>Leads: 12/09/25</h3>
-              <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:gap-4">
-
-                {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
-                ) : (
-                  filteredSignals.map((signal, index) => (
-                    <SignalFeedItem key={index} {...signal} />
-                  ))
-                )}
-                <div className="text-center p-4 sm:col-span-3">
-                  <p className="text-indigo-400 font-semibold flex items-center justify-center">
-                    <ListChecks className="w-5 h-5 mr-2" />
-                    View & Customize Watchlist Scans
-                  </p>
-                </div>
-                {/* Info Modal for Live Setup Scans - renders outside collapsible content */}
-              </div>
-            </CollapsibleSection>
-          )}
+          <LiveSetupScansSection
+            isLoading={isLoading}
+            filteredSignals={filteredSignals}
+            signalTimeframe={signalTimeframe}
+            setSignalTimeframe={setSignalTimeframe}
+            signalFeedInfoOpen={signalFeedInfoOpen}
+            setSignalFeedInfoOpen={setSignalFeedInfoOpen}
+          />
 
           {/* Market Pulse Info Modal (refactored to InfoModal) */}
           {/* Unified Info Modal: includes both Market Pulse details and Market Overview details */}
@@ -570,80 +363,6 @@ export default function App() {
             </div>
           </InfoModal>
 
-          {/* Modal for Market Pulse Item Info (converted to InfoModal) */}
-          <InfoModal
-            open={Boolean(modalOpen && selectedPulse)}
-            onClose={() => setModalOpen(false)}
-            title={
-              <>
-                <span className="text-2xl font-bold text-gray-900 dark:text-white">{selectedPulse?.index}</span>
-              </>
-            }
-            ariaLabel={`${selectedPulse?.index} Info Modal`}
-            onAfterClose={() => {
-              // Clear selectedPulse only after modal fully closed
-              setSelectedPulse(null);
-            }}
-          >
-            {/* Modal Content */}
-            <div className="space-y-6 w-full max-w-2xl mx-auto">
-
-              {/* Price and Change */}
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">{modalDisplayPulse?.value ?? selectedPulse?.value}</span>
-                    {(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe) && (
-                      <span
-                        title={(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe) === '24H' ? '24 hours (around the clock)' : `Last ${modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe}`}
-                        className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700"
-                      >
-                        {humanTimeframeLabel(modalDisplayPulse?.timeframe ?? selectedPulse?.timeframe)}
-                        {(modalDisplayPulse?.afterHours ?? selectedPulse?.afterHours) ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}
-                      </span>
-                    )}
-                  </div>
-                  <span className={`text-sm font-semibold ${modalDisplayPulse?.color ?? selectedPulse?.color} flex items-center`}>
-                    {modalDisplayPulse?.color?.includes('green') ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-                    {modalDisplayPulse?.change ?? selectedPulse?.change}
-                  </span>
-                </div>
-              </div>
-
-              {/* Chart Placeholder */}
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center">
-                  <span className="text-gray-600 dark:text-gray-400 text-lg" data-testid="modal-chart-placeholder">[Stock Chart Placeholder{modalChartTimeframe ? ` - ${modalChartTimeframe}` : ''}]</span>
-                </div>
-              </div>
-
-              {/* Timeline Filter (right above chart placeholder) */}
-              <div className="flex items-center justify-center gap-2">
-                <div className="text-sm text-gray-500 mr-2">Timeline:</div>
-                {(['1D','1W','1M','1Y'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={modalChartTimeframe === t}
-                    data-testid={`modal-chart-filter-${t}`}
-                    title={`Show ${t} timeframe`}
-                    onClick={() => setModalChartTimeframe(t)}
-                    className={`min-w-[40px] px-2 py-1 text-xs rounded ${modalChartTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              {/* Description */}
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {selectedPulse ? pulseDescriptions[selectedPulse.index] : 'No description available.'}
-                </p>
-              </div>
-
-            </div>
-          </InfoModal>
 
           {/* Legal Disclaimer Modal (detailed) */}
           <InfoModal
@@ -775,44 +494,16 @@ export default function App() {
           </InfoModal>
 
           {/* Disclaimers & Risk Notices (moved into a collapsible section at the bottom) */}
-          {isLoading ? (
-            <DisclaimersSkeleton />
-          ) : (
-            <CollapsibleSection
-              title={<span className="flex items-center gap-2">Disclaimers & Risk Notices</span>}
-              openKey={'disclaimers'}
-            >
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
-                  <div className="item-press-inner relative flex-1">
-                    <strong className="block flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-400" />Stop Loss Reminder</strong>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">A stop loss is used to limit an investor's loss on a position. Set one to help protect capital and manage risk.</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-red-700" aria-label="Open stop loss details" data-testid="stop-loss-open-btn" onClick={() => setStopLossModalOpen(true)}>Learn more</button>
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
-                  <div className="item-press-inner relative flex-1">
-                    <strong className="block flex items-center gap-2"><FileText className="w-4 h-4 text-indigo-300" />Legal Disclaimer</strong>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">This data is for informational/testing purposes only and does not constitute financial advice.</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" aria-label="Open disclaimer details" data-testid="disclaimer-open-btn" onClick={() => setDisclaimerModalOpen(true)}>Learn more</button>
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
-                  <div className="item-press-inner relative flex-1">
-                    <strong className="block flex items-center gap-2"><Cpu className="w-4 h-4 text-gray-600" />AI Usage</strong>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">This app uses language models (LLMs) to summarize market data and provide context for signals. Learn more about how this works and the model limitations.</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-gray-900" aria-label="Open AI usage details" data-testid="ai-usage-open-btn" onClick={() => setAiUsageModalOpen(true)}>Learn more</button>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleSection>
-          )}
+          <DisclaimersSection
+            isLoading={isLoading}
+            setStopLossModalOpen={setStopLossModalOpen}
+            setDisclaimerModalOpen={setDisclaimerModalOpen}
+            setAiUsageModalOpen={setAiUsageModalOpen}
+          />
+
+          {/* Spacer */}
+          <div className='mb-64 lg:mb-0'></div>
+
         </div>
       </div>
       {/* Hide BottomNav when modal is open */}
