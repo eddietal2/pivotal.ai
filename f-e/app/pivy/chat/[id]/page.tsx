@@ -143,7 +143,7 @@ const PivyChatInstancePage: React.FC = () => {
         <button 
           onClick={() => {
             setIsExiting(true);
-            setTimeout(() => router.push('/pivy'), 500);
+            setTimeout(() => router.back(), 500);
           }}
           className="mr-4 p-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
