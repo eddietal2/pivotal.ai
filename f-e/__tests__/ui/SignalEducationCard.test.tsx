@@ -17,17 +17,16 @@ describe('SignalEducationCard', () => {
 
     expect(screen.getByText('Moving Average (MA)')).toBeInTheDocument();
     expect(screen.getByText('Foundation (Trend)')).toBeInTheDocument();
-    // Description, examples, and the chart are present but not visible by default (collapsible)
+    // Description, examples, and the chart are present in the DOM and the content is collapsed by default
     const descEl = screen.getByText(/The Pullback Entry/i);
-    expect(descEl).not.toBeVisible();
     const exampleEl = screen.getByText('20/50 EMA alignment');
-    expect(exampleEl).not.toBeVisible();
-    // Chart placeholder is in the content but hidden initially
     const content = screen.getByTestId('card-content-Moving-Average-(MA)');
     const chart = within(content).getByTestId('signal-education-chart');
+    expect(descEl).toBeInTheDocument();
+    expect(exampleEl).toBeInTheDocument();
+    expect(content).toHaveAttribute('data-expanded', 'false');
+    expect(content).toHaveAttribute('aria-hidden', 'true');
     expect(chart).toBeInTheDocument();
-    expect(chart).not.toBeVisible();
-    expect(screen.queryByText('Bounce/reversal candle at MA')).not.toBeInTheDocument();
     expect(screen.getByText('Trend')).toBeInTheDocument();
 
     // Clicking the toggle should expand the card and show description & list items

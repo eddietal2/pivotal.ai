@@ -1,15 +1,12 @@
 import '@testing-library/jest-dom'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { ThemeProvider } from '../../components/context/ThemeContext'
-import { redirectTo } from '../../lib/redirect'
 
 // Mock fetch API
 import fetchMock from 'jest-fetch-mock';
-import { describe } from 'node:test';
 fetchMock.enableMocks();
 
 // Mock the redirect helper so `redirectTo` is a Jest mock function
-jest.mock('../lib/redirect', () => ({
+jest.mock('../../lib/redirect', () => ({
   redirectTo: jest.fn(),
 }));
 
@@ -31,6 +28,17 @@ jest.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
 }));
 
+// Mock the UIContext module at module level
+jest.mock('@/components/context/UIContext', () => ({
+  useUI: jest.fn(),
+  UIProvider: ({ children }) => children,
+}));
+
+// Import mocked hooks
+import { useTheme } from '@/components/context/ThemeContext';
+import { useToast } from '@/components/context/ToastContext';
+import { useUI } from '@/components/context/UIContext';
+
 // Import components after mocks are set up
 import TopNav from '../../components/navigation/TopNav';
 import BottomNav from '../../components/navigation/BottomNav';
@@ -42,14 +50,12 @@ describe('Top Navigation Bar (Header)', () => {
     fetchMock.resetMocks();
     
     // Set default mock return for useTheme so Page component can render
-    const { useTheme } = require('@/components/context/ThemeContext');
     useTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: jest.fn(),
     });
     
     // Set default mock return for useToast
-    const { useToast } = require('@/components/context/ToastContext');
     useToast.mockReturnValue({
       showToast: jest.fn(),
       hideToast: jest.fn(),
@@ -78,7 +84,7 @@ describe('Top Navigation Bar (Header)', () => {
         // Verify TopNav contains expected navigation links
         expect(screen.getByText('Home')).toBeInTheDocument();
         expect(screen.getByText('Watchlist')).toBeInTheDocument();
-        expect(screen.getByText('News')).toBeInTheDocument();
+        expect(screen.getByText('Pivy')).toBeInTheDocument();
         expect(screen.getByText('Settings')).toBeInTheDocument();
         
         // Verify logo/brand is present (now as an image)
@@ -153,18 +159,18 @@ describe('Top Navigation Bar (Header)', () => {
         // Find navigation links
         const homeLink = screen.getByRole('link', { name: /home/i });
         const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
-        const newsLink = screen.getByRole('link', { name: /news/i });
+        const pivyLink = screen.getByRole('link', { name: /pivy/i });
         const settingsLink = screen.getByRole('link', { name: /settings/i });
 
         expect(homeLink).toBeInTheDocument();
         expect(watchlistLink).toBeInTheDocument();
-        expect(newsLink).toBeInTheDocument();
+        expect(pivyLink).toBeInTheDocument();
         expect(settingsLink).toBeInTheDocument();
 
         // Verify links have correct href attributes
         expect(homeLink).toHaveAttribute('href', '/home');
         expect(watchlistLink).toHaveAttribute('href', '/watchlist');
-        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(pivyLink).toHaveAttribute('href', '/pivy');
         expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
@@ -178,7 +184,6 @@ describe('Top Navigation Bar (Header)', () => {
         });
 
         const mockToggleTheme = jest.fn();
-        const { useTheme } = require('@/components/context/ThemeContext');
         
         // PART 1: Test with light theme
         useTheme.mockReturnValue({
@@ -237,16 +242,16 @@ describe('Top Navigation Bar (Header)', () => {
         // Get all navigation buttons
         const homeButton = screen.getByRole('button', { name: /^home$/i });
         const watchlistButton = screen.getByRole('button', { name: /^watchlist$/i });
-        const newsButton = screen.getByRole('button', { name: /^news$/i });
+        const pivyButton = screen.getByRole('button', { name: /^pivy$/i });
         const settingsButton = screen.getByRole('button', { name: /^settings$/i });
 
         // Settings button should have active (primary) variant class
-        expect(settingsButton).toHaveClass('bg-primary');
+        expect(settingsButton).toHaveClass('bg-gradient-to-br', 'from-[#0e74a7]', 'to-[#1fa0c8]', 'text-white', 'shadow-sm');
         
         // Other buttons should have ghost variant (no bg-primary)
-        expect(homeButton).not.toHaveClass('bg-primary');
-        expect(watchlistButton).not.toHaveClass('bg-primary');
-        expect(newsButton).not.toHaveClass('bg-primary');
+        expect(homeButton).not.toHaveClass('bg-gradient-to-br');
+        expect(watchlistButton).not.toHaveClass('bg-gradient-to-br');
+        expect(pivyButton).not.toHaveClass('bg-gradient-to-br');
 
         // PART 2: Test Home page - Home button should be active
         mockUsePathname.mockReturnValue('/home');
@@ -254,30 +259,30 @@ describe('Top Navigation Bar (Header)', () => {
 
         const homeButtonActive = screen.getByRole('button', { name: /^home$/i });
         const watchlistButtonInactive = screen.getByRole('button', { name: /^watchlist$/i });
-        const newsButtonInactive = screen.getByRole('button', { name: /^news$/i });
+        const pivyButtonInactive = screen.getByRole('button', { name: /^pivy$/i });
         const settingsButtonInactive = screen.getByRole('button', { name: /^settings$/i });
 
         // Home button should be active
-        expect(homeButtonActive).toHaveClass('bg-primary');
+        expect(homeButtonActive).toHaveClass('bg-gradient-to-br', 'from-[#0e74a7]', 'to-[#1fa0c8]', 'text-white', 'shadow-sm');
         
         // Other buttons should be inactive
-        expect(watchlistButtonInactive).not.toHaveClass('bg-primary');
-        expect(newsButtonInactive).not.toHaveClass('bg-primary');
-        expect(settingsButtonInactive).not.toHaveClass('bg-primary');
+        expect(watchlistButtonInactive).not.toHaveClass('bg-gradient-to-br');
+        expect(pivyButtonInactive).not.toHaveClass('bg-gradient-to-br');
+        expect(settingsButtonInactive).not.toHaveClass('bg-gradient-to-br');
 
         // PART 3: Test Watchlist page - Watchlist button should be active
         mockUsePathname.mockReturnValue('/watchlist');
         rerender(<TopNav />);
 
         const watchlistButtonActive = screen.getByRole('button', { name: /^watchlist$/i });
-        expect(watchlistButtonActive).toHaveClass('bg-primary');
+        expect(watchlistButtonActive).toHaveClass('bg-gradient-to-br', 'from-[#0e74a7]', 'to-[#1fa0c8]', 'text-white', 'shadow-sm');
 
         // PART 4: Test News page - News button should be active
-        mockUsePathname.mockReturnValue('/news');
+        mockUsePathname.mockReturnValue('/pivy');
         rerender(<TopNav />);
 
-        const newsButtonActive = screen.getByRole('button', { name: /^news$/i });
-        expect(newsButtonActive).toHaveClass('bg-primary');
+        const pivyButtonActive = screen.getByRole('button', { name: /^pivy$/i });
+        expect(pivyButtonActive).toHaveClass('bg-gradient-to-br', 'from-[#0e74a7]', 'to-[#1fa0c8]', 'text-white', 'shadow-sm');
     });
  });
 
@@ -287,17 +292,20 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
     fetchMock.resetMocks();
     
     // Set default mock return for useTheme so Page component can render
-    const { useTheme } = require('@/components/context/ThemeContext');
     useTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: jest.fn(),
     });
     
     // Set default mock return for useToast
-    const { useToast } = require('@/components/context/ToastContext');
     useToast.mockReturnValue({
       showToast: jest.fn(),
       hideToast: jest.fn(),
+    });
+
+    // Set default mock return for useUI
+    useUI.mockReturnValue({
+      // Add any default values if needed
     });
     });
 
@@ -327,7 +335,7 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         // Verify all navigation links are present
         expect(screen.getByText('Home')).toBeInTheDocument();
         expect(screen.getByText('Watchlist')).toBeInTheDocument();
-        expect(screen.getByText('News')).toBeInTheDocument();
+        expect(screen.getByText('Pivy')).toBeInTheDocument();
         expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
@@ -351,35 +359,35 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         // Verify all navigation links are present and clickable
         const homeLink = screen.getByRole('link', { name: /home/i });
         const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
-        const newsLink = screen.getByRole('link', { name: /news/i });
+        const pivyLink = screen.getByRole('link', { name: /pivy/i });
         const settingsLink = screen.getByRole('link', { name: /settings/i });
 
         expect(homeLink).toBeInTheDocument();
         expect(watchlistLink).toBeInTheDocument();
-        expect(newsLink).toBeInTheDocument();
+        expect(pivyLink).toBeInTheDocument();
         expect(settingsLink).toBeInTheDocument();
 
         // Verify links have correct href attributes
         expect(homeLink).toHaveAttribute('href', '/home');
         expect(watchlistLink).toHaveAttribute('href', '/watchlist');
-        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(pivyLink).toHaveAttribute('href', '/pivy');
         expect(settingsLink).toHaveAttribute('href', '/settings');
 
         // Verify text labels are visible
         expect(screen.getByText('Home')).toBeVisible();
         expect(screen.getByText('Watchlist')).toBeVisible();
-        expect(screen.getByText('News')).toBeVisible();
+        expect(screen.getByText('Pivy')).toBeVisible();
         expect(screen.getByText('Settings')).toBeVisible();
 
         // Verify icons are present (check for SVG elements within links)
         const homeSvg = homeLink.querySelector('svg');
         const watchlistSvg = watchlistLink.querySelector('svg');
-        const newsSvg = newsLink.querySelector('svg');
+        const pivySvg = pivyLink.querySelector('svg');
         const settingsSvg = settingsLink.querySelector('svg');
 
         expect(homeSvg).toBeInTheDocument();
         expect(watchlistSvg).toBeInTheDocument();
-        expect(newsSvg).toBeInTheDocument();
+        expect(pivySvg).toBeInTheDocument();
         expect(settingsSvg).toBeInTheDocument();
     });
 
@@ -392,19 +400,19 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         // Get all navigation links
         const homeLink = screen.getByRole('link', { name: /home/i });
         const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
-        const newsLink = screen.getByRole('link', { name: /news/i });
+        const pivyLink = screen.getByRole('link', { name: /pivy/i });
         const settingsLink = screen.getByRole('link', { name: /settings/i });
 
         // Settings link should have active style classes
-        expect(settingsLink).toHaveClass('text-blue-600', 'bg-blue-50');
+        expect(settingsLink).toHaveClass('text-[#105B92]', 'bg-blue-50');
         
         // Other links should have inactive style (text-gray-600, no bg-blue-50)
         expect(homeLink).toHaveClass('text-gray-600');
         expect(homeLink).not.toHaveClass('bg-blue-50');
         expect(watchlistLink).toHaveClass('text-gray-600');
         expect(watchlistLink).not.toHaveClass('bg-blue-50');
-        expect(newsLink).toHaveClass('text-gray-600');
-        expect(newsLink).not.toHaveClass('bg-blue-50');
+        expect(pivyLink).toHaveClass('text-gray-600');
+        expect(pivyLink).not.toHaveClass('bg-blue-50');
 
         // PART 2: Test Home page - Home link should be active
         mockUsePathname.mockReturnValue('/home');
@@ -412,17 +420,17 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
 
         const homeLinkActive = screen.getByRole('link', { name: /home/i });
         const watchlistLinkInactive = screen.getByRole('link', { name: /watchlist/i });
-        const newsLinkInactive = screen.getByRole('link', { name: /news/i });
+        const pivyLinkInactive = screen.getByRole('link', { name: /pivy/i });
         const settingsLinkInactive = screen.getByRole('link', { name: /settings/i });
 
         // Home link should be active
-        expect(homeLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
+        expect(homeLinkActive).toHaveClass('text-[#105B92]', 'bg-blue-50');
         
         // Other links should be inactive
         expect(watchlistLinkInactive).toHaveClass('text-gray-600');
         expect(watchlistLinkInactive).not.toHaveClass('bg-blue-50');
-        expect(newsLinkInactive).toHaveClass('text-gray-600');
-        expect(newsLinkInactive).not.toHaveClass('bg-blue-50');
+        expect(pivyLinkInactive).toHaveClass('text-gray-600');
+        expect(pivyLinkInactive).not.toHaveClass('bg-blue-50');
         expect(settingsLinkInactive).toHaveClass('text-gray-600');
         expect(settingsLinkInactive).not.toHaveClass('bg-blue-50');
 
@@ -431,14 +439,14 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         rerender(<BottomNav />);
 
         const watchlistLinkActive = screen.getByRole('link', { name: /watchlist/i });
-        expect(watchlistLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
+        expect(watchlistLinkActive).toHaveClass('text-[#105B92]', 'bg-blue-50');
 
         // PART 4: Test News page - News link should be active
-        mockUsePathname.mockReturnValue('/news');
+        mockUsePathname.mockReturnValue('/pivy');
         rerender(<BottomNav />);
 
-        const newsLinkActive = screen.getByRole('link', { name: /news/i });
-        expect(newsLinkActive).toHaveClass('text-blue-600', 'bg-blue-50');
+        const pivyLinkActive = screen.getByRole('link', { name: /pivy/i });
+        expect(pivyLinkActive).toHaveClass('text-[#105B92]', 'bg-blue-50');
     });
 
     it('FE-805: Clicking any icon in the Bottom Nav Bar correctly calls the routing function to navigate to the corresponding page, and the URL changes correctly.', async () => {
@@ -449,30 +457,30 @@ describe('Bottom Navigation Bar (Mobile/Footer)', () => {
         // Get all navigation links
         const homeLink = screen.getByRole('link', { name: /home/i });
         const watchlistLink = screen.getByRole('link', { name: /watchlist/i });
-        const newsLink = screen.getByRole('link', { name: /news/i });
+        const pivyLink = screen.getByRole('link', { name: /pivy/i });
         const settingsLink = screen.getByRole('link', { name: /settings/i });
 
         // Verify all links are clickable (not disabled or non-interactive)
         expect(homeLink).not.toHaveAttribute('aria-disabled', 'true');
         expect(watchlistLink).not.toHaveAttribute('aria-disabled', 'true');
-        expect(newsLink).not.toHaveAttribute('aria-disabled', 'true');
+        expect(pivyLink).not.toHaveAttribute('aria-disabled', 'true');
         expect(settingsLink).not.toHaveAttribute('aria-disabled', 'true');
 
         // Verify clicking links doesn't throw errors (they're functional Link components)
         fireEvent.click(homeLink);
         fireEvent.click(watchlistLink);
-        fireEvent.click(newsLink);
+        fireEvent.click(pivyLink);
         fireEvent.click(settingsLink);
 
         // Verify links maintain correct hrefs after interactions
         expect(homeLink).toHaveAttribute('href', '/home');
         expect(watchlistLink).toHaveAttribute('href', '/watchlist');
-        expect(newsLink).toHaveAttribute('href', '/news');
+        expect(pivyLink).toHaveAttribute('href', '/pivy');
         expect(settingsLink).toHaveAttribute('href', '/settings');
     });
 
     it('FE-806: The order of the links in the Bottom Nav Bar remains consistent across all pages.', async () => {
-        const pages = ['/home', '/watchlist', '/news', '/settings'];
+        const pages = ['/home', '/watchlist', '/pivy', '/settings'];
         let previousOrder = null;
 
         for (const page of pages) {

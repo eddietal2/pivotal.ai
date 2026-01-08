@@ -25,7 +25,7 @@ describe('InfoModal', () => {
       </InfoModal>
     );
 
-    fireEvent.click(screen.getByLabelText('Close modal'));
+    fireEvent.click(screen.getByTestId('modal-close-top'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

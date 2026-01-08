@@ -2,29 +2,25 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import WatchlistPage from '@/app/watchlist/page';
 
-describe('Watchlist tabs', () => {
-  test('tablist exists and Watchlist selected by default and shows panel', () => {
+describe('Watchlist page (Market Pulse)', () => {
+  test('renders Market Pulse and timeframe filters', () => {
     render(<WatchlistPage />);
-    const tablist = screen.getByRole('tablist', { name: /watchlist segments/i });
-    expect(tablist).toBeInTheDocument();
-
-    const watchlistTab = screen.getByRole('tab', { name: /Watchlist/i });
-    expect(watchlistTab).toHaveAttribute('aria-selected', 'true');
-
-    const watchlistPanel = screen.getByRole('tabpanel', { name: /Watchlist/i });
-    expect(watchlistPanel).toBeInTheDocument();
-    expect(watchlistPanel).not.toHaveAttribute('hidden');
-
-    const strategyPanel = screen.getByRole('tabpanel', { name: /Strategy Builder/i });
-    expect(strategyPanel).toHaveAttribute('hidden');
+    // Ensure the Market Pulse header is present
+    expect(screen.getByText(/Market Pulse/i)).toBeInTheDocument();
+    // Timeframe filter D should be present and selected by default
+    const dFilter = screen.getByTestId('pulse-filter-D');
+    expect(dFilter).toBeInTheDocument();
+    expect(dFilter).toHaveAttribute('aria-pressed', 'true');
+    // Market pulse container should render items
+    expect(screen.getByTestId('market-pulse-container')).toBeInTheDocument();
   });
 
-  test('toggling tabs switches panels', () => {
+  test('changing timeframe updates selected filter', () => {
     render(<WatchlistPage />);
-    const strategyTab = screen.getByRole('tab', { name: /Strategy Builder/i });
-    fireEvent.click(strategyTab);
-    expect(strategyTab).toHaveAttribute('aria-selected', 'true');
-    const strategyPanel = screen.getByRole('tabpanel', { name: /Strategy Builder/i });
-    expect(strategyPanel).not.toHaveAttribute('hidden');
+    const wFilter = screen.getByTestId('pulse-filter-W');
+    expect(wFilter).toBeInTheDocument();
+    expect(wFilter).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(wFilter);
+    expect(wFilter).toHaveAttribute('aria-pressed', 'true');
   });
 });

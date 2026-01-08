@@ -42,7 +42,7 @@ export default function DisclaimersSection({ isLoading, setStopLossModalOpen, se
             <p className="text-sm text-gray-600 dark:text-gray-300">This app uses language models (LLMs) to summarize market data and provide context for signals. Learn more about how this works and the model limitations.</p>
           </div>
           <div className="flex-shrink-0">
-            <button className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-gray-900" aria-label="Open AI usage details" onClick={() => setAiUsageModalOpen(true)}>Learn more</button>
+            <button data-testid="ai-usage-open-btn" className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-gray-900" aria-label="Open AI usage details" onClick={() => setAiUsageModalOpen(true)}>Learn more</button>
           </div>
         </div>
       </div>

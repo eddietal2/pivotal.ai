@@ -18,6 +18,7 @@ import CandleStickAnim from '@/components/ui/CandleStickAnim';
 import PivyChatCard from '@/components/home/PivyChatCard';
 import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
 import DisclaimersSection from '@/components/home/DisclaimersSection';
+import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 

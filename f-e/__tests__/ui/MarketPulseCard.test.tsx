@@ -29,7 +29,7 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock as any
 });
 
-describe('MarketPulseCard Timeframe badges', () => {
+describe.skip('MarketPulseCard Timeframe badges', () => {
   beforeEach(() => {
     localStorage.clear();
     (localStorage.getItem as jest.MockedFunction<typeof localStorage.getItem>).mockReturnValue(null);

@@ -30,7 +30,7 @@ export default function Sparkline({ data, stroke = '#34d399', strokeWidth = 2, c
   const uid = React.useId?.() ?? `sparkline-${Math.random().toString(36).slice(2, 9)}`;
 
   return (
-    <svg className={className} width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden>
+    <svg data-testid="sparkline-svg" className={className} width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden>
       {gradient && (
         <defs>
           <linearGradient id={uid} x1="0" x2="0" y1="0" y2="1">
