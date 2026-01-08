@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/context/ToastContext';
 
 // Sample data for PivyChats (same as main page)
 const pivyChats = [
@@ -68,6 +69,8 @@ const PivyChatInstancePage: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const { showToast } = useToast();
 
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -143,7 +146,13 @@ const PivyChatInstancePage: React.FC = () => {
         <button 
           onClick={() => {
             setIsExiting(true);
-            setTimeout(() => router.back(), 500);
+            setTimeout(() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/pivy');
+              }
+            }, 500);
           }}
           className="mr-4 p-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
@@ -189,6 +198,40 @@ const PivyChatInstancePage: React.FC = () => {
                   <p className={`text-xs mt-1 ${msg.sender === 'User' ? 'text-blue-200' : 'text-gray-400'}`}>
                     {msg.time}
                   </p>
+
+                  {/* AI message toolbar (Copy, future actions) */}
+                  {msg.sender !== 'User' && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                              await navigator.clipboard.writeText(msg.text);
+                            } else {
+                              const el = document.createElement('textarea');
+                              el.value = msg.text;
+                              document.body.appendChild(el);
+                              el.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(el);
+                            }
+                            setCopiedIndex(index);
+                            showToast('Message copied to clipboard', 'success', 2000);
+                            setTimeout(() => setCopiedIndex(null), 2000);
+                          } catch (err) {
+                            showToast('Could not copy message', 'error', 3000);
+                          }
+                        }}
+                        title="Copy message"
+                        aria-label={`Copy message ${index}`}
+                        className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        {copiedIndex === index ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                        <span>{copiedIndex === index ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
