@@ -1,6 +1,5 @@
 'use client';
   
-
 import React from 'react';
 import InfoModal from '@/components/modals/InfoModal';
 import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
@@ -15,6 +14,8 @@ import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton } from '@/components/ui/skeletons';
 import Link from 'next/link';
+import TypewriterText from '@/components/ui/TypewriterText';
+import CandleStickAnim from '@/components/ui/CandleStickAnim';
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
@@ -214,8 +215,7 @@ export default function App() {
   const { showToast } = useToast();
 
   // Track open state of sections
-  const [marketPulseOpen, setMarketPulseOpen] = React.useState(true);
-  const [signalFeedOpen, setSignalFeedOpen] = React.useState(true);
+  const [titleTypingComplete, setTitleTypingComplete] = React.useState(false);
 
   // Simulate loading on mount
   React.useEffect(() => {
@@ -393,137 +393,59 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
-          
-          {/* Global Market Pulse */}
+
+          {/* Current Day Pivy Chat */}
+          <div className="mb-4">
+            <CandleStickAnim />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Today's Pivy Chat</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Catch up on today's conversation with your AI assistant.</p>
+          </div>
           {isLoading ? (
-            <MarketPulseSkeleton />
+            <MarketOverviewSkeleton />
           ) : (
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
-                  {/* <TrendingUp className="w-6 h-6 text-green-400" /> */}
-                  Market Pulse
-                </span>
-              }
-              infoButton={marketPulseOpen ? (
-                <div className="flex items-center gap-2">
-                  {/* Overview info button (shows MarketOverview modal even when collapsed) */}
-                  <button
-                    type="button"
-                    className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                    title="Learn more about Market Overview"
-                    aria-label="More info about Market Overview"
-                    data-testid="overview-info-btn"
-                    onClick={() => setInfoModalOpen(true)}
-                  >
-                    <Info className="w-5 h-5 text-orange-300" />
-                  </button>
-                  {/* Timeframe filter */}
-                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                    {(['D','W','M','Y'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                        aria-pressed={pulseTimeframe === t}
-                        aria-label={`Show ${t} timeframe`}
-                        data-testid={`pulse-filter-${t}`}
-                        onClick={() => setPulseTimeframe(t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
+            <Link href="/pivy/chat/0">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-48">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">01/07/26</span>
+                    <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">10:30 AM</span>
+                  </div>
+                  <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">
+                    <TypewriterText
+                      text="This is a very long title that should test the maximum length for display purposes and see how it wraps."
+                      speed={50}
+                      delay={500}
+                      className="inline"
+                      onComplete={() => setTitleTypingComplete(true)}
+                    />
+                  </h3>
+                  <div className="space-y-1">
+                    <div className="text-sm">
+                      <span className="font-medium">🤖</span>{' '}
+                      {titleTypingComplete && (
+                        <TypewriterText
+                          text="I'm good, thanks!"
+                          speed={80}
+                          delay={0}
+                          className="inline"
+                        />
+                      )}
+                      <span className="text-xs text-gray-400"> (10:30 AM)</span>
+                    </div>
                   </div>
                 </div>
-              ) : null}
-                openKey={pulseTimeframe}
-              onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
-            >
-              {/* Render PivyChat for today inside collapsible */}
-                <div className="mb-4">
-                {isLoading ? (
-                  <MarketOverviewSkeleton />
-                ) : (
-                  <Link href="/pivy/chat/0">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer flex flex-col justify-between h-48">
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">01/07/26</span>
-                          <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse ml-2"></span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">10:30 AM</span>
-                        </div>
-                        <h3 className="py-2 text-base font-semibold text-gray-900 dark:text-white mb-2">This is a very long title that should test the maximum length for display purposes and see how it wraps.</h3>
-                        <div className="space-y-1">
-                          <div className="text-sm">
-                            <span className="font-medium">🤖</span> I'm good, thanks! <span className="text-xs text-gray-400">(10:30 AM)</span>
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
-                    </div>
-                  </Link>
-                )}
+                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 self-end mt-4" />
               </div>
-              {/* Toggle between slider and list view for Market Pulse items */}
-              <div className='flex justify-between items-center'>
-                <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
-                  <p className='text-[#999]'>Quick look at key market indicators</p>
-                </div>
-                <div className="mb-4 inline-flex float-right rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-1" role="tablist" aria-label="Market Pulse view toggle">
-                  {/* Slide View */}
-                  <button
-                      type="button"
-                      className={`p-2 rounded ${pulseViewMode === 'slider' ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                      aria-pressed={pulseViewMode === 'slider'}
-                      aria-label="Slide view"
-                      data-testid="pulse-view-toggle-slider"
-                      onClick={() => handleSetPulseViewMode('slider')}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 stroke-current">
-                        <path d="M6 8C6 5.17157 6 3.75736 6.87868 2.87868C7.75736 2 9.17157 2 12 2C14.8284 2 16.2426 2 17.1213 2.87868C18 3.75736 18 5.17157 18 8V16C18 18.8284 18 20.2426 17.1213 21.1213C16.2426 22 14.8284 22 12 22C9.17157 22 7.75736 22 6.87868 21.1213C6 20.2426 6 18.8284 6 16V8Z" stroke="currentColor" strokeWidth="1.5"/>
-                        <path opacity="0.5" d="M18 19.5C19.4001 19.5 20.1002 19.5 20.635 19.2275C21.1054 18.9878 21.4878 18.6054 21.7275 18.135C22 17.6002 22 16.9001 22 15.5V8.5C22 7.09987 22 6.3998 21.7275 5.86502C21.4878 5.39462 21.1054 5.01217 20.635 4.77248C20.1002 4.5 19.4001 4.5 18 4.5" stroke="currentColor" strokeWidth="1.5"/>
-                        <path opacity="0.5" d="M6 19.5C4.59987 19.5 3.8998 19.5 3.36502 19.2275C2.89462 18.9878 2.51217 18.6054 2.27248 18.135C2 17.6002 2 16.9001 2 15.5V8.5C2 7.09987 2 6.3998 2.27248 5.86502C2.51217 5.39462 2.89462 5.01217 3.36502 4.77248C3.8998 4.5 4.59987 4.5 6 4.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                  </button>
-                  {/* List View */}
-                  <button
-                      type="button"
-                      className={`p-2 rounded ${pulseViewMode === 'list' ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                      aria-pressed={pulseViewMode === 'list'}
-                      aria-label="List view"
-                      data-testid="pulse-view-toggle-list"
-                      onClick={() => handleSetPulseViewMode('list')}
-                    >
-                      <List className="w-4 h-4" />
-                  </button>
-              </div>
-              </div>
-              <div data-testid="market-pulse-container" className={`relative ${pulseViewMode === 'slider' ? 'flex flex-row gap-4 overflow-x-auto scrollbar-thin snap-x snap-mandatory' : 'flex flex-col gap-4'} ${pulseViewAnimating ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} transition-all duration-200 ease-in-out`}>
-                
-                {isLoading || marketDataLoading ? (
-                  Array.from({ length: 4 }).map((_, i) => <MarketPulseSkeleton key={i} />)
-                ) : (
-                  filteredPulse.map((pulse, index) => (
-                    <div key={index} className={`flex-shrink-0 ${pulseViewMode === 'slider' ? 'w-64 h-32' : 'w-full'}`}>
-                      <WatchListItem
-                        ticker={pulse.index}
-                        price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
-                        change={typeof pulse.change === 'string' ? parseFloat(pulse.change.replace('%', '')) : (pulse.change as any)}
-                        sparkline={pulse.trend}
-                        timeframe={pulse.timeframe}
-                        afterHours={pulse.afterHours}
-                        onClick={() => {
-                          setSelectedPulse(pulse);
-                          setModalOpen(true);
-                        }}
-                      />
-                    </div>
-                  ))
-                )}
-              {/* Market Pulse Info Modal (renders outside the collapsible content so it shows even when collapsed) */}
-              </div>
-            </CollapsibleSection>
+            </Link>
           )}
+          <div className="mt-6 text-right">
+            <Link href="/pivy?drawer=open&about=open" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
+              Learn more about Pivy Chat →
+            </Link>
+          </div>
+          
+          <div className='mt-4'></div>
 
           {/* Real-time Confluence Feed */}
           {isLoading ? (
@@ -536,7 +458,7 @@ export default function App() {
                   Live Setup Scans
                 </span>
               }
-              infoButton={signalFeedOpen ? (
+              infoButton={signalFeedInfoOpen ? (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -566,7 +488,7 @@ export default function App() {
                 </div>
               ) : null}
                 openKey={signalTimeframe}
-              onOpenChange={(isOpen) => setSignalFeedOpen(isOpen)}
+              onOpenChange={(isOpen) => setSignalFeedInfoOpen(isOpen)}
             >
               <p className='text-[#999]'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
               <h3 className='my-4 text-lg'>Leads: 12/09/25</h3>

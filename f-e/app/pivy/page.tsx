@@ -1,13 +1,15 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { ChevronRight, Loader2, Plus, Settings, ChevronDown, Layout } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
 import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
 
-const PivyPage: React.FC = () => {
+const PivyPageContent: React.FC = () => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const searchParams = useSearchParams();
 
   // Get today's date in MM/DD/YY format
   const today = new Date();
@@ -35,6 +37,19 @@ const PivyPage: React.FC = () => {
     const timer = setTimeout(() => setLoading(false), 2000); // Simulate loading for 2 seconds
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle URL parameters for drawer and about states
+  useEffect(() => {
+    const drawer = searchParams.get('drawer');
+    const about = searchParams.get('about');
+    
+    if (drawer === 'open') {
+      setIsDrawerOpen(true);
+    }
+    if (about === 'open') {
+      setAboutExpanded(true);
+    }
+  }, [searchParams]);
 
   // Sample data for PivyChats
   const pivyChats = [
@@ -447,6 +462,14 @@ const PivyPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const PivyPage: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PivyPageContent />
+    </Suspense>
   );
 };
 
