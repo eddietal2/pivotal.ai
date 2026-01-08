@@ -14,7 +14,7 @@ def market_data(request):
     """
     if request.method == 'OPTIONS':
         response = JsonResponse({})
-        response['Access-Control-Allow-Origin'] = 'http://192.168.1.68:3000'
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
         response['Access-Control-Allow-Credentials'] = 'true'
         response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type'
@@ -65,6 +65,6 @@ def market_data(request):
     
     print("market_data completed")
     response = JsonResponse(result)
-    response['Access-Control-Allow-Origin'] = 'http://192.168.1.68:3000'
+    response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
     response['Access-Control-Allow-Credentials'] = 'true'
     return response

@@ -165,7 +165,7 @@ export default function WatchlistPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
       
-      const res = await fetch(`http://192.168.1.68:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
       });
       
@@ -372,17 +372,34 @@ export default function WatchlistPage() {
                 <span className="flex items-center gap-2">
                   Market Pulse
                 </span>
-                
               }
-              infoButton={marketPulseOpen ? (
+              infoButton={marketPulseOpen && !loading && !error ? (
                 <div className="flex items-center gap-2">
-                  {!error || loading && (
-                    <div className='flex justify-between items-center'>
-                      <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
-                        <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Overview info button */}
+                  <button
+                    type="button"
+                    className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                    title="Learn more about Market Overview"
+                    aria-label="More info about Market Overview"
+                  >
+                    <Info className="w-5 h-5 text-orange-300" />
+                  </button>
+                  {/* Timeframe filter */}
+                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
+                    {(['D','W','M','Y'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        aria-pressed={pulseTimeframe === t}
+                        aria-label={`Show ${t} timeframe`}
+                        data-testid={`pulse-filter-${t}`}
+                        onClick={() => setPulseTimeframe(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
@@ -390,7 +407,7 @@ export default function WatchlistPage() {
               onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
             >
               {/* Toggle between slider and list view for Market Pulse items */}
-              {!error || loading && (
+              {error && loading && (
                 <div className='flex justify-between items-center'>
                   <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
                     <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
@@ -414,9 +431,7 @@ export default function WatchlistPage() {
                       </svg>
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                      We're having trouble connecting to the market data server. This could be because the backend server isn't running or there's a network issue.
-                    </p>
+
                     <button
                       onClick={() => fetchMarketData()}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
