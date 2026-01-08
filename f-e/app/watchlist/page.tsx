@@ -137,7 +137,7 @@ export default function WatchlistPage() {
       
       // Call Python server directly (adjust URL/port as needed)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
       
       const res = await fetch(`http://192.168.1.68:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
@@ -162,7 +162,7 @@ export default function WatchlistPage() {
       let errorMessage = 'Failed to load market data';
       
       if (err.name === 'AbortError') {
-        errorMessage = 'Request timed out. Please check if the server is running.';
+        errorMessage = 'Request timed out. The server may be busy fetching data. Please try again.';
       } else if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
         errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
       } else if (err.message.includes('Server responded with status')) {
@@ -189,6 +189,15 @@ export default function WatchlistPage() {
 
   React.useEffect(() => {
     fetchMarketData();
+  }, [fetchMarketData]);
+
+  // Poll for real-time updates every 60 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      fetchMarketData();
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
   }, [fetchMarketData]);
 
   // Filter pulses by chosen timeframe (prefer backend market data when available)
@@ -378,7 +387,7 @@ export default function WatchlistPage() {
                   // Show error state with retry option
                   <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                     <div className="w-12 h-12 text-gray-400 mb-4">
-                      <svg fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="animate-spin" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                       </svg>
                     </div>
