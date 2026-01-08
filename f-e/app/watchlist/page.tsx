@@ -111,6 +111,10 @@ export default function WatchlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  const callCountRef = React.useRef(0);
+  const lastCallStartRef = React.useRef<number | null>(null);
+  const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Normalize timeframe string to a category: D, W, M, Y
@@ -126,10 +130,32 @@ export default function WatchlistPage() {
 
   // Fetch market data directly from Python server
   const fetchMarketData = React.useCallback(async (isRetry = false) => {
+    let timer: NodeJS.Timeout | null = null;
     try {
       if (!isRetry) {
         setLoading(true);
         setError(null);
+
+        // Clear the between-call timer
+        if (betweenCallTimerRef.current) {
+          clearInterval(betweenCallTimerRef.current);
+          betweenCallTimerRef.current = null;
+        }
+
+        const now = Date.now();
+        lastCallStartRef.current = now;
+
+        callCountRef.current++;
+        if (callCountRef.current === 1) console.log('Initial Call');
+        else console.log(`${['Second', 'Third', 'Fourth', 'Fifth'][callCountRef.current - 2] || `${callCountRef.current}th`} Call`);
+
+        const start = Date.now();
+        timer = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - start) / 1000);
+          if (elapsed > 0) {
+            console.log(elapsed);
+          }
+        }, 1000);
       }
 
       const tickers = Object.keys(tickerNames).join(',');
@@ -183,7 +209,19 @@ export default function WatchlistPage() {
         }, delay);
       }
     } finally {
+      if (timer) clearInterval(timer);
       setLoading(false);
+
+      // Start the between-call timer
+      if (!isRetry && lastCallStartRef.current) {
+        betweenCallTimerRef.current = setInterval(() => {
+          const elapsed = Date.now() - lastCallStartRef.current!;
+          const seconds = Math.floor(elapsed / 1000);
+          if (seconds > 0) {
+            console.log(seconds);
+          }
+        }, 1000);
+      }
     }
   }, [retryCount, tickerNames]);
 
