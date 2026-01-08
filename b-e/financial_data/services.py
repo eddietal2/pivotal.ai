@@ -2,6 +2,8 @@
 import pandas as pd
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
+import os
+# from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
 
 # Market Indicator Symbols (yfinance format or FRED series):
 # ----------------------------------------------------------
@@ -112,59 +114,59 @@ class FinancialDataService:
                     }
                 }
             
-            # Default to yfinance for other tickers
-            import yfinance as yf
-            
-            # Fetch 2 days of 1-minute data (includes pre/post-market)
-            df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
-            if df.empty:
-                raise ValueError(f"No data found for ticker {ticker}")
-            
-            # Flatten MultiIndex columns for single ticker
-            df.columns = df.columns.droplevel(1)
-            
-            df.reset_index(inplace=True)
-            df['Datetime'] = pd.to_datetime(df['Datetime'])
-            # Convert to US/Eastern timezone
-            df['Datetime'] = df['Datetime'].dt.tz_convert('US/Eastern')
-            df.set_index('Datetime', inplace=True)
-            df.sort_index(inplace=True)
-            
-            # Get all closes in chronological order (oldest to newest)
-            all_closes = df['Close'].tolist()
-            
-            # Extract the last 1440 points (24 hours of 1-minute data)
-            # If fewer than 1440 points, use all available
-            sparkline_24h = all_closes[-1440:] if len(all_closes) >= 1440 else all_closes
-            
-            # Get the latest data point
-            latest = df.iloc[-1]
-            latest_datetime = df.index[-1].strftime('%m/%d/%y - %I:%M %p')
-            latest_close = float(latest['Close'])
-            
-            # Determine if after hours (outside 9:30 AM - 4:00 PM ET)
-            eastern = pytz.timezone('US/Eastern')
-            now = pd.Timestamp.now(tz=eastern)
-            market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
-            market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
-            is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
-            
-            # Calculate change (vs. 24 hours ago if available)
-            change = 0.0
-            if len(all_closes) >= 1440:
-                close_24h_ago = all_closes[-1441] if len(all_closes) > 1441 else all_closes[0]
-                change = ((latest_close - close_24h_ago) / close_24h_ago) * 100 if close_24h_ago != 0 else 0.0
-            
-            return {
-                'closes': sparkline_24h,  # Now contains 24-hour data
-                'datetimes': [latest_datetime],  # Simplified for compatibility
-                'latest': {
-                    'datetime': latest_datetime, 
-                    'close': latest_close,
-                    'change': round(change, 2),
-                    'is_after_hours': is_after_hours
+            # Use yfinance for all tickers except FRED series
+            if not ticker.startswith('DGS'):
+                import yfinance as yf
+                
+                # Fetch 2 days of 1-minute data (includes pre/post-market)
+                df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
+                if df.empty:
+                    raise ValueError(f"No data found for ticker {ticker}")
+                
+                # Flatten MultiIndex columns for single ticker
+                df.columns = df.columns.droplevel(1)
+                
+                df.reset_index(inplace=True)
+                df['Datetime'] = pd.to_datetime(df['Datetime'])
+                # Convert to US/Eastern timezone
+                df['Datetime'] = df['Datetime'].dt.tz_convert('US/Eastern')
+                df.set_index('Datetime', inplace=True)
+                df.sort_index(inplace=True)
+                
+                # Get all closes in chronological order (oldest to newest)
+                all_closes = df['Close'].tolist()
+                
+                # Sparkline: last 24 closes (or all if less)
+                sparkline_24h = all_closes[-24:] if len(all_closes) >= 24 else all_closes
+                
+                # Latest data
+                latest = df.iloc[-1]
+                latest_datetime = df.index[-1].strftime('%m/%d/%y - %I:%M %p')
+                latest_close = float(latest['Close'])
+                
+                # Determine if after hours
+                eastern = pytz.timezone('US/Eastern')
+                now = pd.Timestamp.now(tz=eastern)
+                market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
+                market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
+                is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
+                
+                # Calculate change
+                change = 0.0
+                if len(all_closes) >= 24:
+                    close_24h_ago = all_closes[-25] if len(all_closes) > 25 else all_closes[0]
+                    change = ((latest_close - close_24h_ago) / close_24h_ago) * 100 if close_24h_ago != 0 else 0.0
+                
+                return {
+                    'closes': sparkline_24h,
+                    'datetimes': [latest_datetime],
+                    'latest': {
+                        'datetime': latest_datetime,
+                        'close': latest_close,
+                        'change': round(change, 2),
+                        'is_after_hours': is_after_hours
+                    }
                 }
-            }
         except Exception as e:
             raise ValueError(f"Error fetching 24h data for {ticker}: {e}")
 
@@ -188,35 +190,37 @@ class FinancialDataService:
             }
         
         try:
-            import yfinance as yf
-            # Fetch 6 months of daily data
-            df = yf.download(ticker, period='6mo', interval='1d', progress=False)
-            if df.empty:
-                raise ValueError(f"No data for {ticker}")
-            
-            # Flatten MultiIndex columns for single ticker
-            df.columns = df.columns.droplevel(1)
-            
-            if 'Volume' not in df.columns:
-                raise ValueError(f"No volume data for {ticker}")
-            
-            # Daily RV: Last day's volume / 20-day average
-            avg_daily_vol = df['Volume'].rolling(20).mean().iloc[-1]
-            last_daily_vol = df['Volume'].iloc[-1]
-            daily_rv = last_daily_vol / avg_daily_vol if avg_daily_vol > 0 else 0
-            
-            # Weekly RV: Last week's volume / 4-week average weekly volume
-            df_weekly = df.resample('W').sum()  # Aggregate to weekly
-            avg_weekly_vol = df_weekly['Volume'].rolling(4).mean().iloc[-1]
-            last_weekly_vol = df_weekly['Volume'].iloc[-1]
-            weekly_rv = last_weekly_vol / avg_weekly_vol if avg_weekly_vol > 0 else 0
-            
-            return {
-                'daily_rv': round(daily_rv, 2), 
-                'daily_grade': self.grade_rv(daily_rv),
-                'weekly_rv': round(weekly_rv, 2),
-                'weekly_grade': self.grade_rv(weekly_rv)
-            }
+            # Use yfinance for all tickers except FRED series
+            if not ticker.startswith('DGS'):
+                import yfinance as yf
+                # Fetch 6 months of daily data
+                df = yf.download(ticker, period='6mo', interval='1d', progress=False)
+                if df.empty:
+                    raise ValueError(f"No data for {ticker}")
+                
+                # Flatten MultiIndex columns for single ticker
+                df.columns = df.columns.droplevel(1)
+                
+                if 'Volume' not in df.columns:
+                    raise ValueError(f"No volume data for {ticker}")
+                
+                # Daily RV: Last day's volume / 20-day average
+                avg_daily_vol = df['Volume'].rolling(20).mean().iloc[-1]
+                last_daily_vol = df['Volume'].iloc[-1]
+                daily_rv = last_daily_vol / avg_daily_vol if avg_daily_vol > 0 else 0
+                
+                # Weekly RV: Last week's volume / 4-week average weekly volume
+                df_weekly = df.resample('W').sum()  # Aggregate to weekly
+                avg_weekly_vol = df_weekly['Volume'].rolling(4).mean().iloc[-1]
+                last_weekly_vol = df_weekly['Volume'].iloc[-1]
+                weekly_rv = last_weekly_vol / avg_weekly_vol if avg_weekly_vol > 0 else 0
+                
+                return {
+                    'daily_rv': round(daily_rv, 2), 
+                    'daily_grade': self.grade_rv(daily_rv),
+                    'weekly_rv': round(weekly_rv, 2),
+                    'weekly_grade': self.grade_rv(weekly_rv)
+                }
         except Exception as e:
             raise ValueError(f"Error calculating RV for {ticker}: {e}")
 
@@ -246,8 +250,8 @@ def fetch_watchlist(tickers_csv: str):
     import time
     for ticker in tickers:
         try:
-            # Small delay to avoid being throttled if many tickers
-            time.sleep(0.1)
+            # Small delay to avoid rate limiting (Alpha Vantage free tier: 5 calls/min)
+            time.sleep(2)
             data = service.fetch_data(ticker)
 
             # Use change from fetch_data
