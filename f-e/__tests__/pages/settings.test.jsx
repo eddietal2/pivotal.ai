@@ -74,6 +74,10 @@ describe('Settings: Account Settings', () => {
     
     // Reset redirect mock
     redirectTo.mockReset();
+    
+    // Restore mock return values after reset
+    useTheme.mockReturnValue(mockThemeValue);
+    useToast.mockReturnValue(mockToastValue);
   });
 
   it('FE-401: The Settings page loads and displays the authenticated user\'s information from localStorage. The Page will load with Skeleton UI initially, then display content after loading completes. ', async () => {
