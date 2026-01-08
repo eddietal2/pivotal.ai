@@ -277,19 +277,6 @@ const PivyPageContent: React.FC = () => {
                   <h3 className="text-lg font-semibold">Pivy Chat Settings</h3>
                 </div>
                 <div className="flex gap-2">
-                  {(timeframeExpanded ? 1 : 0) + (viewModeExpanded ? 1 : 0) + (notificationsExpanded ? 1 : 0) + (aboutExpanded ? 1 : 0) > 0 && (
-                    <button 
-                      onClick={() => {
-                        setTimeframeExpanded(false);
-                        setViewModeExpanded(false);
-                        setNotificationsExpanded(false);
-                        setAboutExpanded(false);
-                      }}
-                      className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
-                    >
-                      Collapse All
-                    </button>
-                  )}
                   <button 
                     onClick={() => setIsDrawerOpen(false)}
                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -453,7 +440,15 @@ const PivyPageContent: React.FC = () => {
               </button>
               {aboutExpanded && (
                 <div className="mt-2">
-                  <p className="text-gray-600 dark:text-gray-300">Pivy Chat is an AI-powered trading assistant that provides real-time insights, market analysis, and personalized recommendations to help you make informed trading decisions. Stay ahead of the market with intelligent conversations and data-driven advice.</p>
+                  <CandleStickAnim></CandleStickAnim>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Pivy Chat serves as your comprehensive trading journal, automatically creating a new chat entry for you each day starting from Day 1 of your registration. 
+                    <br></br>
+                    <br></br>
+                    Every morning at 8 AM EST, a fresh conversation begins, providing real-time market analysis, personalized trading insights, and the ability to engage in live dialogue about market conditions. Each daily entry builds upon your trading history, allowing you to track patterns, review past decisions, and maintain a chronological record of your trading journey. 
+                    <br></br>
+                    <br></br>
+                    Whether you're seeking immediate market updates, discussing strategy, or reflecting on previous trades, your journal entries remain accessible and editable, creating a dynamic record of your evolving trading expertise.</p>
                 </div>
               )}
 
