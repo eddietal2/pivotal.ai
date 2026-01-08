@@ -3,7 +3,7 @@ import pandas as pd
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
 
-# Market Indicator Symbols (yfinance format):
+# Market Indicator Symbols (yfinance format or FRED series):
 # ----------------------------------------------------------
 # GSPC: S&P 500
 # DJI: DOW
@@ -11,13 +11,13 @@ import pytz  # For timezone handling
 # N/A: CALL/PUT Ratio (derived from options data, no single symbol)
 # N/A: AAII Retailer Investor Sentiment (survey data, no symbol)
 # VIX: VIX (Fear Index)
-# TNX: 10-Yr Yield
+# DGS10: 10-Yr Yield (FRED series)
 # BTC-USD: Bitcoin
 # GC=F: Gold
 # SI=F: Silver
 # CL=F: Crude Oil
-# RUT: Russell 2000
-# IRX: 2-Yr Yield
+# ^RUT: Russell 2000
+# DGS2: 2-Yr Yield (FRED series)
 # ETH-USD: Ethereum
 # HG=F: Copper
 # NG=F: Natural Gas
@@ -52,12 +52,67 @@ class FinancialDataService:
         Fetch latest data with a 24-hour sparkline combining today and yesterday's closes.
         
         Args:
-            ticker (str): Ticker symbol (e.g., 'AAPL', '^GSPC').
+            ticker (str): Ticker symbol (e.g., 'AAPL', '^GSPC') or FRED series (e.g., 'DGS10').
         
         Returns:
             dict: {'closes': [list of close prices], 'datetimes': [list of formatted datetimes], 'latest': {'datetime': str, 'close': float}}
         """
         try:
+            # Handle FRED series for Treasury yields
+            if ticker.startswith('DGS'):
+                import requests
+                import csv
+                from io import StringIO
+                
+                url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={ticker}"
+                response = requests.get(url, timeout=10)
+                if response.status_code != 200:
+                    raise ValueError(f"No data from FRED for {ticker}")
+                
+                reader = csv.DictReader(StringIO(response.text))
+                data = []
+                for row in reader:
+                    value_str = row.get(ticker, '')
+                    if value_str and value_str != '.':
+                        data.append({
+                            'date': pd.to_datetime(row['observation_date']),
+                            'value': float(value_str)
+                        })
+                
+                if not data:
+                    raise ValueError(f"No data found for {ticker}")
+                
+                # Sort by date
+                data.sort(key=lambda x: x['date'])
+                # Get last 30 days
+                last_30 = data[-30:]
+                closes = [d['value'] for d in last_30]
+                
+                # Sparkline: last 24 daily closes
+                sparkline = closes[-24:] if len(closes) >= 24 else closes
+                latest_close = closes[-1]
+                latest_datetime = last_30[-1]['date'].strftime('%m/%d/%y - %I:%M %p')
+                
+                # Change: vs previous day
+                change = 0.0
+                if len(closes) >= 2:
+                    prev_close = closes[-2]
+                    change = ((latest_close - prev_close) / prev_close) * 100 if prev_close != 0 else 0.0
+                
+                is_after_hours = False  # Yields don't have after hours
+                
+                return {
+                    'closes': sparkline,
+                    'datetimes': [latest_datetime],
+                    'latest': {
+                        'datetime': latest_datetime,
+                        'close': latest_close,
+                        'change': round(change, 2),
+                        'is_after_hours': is_after_hours
+                    }
+                }
+            
+            # Default to yfinance for other tickers
             import yfinance as yf
             
             # Fetch 2 days of 1-minute data (includes pre/post-market)
@@ -123,6 +178,15 @@ class FinancialDataService:
         Returns:
             dict: {'daily_rv': float, 'weekly_rv': float}
         """
+        # FRED series don't have volume data
+        if ticker.startswith('DGS'):
+            return {
+                'daily_rv': None,
+                'daily_grade': None,
+                'weekly_rv': None,
+                'weekly_grade': None
+            }
+        
         try:
             import yfinance as yf
             # Fetch 6 months of daily data
@@ -186,23 +250,8 @@ def fetch_watchlist(tickers_csv: str):
             time.sleep(0.1)
             data = service.fetch_data(ticker)
 
-            # Daily percent change (last 2 daily closes)
-            try:
-                import yfinance as yf
-                daily = yf.download(ticker, period='3d', interval='1d', progress=False)
-                if not daily.empty:
-                    # Handle single-ticker DataFrame with single-level cols
-                    if isinstance(daily.columns, pd.MultiIndex):
-                        daily.columns = daily.columns.droplevel(1)
-                    closes = daily['Close'].dropna().tolist()
-                    if len(closes) >= 2:
-                        change = round(((closes[-1] - closes[-2]) / closes[-2]) * 100, 2)
-                    else:
-                        change = 0.0
-                else:
-                    change = 0.0
-            except Exception:
-                change = 0.0
+            # Use change from fetch_data
+            change = data['latest']['change']
 
             # Relative volume (daily)
             try:
@@ -213,14 +262,14 @@ def fetch_watchlist(tickers_csv: str):
                 rv = None
                 rv_grade = None
 
-            # Sparkline: last up to 24 intraday closes
+            # Sparkline: last up to 24 closes
             sparkline = data.get('closes', [])[-24:]
 
             result[ticker] = {
                 'close': round(data['latest']['close'], 2) if data.get('latest') else None,
                 'change': change,
                 'sparkline': sparkline,
-                'is_after_hours': False,
+                'is_after_hours': data['latest']['is_after_hours'],
                 'rv': rv,
                 'rv_grade': rv_grade
             }

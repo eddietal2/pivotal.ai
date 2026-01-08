@@ -5,7 +5,8 @@ import Sparkline from '@/components/ui/Sparkline';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 type Props = {
-  ticker: string;
+  name: string;
+  symbol: string;
   price: string;
   change?: number; // percent change
   sparkline?: number[]; // numeric array for sparkline values
@@ -15,22 +16,22 @@ type Props = {
   onClick?: () => void;
 };
 
-export default function WatchListItem({ ticker, price, change = 0, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
 
   return (
     <button
-      data-testid={`watchlist-item-${ticker}`}
+      data-testid={`watchlist-item-${symbol}`}
       type="button"
       onClick={onClick}
       className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press"
-      aria-label={`More info about ${ticker}${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
+      aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
     >
       <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-gray-400">{ticker}</p>
+        <p className="text-sm font-medium text-gray-400">{name} ({symbol})</p>
         {/* timeframe chip */}
         {timeframe && (
           <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>

@@ -7,17 +7,17 @@ import { Info } from 'lucide-react';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
-  '^GSPC': 'S&P 500',
+  '^GSPC': 'SP 500',
   '^DJI': 'DOW',
   '^IXIC': 'Nasdaq',
   '^VIX': 'VIX (Fear Index)',
-  'TNX': '10-Yr Yield',
+  'DGS10': '10-Yr Yield',
   'BTC-USD': 'Bitcoin',
   'GC=F': 'Gold',
   'SI=F': 'Silver',
   'CL=F': 'Crude Oil',
-  'RUT': 'Russell 2000',
-  'IRX': '2-Yr Yield',
+  '^RUT': 'Russell 2000',
+  'DGS2': '2-Yr Yield',
   'ETH-USD': 'Ethereum',
   'HG=F': 'Copper',
   'NG=F': 'Natural Gas'
@@ -137,9 +137,9 @@ export default function WatchlistPage() {
       
       // Call Python server directly (adjust URL/port as needed)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      const res = await fetch(`http://localhost:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
+      const res = await fetch(`http://192.168.1.68:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
       });
       
@@ -196,8 +196,8 @@ export default function WatchlistPage() {
     const backendEntries = Object.keys(marketData || {});
     if (backendEntries.length > 0) {
       return backendEntries.map((ticker) => ({
-        ticker,
-        name: tickerNames[ticker] || ticker,
+        ticker: tickerNames[ticker] || ticker,
+        symbol: ticker,
         price: marketData[ticker]?.close ? Number(marketData[ticker].close).toFixed(2) : 'N/A',
         change: marketData[ticker]?.change ?? 0,
         sparkline: marketData[ticker]?.sparkline ?? [],
@@ -399,7 +399,8 @@ export default function WatchlistPage() {
                   filteredPulse.map((pulse, index) => (
                     <div key={index} className="flex-shrink-0 w-full">
                       <WatchListItem
-                        ticker={(pulse as any).name ?? (pulse as any).ticker ?? (pulse as any).index ?? '—'}
+                        name={(pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—'}
+                        symbol={(pulse as any).symbol ?? (pulse as any).ticker ?? '—'}
                         price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
                         change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
                         sparkline={(pulse as any).sparkline ?? (pulse as any).trend}
