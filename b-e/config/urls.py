@@ -21,6 +21,6 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
-    # path('api/financial/', include('financial_data.urls')),
+    path('api/market-data/', include('financial_data.urls')),
     path('', views.wassup_world, name='wassup_world'),
 ]

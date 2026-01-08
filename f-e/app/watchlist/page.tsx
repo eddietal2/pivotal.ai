@@ -5,6 +5,24 @@ import CollapsibleSection from '../../components/ui/CollapsibleSection';
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import { Info } from 'lucide-react';
 
+// Ticker to name mapping for Market Pulse
+const tickerNames: Record<string, string> = {
+  '^GSPC': 'S&P 500',
+  '^DJI': 'DOW',
+  '^IXIC': 'Nasdaq',
+  '^VIX': 'VIX (Fear Index)',
+  'TNX': '10-Yr Yield',
+  'BTC-USD': 'Bitcoin',
+  'GC=F': 'Gold',
+  'SI=F': 'Silver',
+  'CL=F': 'Crude Oil',
+  'RUT': 'Russell 2000',
+  'IRX': '2-Yr Yield',
+  'ETH-USD': 'Ethereum',
+  'HG=F': 'Copper',
+  'NG=F': 'Natural Gas'
+};
+
 // Mock data for the Global Market Pulse
 const mockPulse = [
   // Daily data (D)
@@ -86,7 +104,13 @@ export default function WatchlistPage() {
   const [marketPulseOpen, setMarketPulseOpen] = useState(true);
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
-  
+
+  // Market data state (from b-e financial_data)
+  const [marketData, setMarketData] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Normalize timeframe string to a category: D, W, M, Y
@@ -100,13 +124,112 @@ export default function WatchlistPage() {
     return 'D';
   };
 
-  // Filter pulses by chosen timeframe
-  const filteredPulse = React.useMemo(() => {
-    return mockPulse
-      .filter((p) => normalizeTimeframe(p.timeframe) === pulseTimeframe)
-  }, [pulseTimeframe]);
+  // Fetch market data directly from Python server
+  const fetchMarketData = React.useCallback(async (isRetry = false) => {
+    try {
+      if (!isRetry) {
+        setLoading(true);
+        setError(null);
+      }
 
-  // Handle scroll to show/hide fixed header
+      const tickers = Object.keys(tickerNames).join(',');
+      console.log('Fetching market data for tickers:', tickers);
+      
+      // Call Python server directly (adjust URL/port as needed)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await fetch(`http://localhost:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      console.log('Fetch response status:', res.status);
+      
+      if (!res.ok) {
+        throw new Error(`Server responded with status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log('Fetched market data:', data);
+      
+      setMarketData(data);
+      setError(null);
+      setRetryCount(0);
+    } catch (err: any) {
+      console.error('Error fetching market data:', err);
+      
+      let errorMessage = 'Failed to load market data';
+      
+      if (err.name === 'AbortError') {
+        errorMessage = 'Request timed out. Please check if the server is running.';
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
+        errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
+      } else if (err.message.includes('Server responded with status')) {
+        errorMessage = `Server error: ${err.message}`;
+      } else {
+        errorMessage = `Network error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      
+      // Auto-retry up to 2 times with exponential backoff
+      if (retryCount < 3) {
+        const delay = 10000; // every 10s
+        console.log(`Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchMarketData(true);
+        }, delay);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [retryCount, tickerNames]);
+
+  React.useEffect(() => {
+    fetchMarketData();
+  }, [fetchMarketData]);
+
+  // Filter pulses by chosen timeframe (prefer backend market data when available)
+  const filteredPulse = React.useMemo(() => {
+    const backendEntries = Object.keys(marketData || {});
+    if (backendEntries.length > 0) {
+      return backendEntries.map((ticker) => ({
+        ticker,
+        name: tickerNames[ticker] || ticker,
+        price: marketData[ticker]?.close ? Number(marketData[ticker].close).toFixed(2) : 'N/A',
+        change: marketData[ticker]?.change ?? 0,
+        sparkline: marketData[ticker]?.sparkline ?? [],
+        timeframe: '24H',
+        afterHours: marketData[ticker]?.is_after_hours ?? false,
+        rv: marketData[ticker]?.rv ?? null
+      }));
+    }
+
+    // Return empty array when loading or no data - no fallback to mock data
+    return [];
+  }, [marketData, pulseTimeframe]);
+
+  // Loading skeleton component for Market Pulse items
+  const PulseSkeleton = () => (
+    <div className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 w-full h-24 animate-pulse">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-8"></div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-18 h-7 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="flex flex-col gap-1">
+            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+          </div>
+        </div>
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+      </div>
+    </div>
+  );
   React.useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -239,23 +362,54 @@ export default function WatchlistPage() {
               {/* Toggle between slider and list view for Market Pulse items */}
               <div className='flex justify-between items-center'>
                 <div className='lg:h-16 items-center justify-start pt-1 mr-4'>
-                  <p className='text-[#999]'>Quick look at key market indicators</p>
+                  <p className='text-[#999] mb-2'>Quick look at key market indicators</p>
                 </div>
               </div>
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-4">
                 
-                {filteredPulse.map((pulse, index) => (
-                  <div key={index} className="flex-shrink-0 w-full">
-                    <WatchListItem
-                      ticker={pulse.index}
-                      price={typeof pulse.value === 'number' ? pulse.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(pulse.value)}
-                      change={typeof pulse.change === 'string' ? parseFloat(pulse.change.replace('%', '')) : (pulse.change as any)}
-                      sparkline={pulse.trend}
-                      timeframe={pulse.timeframe}
-                      afterHours={pulse.afterHours}
-                    />
+                {loading ? (
+                  // Show loading skeletons for all expected tickers
+                  Object.keys(tickerNames).map((ticker) => (
+                    <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
+                      <PulseSkeleton />
+                    </div>
+                  ))
+                ) : error ? (
+                  // Show error state with retry option
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <div className="w-12 h-12 text-gray-400 mb-4">
+                      <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md">
+                      We're having trouble connecting to the market data server. This could be because the backend server isn't running or there's a network issue.
+                    </p>
+                    <button
+                      onClick={() => fetchMarketData()}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      disabled={loading}
+                    >
+                      {loading ? 'Retrying...' : 'Try Again'}
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  // Show actual data when loaded
+                  filteredPulse.map((pulse, index) => (
+                    <div key={index} className="flex-shrink-0 w-full">
+                      <WatchListItem
+                        ticker={(pulse as any).name ?? (pulse as any).ticker ?? (pulse as any).index ?? '—'}
+                        price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
+                        change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
+                        sparkline={(pulse as any).sparkline ?? (pulse as any).trend}
+                        timeframe={(pulse as any).timeframe}
+                        afterHours={(pulse as any).afterHours}
+                        rv={(pulse as any).rv}
+                      />
+                    </div>
+                  ))
+                )}
               </div>
             </CollapsibleSection>
           </div>

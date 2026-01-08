@@ -50,7 +50,7 @@ INSTALLED_APPS = [
 
     # custom apps
     'authentication',
-    # 'financial_data',
+    'financial_data',
 ]
 
 MIDDLEWARE = [

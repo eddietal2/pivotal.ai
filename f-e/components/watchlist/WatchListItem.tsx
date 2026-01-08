@@ -11,10 +11,11 @@ type Props = {
   sparkline?: number[]; // numeric array for sparkline values
   timeframe?: string;
   afterHours?: boolean;
+  rv?: number; // relative volume (e.g., 1.2 for 1.2x)
   onClick?: () => void;
 };
 
-export default function WatchListItem({ ticker, price, change = 0, sparkline = [], timeframe, afterHours, onClick }: Props) {
+export default function WatchListItem({ ticker, price, change = 0, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -44,7 +45,12 @@ export default function WatchListItem({ ticker, price, change = 0, sparkline = [
               <Sparkline data={sparkline} width={72} height={28} stroke={sparkStroke} className="rounded" gradient={true} fillOpacity={0.12} />
             )}
           </div>
-          <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{price}</span>
+          <div className="flex flex-col">
+            <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{price}</span>
+            {typeof rv === 'number' && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">RV: {rv.toFixed(2)}x</span>
+            )}
+          </div>
         </div>
         <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
           {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}

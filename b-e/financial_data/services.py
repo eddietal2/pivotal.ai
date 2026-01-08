@@ -46,9 +46,10 @@ class FinancialDataService:
             return 'Very High'
         else:
             return 'Extreme'
+    
     def fetch_data(self, ticker):
         """
-        Fetch intraday data for the most recent complete trading day for a ticker.
+        Fetch latest data with a 24-hour sparkline combining today and yesterday's closes.
         
         Args:
             ticker (str): Ticker symbol (e.g., 'AAPL', '^GSPC').
@@ -58,7 +59,8 @@ class FinancialDataService:
         """
         try:
             import yfinance as yf
-            # Fetch 2 days of data to ensure we have the previous complete day
+            
+            # Fetch 2 days of 1-minute data (includes pre/post-market)
             df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
             if df.empty:
                 raise ValueError(f"No data found for ticker {ticker}")
@@ -73,39 +75,43 @@ class FinancialDataService:
             df.set_index('Datetime', inplace=True)
             df.sort_index(inplace=True)
             
-            # Get the most recent complete trading day
-            # Group by date and find the last complete day (not today if during trading hours)
-            df['date'] = df.index.date
-            unique_dates = sorted(df['date'].unique())
+            # Get all closes in chronological order (oldest to newest)
+            all_closes = df['Close'].tolist()
             
-            # If we have at least 2 days, take the second to last (most recent complete day)
-            # If only 1 day, take that one
-            if len(unique_dates) >= 2:
-                complete_day = unique_dates[-2]  # Second to last date
-            else:
-                complete_day = unique_dates[-1]  # Only day available
+            # Extract the last 1440 points (24 hours of 1-minute data)
+            # If fewer than 1440 points, use all available
+            sparkline_24h = all_closes[-1440:] if len(all_closes) >= 1440 else all_closes
             
-            # Filter to only the complete day's data
-            df_complete = df[df['date'] == complete_day].copy()
-            df_complete.drop('date', axis=1, inplace=True)
-            
-            # Get all close prices for the complete day
-            closes = df_complete['Close'].tolist()
-            # Get formatted datetimes
-            datetimes = [dt.strftime('%m/%d/%y - %I:%M %p') for dt in df_complete.index]
-            
-            # Get the most recent data from the complete day
-            latest = df_complete.iloc[-1]
-            latest_datetime = df_complete.index[-1].strftime('%m/%d/%y - %I:%M %p')
+            # Get the latest data point
+            latest = df.iloc[-1]
+            latest_datetime = df.index[-1].strftime('%m/%d/%y - %I:%M %p')
             latest_close = float(latest['Close'])
             
+            # Determine if after hours (outside 9:30 AM - 4:00 PM ET)
+            eastern = pytz.timezone('US/Eastern')
+            now = pd.Timestamp.now(tz=eastern)
+            is_after_hours = not (now.weekday() < 5 and 
+                                pd.Timestamp(now.date()).replace(hour=9, minute=30, tz=eastern) <= now <= 
+                                pd.Timestamp(now.date()).replace(hour=16, minute=0, tz=eastern))
+            
+            # Calculate change (vs. 24 hours ago if available)
+            change = 0.0
+            if len(all_closes) >= 1440:
+                close_24h_ago = all_closes[-1441] if len(all_closes) > 1441 else all_closes[0]
+                change = ((latest_close - close_24h_ago) / close_24h_ago) * 100 if close_24h_ago != 0 else 0.0
+            
             return {
-                'closes': closes,
-                'datetimes': datetimes,
-                'latest': {'datetime': latest_datetime, 'close': latest_close}
+                'closes': sparkline_24h,  # Now contains 24-hour data
+                'datetimes': [latest_datetime],  # Simplified for compatibility
+                'latest': {
+                    'datetime': latest_datetime, 
+                    'close': latest_close,
+                    'change': round(change, 2),
+                    'is_after_hours': is_after_hours
+                }
             }
         except Exception as e:
-            raise ValueError(f"Error fetching data for {ticker}: {e}")
+            raise ValueError(f"Error fetching 24h data for {ticker}: {e}")
 
     def fetch_relative_volume(self, ticker):
         """
@@ -150,21 +156,86 @@ class FinancialDataService:
         except Exception as e:
             raise ValueError(f"Error calculating RV for {ticker}: {e}")
 
-def main():
-    """Test function."""
+import sys
+import json
+
+def fetch_watchlist(tickers_csv: str):
+    """Fetch data for a comma-separated list of tickers and print JSON to stdout.
+
+    Output format (example):
+    {
+      "^GSPC": {
+         "close": 5210.45,
+         "change": 0.82,
+         "sparkline": [5180,5190,...],
+         "is_after_hours": false,
+         "rv": 1.23,
+         "rv_grade": "Normal"
+      },
+      ...
+    }
+    """
     service = FinancialDataService()
-    ticker = '^GSPC'
+    result = {}
+    tickers = [t.strip() for t in tickers_csv.split(',') if t.strip()]
 
-    try:
-        print(f"Fetching most recent data for {ticker}...")
-        data = service.fetch_data(ticker)
-        print(f"Data fetched successfully!")
-        print(f"Number of data points: {len(data['closes'])}")
-        print(f"Latest Datetime: {data['latest']['datetime']}")
-        print(f"Latest Close Price: {data['latest']['close']}")
-        print(f"First few closes: {data['closes'][:5]}")
-    except Exception as e:
-        print(f"Error: {e}")
+    import time
+    for ticker in tickers:
+        try:
+            # Small delay to avoid being throttled if many tickers
+            time.sleep(0.1)
+            data = service.fetch_data(ticker)
 
-if __name__ == "__main__":
+            # Daily percent change (last 2 daily closes)
+            try:
+                import yfinance as yf
+                daily = yf.download(ticker, period='3d', interval='1d', progress=False)
+                if not daily.empty:
+                    # Handle single-ticker DataFrame with single-level cols
+                    if isinstance(daily.columns, pd.MultiIndex):
+                        daily.columns = daily.columns.droplevel(1)
+                    closes = daily['Close'].dropna().tolist()
+                    if len(closes) >= 2:
+                        change = round(((closes[-1] - closes[-2]) / closes[-2]) * 100, 2)
+                    else:
+                        change = 0.0
+                else:
+                    change = 0.0
+            except Exception:
+                change = 0.0
+
+            # Relative volume (daily)
+            try:
+                rv_info = service.fetch_relative_volume(ticker)
+                rv = rv_info.get('daily_rv', None)
+                rv_grade = rv_info.get('daily_grade', None)
+            except Exception:
+                rv = None
+                rv_grade = None
+
+            # Sparkline: last up to 24 intraday closes
+            sparkline = data.get('closes', [])[-24:]
+
+            result[ticker] = {
+                'close': round(data['latest']['close'], 2) if data.get('latest') else None,
+                'change': change,
+                'sparkline': sparkline,
+                'is_after_hours': False,
+                'rv': rv,
+                'rv_grade': rv_grade
+            }
+        except Exception as e:
+            result[ticker] = {'error': str(e)}
+
+    print(json.dumps(result))
+
+def main():
+    if len(sys.argv) >= 3 and sys.argv[1] == 'fetch_watchlist':
+        tickers_csv = sys.argv[2]
+        fetch_watchlist(tickers_csv)
+    else:
+        # Fallback test/demo
+        print(json.dumps({'^GSPC': {'close': None, 'change': 0.0, 'sparkline': [], 'is_after_hours': False, 'rv': None, 'rv_grade': None}}))
+
+if __name__ == '__main__':
     main()
