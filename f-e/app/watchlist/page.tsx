@@ -92,6 +92,7 @@ export default function WatchlistPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
+  const [showReorderSkeleton, setShowReorderSkeleton] = useState(false);
 
   // Market data state (from b-e financial_data)
   const [marketData, setMarketData] = useState<Record<string, any>>({});
@@ -518,7 +519,7 @@ export default function WatchlistPage() {
                 </div>
               )}
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-6">
-                {loading || timeframeSwitching ? (
+                {loading || timeframeSwitching || showReorderSkeleton ? (
                   // Show loading skeletons for all expected tickers
                   assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
@@ -598,7 +599,14 @@ export default function WatchlistPage() {
                         onClick={() => {
                           // Save the current order to localStorage
                           localStorage.setItem('assetClassOrder', JSON.stringify(assetClassOrder));
+                          
+                          // Show skeleton transition for 500ms
+                          setShowReorderSkeleton(true);
                           setIsRearrangeMode(false);
+                          
+                          setTimeout(() => {
+                            setShowReorderSkeleton(false);
+                          }, 500);
                         }}
                         className="px-6 py-2 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors"
                       >
