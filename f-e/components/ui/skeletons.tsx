@@ -222,3 +222,38 @@ export function DayModalSkeleton() {
     </div>
   );
 }
+
+// Skeleton for Top Market Indicators section
+export function TopIndicatorsSkeleton() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 animate-pulse">
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-4"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-600 rounded-full">
+            <div className="w-5 h-5 bg-gray-200 dark:bg-gray-500 rounded"></div>
+          </div>
+          <div className="flex-1">
+            <div className="h-5 bg-gray-200 dark:bg-gray-500 rounded w-20 mb-1"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-500 rounded w-16 mb-1"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-500 rounded w-12"></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-600 rounded-full">
+            <div className="w-5 h-5 bg-gray-200 dark:bg-gray-500 rounded"></div>
+          </div>
+          <div className="flex-1">
+            <div className="h-5 bg-gray-200 dark:bg-gray-500 rounded w-20 mb-1"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-500 rounded w-16 mb-1"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-500 rounded w-12"></div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 text-center">
+        <div className="h-4 bg-gray-200 dark:bg-gray-500 rounded w-32 mx-auto"></div>
+      </div>
+    </div>
+  );
+}

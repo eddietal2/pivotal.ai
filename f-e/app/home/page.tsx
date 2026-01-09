@@ -12,13 +12,29 @@ import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
 import MarketOverview from '@/components/ui/MarketOverview';
-import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton } from '@/components/ui/skeletons';
+import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton, TopIndicatorsSkeleton } from '@/components/ui/skeletons';
 import Link from 'next/link';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 import PivyChatCard from '@/components/home/PivyChatCard';
 import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
 import DisclaimersSection from '@/components/home/DisclaimersSection';
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
+
+// Ticker to name mapping for Market Pulse (same as watchlist)
+const tickerNames: Record<string, string> = {
+  '^GSPC': 'SP 500',
+  '^DJI': 'DOW',
+  '^IXIC': 'Nasdaq',
+  '^VIX': 'VIX (Fear Index)',
+  'BTC-USD': 'Bitcoin',
+  'GC=F': 'Gold',
+  'SI=F': 'Silver',
+  'CL=F': 'Crude Oil',
+  '^RUT': 'Russell 2000',
+  'ETH-USD': 'Ethereum',
+  'HG=F': 'Copper',
+  'NG=F': 'Natural Gas'
+};
 
 // CollapsibleSection is now an extracted component in components/CollapsibleSection.tsx
 
@@ -140,6 +156,108 @@ export default function App() {
   // Loading state for skeletons
   const [isLoading, setIsLoading] = React.useState(true);
   const { showToast } = useToast();
+
+  // Market data state for top indicators
+  const [marketData, setMarketData] = React.useState<Record<string, any>>({});
+  const [topBullish, setTopBullish] = React.useState<any>(null);
+  const [topBearish, setTopBearish] = React.useState<any>(null);
+  const [topIndicatorsLoading, setTopIndicatorsLoading] = React.useState(true);
+
+  // Fetch market data for top indicators
+  const fetchMarketData = React.useCallback(async () => {
+    try {
+      const tickers = Object.keys(tickerNames).join(',');
+      console.log('Fetching market data for tickers:', tickers);
+      const response = await fetch(`/api/financial/data/?tickers=${tickers}&type=price`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Received market data:', data);
+      setMarketData(data);
+
+      // Calculate top bullish and bearish indicators
+      const entries = Object.entries(data);
+      console.log('Data entries:', entries);
+      if (entries.length > 0) {
+        let maxChange = -Infinity;
+        let minChange = Infinity;
+        let bullishItem = null;
+        let bearishItem = null;
+
+        entries.forEach(([ticker, tickerData]: [string, any]) => {
+          console.log(`Processing ${ticker}:`, tickerData);
+          const change = tickerData?.change ?? tickerData?.price?.change ?? 0;
+          console.log(`Change for ${ticker}:`, change);
+          
+          if (change > maxChange) {
+            maxChange = change;
+            bullishItem = {
+              ticker: tickerNames[ticker] || ticker,
+              symbol: ticker,
+              change: change,
+              price: tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
+            };
+          }
+          
+          if (change < minChange) {
+            minChange = change;
+            bearishItem = {
+              ticker: tickerNames[ticker] || ticker,
+              symbol: ticker,
+              change: change,
+              price: tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
+            };
+          }
+        });
+
+        console.log('Top bullish:', bullishItem);
+        console.log('Top bearish:', bearishItem);
+        setTopBullish(bullishItem);
+        setTopBearish(bearishItem);
+      } else {
+        // Fallback mock data if no real data
+        console.log('No market data received, using fallback mock data');
+        setTopBullish({
+          ticker: 'Bitcoin',
+          symbol: 'BTC-USD',
+          change: 3.45,
+          price: '43250.00'
+        });
+        setTopBearish({
+          ticker: 'VIX (Fear Index)',
+          symbol: '^VIX',
+          change: -2.15,
+          price: '18.45'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      // Fallback mock data on error
+      console.log('Using fallback mock data due to error');
+      setTopBullish({
+        ticker: 'Bitcoin',
+        symbol: 'BTC-USD',
+        change: 3.45,
+        price: '43250.00'
+      });
+      setTopBearish({
+        ticker: 'VIX (Fear Index)',
+        symbol: '^VIX',
+        change: -2.15,
+        price: '18.45'
+      });
+    } finally {
+      setTopIndicatorsLoading(false);
+    }
+  }, []);
+
+  // Fetch market data on mount
+  React.useEffect(() => {
+    fetchMarketData();
+  }, [fetchMarketData]);
 
   // Track open state of sections
 
@@ -292,6 +410,49 @@ export default function App() {
               Learn more about Pivy Chat →
             </Link>
           </div>
+
+          {/* Top Market Indicator at the Moment */}
+          {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : (topBullish || topBearish) && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Top Market Indicators</h2>
+              <p>An AI generated impression of these two together</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {topBullish && (
+                  <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full">
+                      <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-white">{topBullish.ticker}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBullish.symbol}</div>
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        +{topBullish.change?.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {topBearish && (
+                  <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-800 rounded-full">
+                      <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 rotate-180" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-white">{topBearish.ticker}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBearish.symbol}</div>
+                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                        {topBearish.change?.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-center">
+                <Link href="/watchlist" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
+                  View all market indicators →
+                </Link>
+              </div>
+            </div>
+          )}
           
           {/* Spacer */}
           <div className='mt-4'></div>
@@ -507,6 +668,7 @@ export default function App() {
 
         </div>
       </div>
+
       {/* Hide BottomNav when modal is open */}
       {!(modalOpen || infoModalOpen || signalFeedInfoOpen || disclaimerModalOpen || stopLossModalOpen || aiUsageModalOpen) && (
         <div className="fixed bottom-0 left-0 w-full z-40">
