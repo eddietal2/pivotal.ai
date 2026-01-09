@@ -292,6 +292,14 @@ export default function WatchlistPage() {
       </div>
     </div>
   );
+
+  // Loading skeleton component for Asset Class headers
+  const AssetClassHeaderSkeleton = () => (
+    <div className="flex items-center gap-2 mb-3 animate-pulse">
+      <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+    </div>
+  );
   React.useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -512,16 +520,11 @@ export default function WatchlistPage() {
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-6">
                 {loading || timeframeSwitching ? (
                   // Show loading skeletons for all expected tickers
-                  Object.keys(assetClasses).map((classKey) => {
+                  assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
                     return (
                       <div key={`skeleton-group-${classKey}`} className="space-y-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-lg">{classData.icon}</span>
-                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                            {classData.name}
-                          </h3>
-                        </div>
+                        <AssetClassHeaderSkeleton />
                         {classData.tickers.map((ticker) => (
                           <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
                             <PulseSkeleton />
