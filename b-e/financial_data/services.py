@@ -195,6 +195,19 @@ class FinancialDataService:
                     'year': {'period': '1y', 'interval': '1d'}       # Daily for year
                 }
                 
+                # First get yesterday's close for day timeframe calculation
+                yesterday_close = None
+                try:
+                    with yf_lock:
+                        daily_df = yf.download(ticker, period='5d', interval='1d', progress=False)
+                    if not daily_df.empty:
+                        daily_df.columns = daily_df.columns.droplevel(1)
+                        # Get the second to last close (yesterday's close)
+                        if len(daily_df) >= 2:
+                            yesterday_close = float(daily_df['Close'].iloc[-2])
+                except:
+                    pass  # If we can't get yesterday's close, we'll use the default calculation
+                
                 for tf_name, tf_params in timeframes.items():
                     try:
                         with yf_lock:
@@ -211,7 +224,6 @@ class FinancialDataService:
                                     'is_after_hours': False
                                 }
                             }
-                            continue
                             continue
                         
                         # Flatten MultiIndex columns for single ticker
@@ -254,13 +266,21 @@ class FinancialDataService:
                         market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
                         is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
                         
+                        # Special handling for day timeframe - calculate change from yesterday's close
+                        if tf_name == 'day' and yesterday_close is not None:
+                            change = round(((latest_close - yesterday_close) / yesterday_close) * 100, 2)
+                            value_change = round(latest_close - yesterday_close, 2)
+                        else:
+                            change = self._calculate_change(closes, tf_name)
+                            value_change = self._calculate_value_change(closes, tf_name)
+                        
                         timeframe_data[tf_name] = {
                             'closes': closes,
                             'latest': {
                                 'datetime': latest_datetime,
                                 'close': format_number_with_commas(latest_close),
-                                'change': self._calculate_change(closes, tf_name),
-                                'value_change': self._calculate_value_change(closes, tf_name),
+                                'change': change,
+                                'value_change': value_change,
                                 'is_after_hours': is_after_hours
                             }
                         }

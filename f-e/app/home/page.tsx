@@ -173,7 +173,7 @@ export default function App() {
     try {
       const tickers = Object.keys(tickerNames).join(',');
       console.log('Fetching market data for tickers:', tickers);
-      const response = await fetch(`/api/financial/data/?tickers=${tickers}&type=price`);
+      const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${tickers}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -194,7 +194,9 @@ export default function App() {
 
         entries.forEach(([ticker, tickerData]: [string, any]) => {
           console.log(`Processing ${ticker}:`, tickerData);
-          const change = tickerData?.change ?? tickerData?.price?.change ?? 0;
+          // Use today's change from the day timeframe
+          const dayTimeframe = tickerData?.timeframes?.day;
+          const change = dayTimeframe?.latest?.change ?? tickerData?.change ?? tickerData?.price?.change ?? 0;
           console.log(`Change for ${ticker}:`, change);
           
           if (change > maxChange) {
@@ -203,7 +205,7 @@ export default function App() {
               ticker: tickerNames[ticker] || ticker,
               symbol: ticker,
               change: change,
-              price: tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
+              price: dayTimeframe?.latest?.close ?? tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
             };
           }
           
@@ -213,7 +215,7 @@ export default function App() {
               ticker: tickerNames[ticker] || ticker,
               symbol: ticker,
               change: change,
-              price: tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
+              price: dayTimeframe?.latest?.close ?? tickerData?.price ?? tickerData?.latest?.close ?? 'N/A'
             };
           }
         });
@@ -332,18 +334,11 @@ export default function App() {
       
       for (const ticker of uniqueTickers) {
         try {
-          // Fetch price data
-          const priceResponse = await fetch(`/api/financial/data/?ticker=${ticker}&type=price`);
-          const priceData = await priceResponse.json();
+          // Fetch market data (includes both price and RV)
+          const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${ticker}`);
+          const marketData = await response.json();
           
-          // Fetch RV data
-          const rvResponse = await fetch(`/api/financial/data/?ticker=${ticker}&type=rv`);
-          const rvData = await rvResponse.json();
-          
-          data[ticker] = {
-            price: priceData,
-            rv: rvData
-          };
+          data[ticker] = marketData[ticker];
         } catch (error) {
           console.error(`Error fetching data for ${ticker}:`, error);
         }
@@ -429,7 +424,7 @@ export default function App() {
           {/* Top Market Indicator at the Moment */}
           {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : (topBullish || topBearish) && (
             <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Top Market Indicators</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Today's Top Market Indicators</h2>
               <p>An AI generated impression of these two together</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {topBullish && (
