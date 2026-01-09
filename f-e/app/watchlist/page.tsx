@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 import WatchListItem from '../../components/watchlist/WatchListItem';
-import { Info, LineChart, Plus, ChevronDown } from 'lucide-react';
+import { Info, LineChart, Plus, ChevronDown, Settings } from 'lucide-react';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -655,7 +655,7 @@ export default function WatchlistPage() {
             className="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
             onClick={() => setIsDrawerOpen(true)}
           >
-            <Plus className="w-5 h-5 text-white" />
+            <Settings className="w-5 h-5 text-white" />
           </button>
         </div>
       {/* Bottom Drawer */}
