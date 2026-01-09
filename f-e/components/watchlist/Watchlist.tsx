@@ -21,7 +21,8 @@ export default function Watchlist({ items }: Props) {
             {items.map((it) => (
               <WatchListItem
                 key={it.ticker}
-                ticker={it.ticker}
+                name={it.ticker}
+                symbol={it.ticker}
                 price={it.price ?? ''}
                 change={it.change ?? (typeof it.match === 'boolean' ? (it.match ? 1.2 : -0.6) : 0)}
                 sparkline={it.sparkline ?? [1, 2, 4, 3, 6]}

@@ -51,6 +51,20 @@ const PivyPageContent: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Disable body scroll when drawer is open
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen]);
+
   // Sample data for PivyChats
   const pivyChats = [
     {
@@ -271,19 +285,15 @@ const PivyPageContent: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-4">
 
               {/* Header of Bottom Drawer */}
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  <h3 className="text-lg font-semibold">Pivy Chat Settings</h3>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setIsDrawerOpen(false)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    ✕
-                  </button>
-                </div>
+              <div className="flex justify-between items-center border-b">
+                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <h2 className="text-lg font-semibold">Pivy Chat Settings</h2>
+                <button 
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
               </div>
 
               {/* Timeframe */}

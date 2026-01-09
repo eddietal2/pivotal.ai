@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 import WatchListItem from '../../components/watchlist/WatchListItem';
-import { Info } from 'lucide-react';
+import { Info, LineChart, Plus, ChevronDown } from 'lucide-react';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -104,6 +104,11 @@ export default function WatchlistPage() {
   const [marketPulseOpen, setMarketPulseOpen] = useState(true);
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
+  // Track drawer open state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Track collapsible section states
+  const [section1Expanded, setSection1Expanded] = useState(false);
+  const [section2Expanded, setSection2Expanded] = useState(false);
 
   // Market data state (from b-e financial_data)
   const [marketData, setMarketData] = useState<Record<string, any>>({});
@@ -293,6 +298,20 @@ export default function WatchlistPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Disable body scroll when drawer is open
+  React.useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen]);
+
   return (
     <div className="min-h-screen pb-62 bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
 
@@ -400,6 +419,7 @@ export default function WatchlistPage() {
                       </button>
                     ))}
                   </div>
+
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
@@ -462,6 +482,87 @@ export default function WatchlistPage() {
           </div>
         </div>
       </div>
+
+      {/* Floating Button */}
+      <>
+        <div className="fixed bottom-28 right-4 z-50">
+          <button 
+            className="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+            onClick={() => setIsDrawerOpen(true)}
+          >
+            <Plus className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      {/* Bottom Drawer */}
+      <div 
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[99] transition-opacity ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsDrawerOpen(false)}
+      >
+        <div 
+          className={`fixed inset-0 bg-white/80 dark:bg-gray-800/20 backdrop-blur-lg shadow-lg z-[100] transform transition-transform ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex justify-between items-center p-4 border-b">
+              <LineChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-lg font-semibold">Manage Watchlist</h2>
+              <button 
+                onClick={() => setIsDrawerOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Section 1 */}
+              <button
+                className='text-2xl mt-4 flex items-center justify-between w-full text-left'
+                onClick={() => {
+                  setSection1Expanded(!section1Expanded);
+                  setSection2Expanded(false); // Close other sections
+                }}
+              >
+                <h3>Section 1</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${section1Expanded ? 'rotate-180' : ''}`} />
+              </button>
+              {section1Expanded && (
+                <div className="mt-2">
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Section 1 Content</h2>
+                </div>
+              )}
+
+              {/* Section 2 */}
+              <button
+                className='text-2xl mt-4 flex items-center justify-between w-full text-left'
+                onClick={() => {
+                  setSection2Expanded(!section2Expanded);
+                  setSection1Expanded(false); // Close other sections
+                }}
+              >
+                <h3>Section 2</h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${section2Expanded ? 'rotate-180' : ''}`} />
+              </button>
+              {section2Expanded && (
+                <div className="mt-2">
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Section 2 Content</h2>
+                </div>
+              )}
+            </div>
+
+            {/* Close button of Bottom Drawer */}
+            <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+              <button 
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </>
     </div>
   );
 }
