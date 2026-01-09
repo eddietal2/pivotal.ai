@@ -55,13 +55,13 @@ class FinancialDataService:
     
     def fetch_data(self, ticker):
         """
-        Fetch latest data with a 24-hour sparkline combining today and yesterday's closes.
+        Fetch data for all timeframes (Day, Week, Month, Year) in a single call.
         
         Args:
             ticker (str): Ticker symbol (e.g., 'AAPL', '^GSPC') or FRED series (e.g., 'DGS10').
         
         Returns:
-            dict: {'closes': [list of close prices], 'datetimes': [list of formatted datetimes], 'latest': {'datetime': str, 'close': float}}
+            dict: Data for all timeframes with sparklines and latest values
         """
         try:
             # Handle FRED series for Treasury yields
@@ -90,90 +90,178 @@ class FinancialDataService:
                 
                 # Sort by date
                 data.sort(key=lambda x: x['date'])
-                # Get last 30 days
-                last_30 = data[-30:]
-                closes = [d['value'] for d in last_30]
                 
-                # Sparkline: last 24 daily closes
-                sparkline = closes[-24:] if len(closes) >= 24 else closes
-                latest_close = closes[-1]
-                latest_datetime = last_30[-1]['date'].strftime('%m/%d/%y - %I:%M %p')
+                # Get data for different timeframes
+                timeframe_data = {}
                 
-                # Change: vs previous day
-                change = 0.0
-                if len(closes) >= 2:
-                    prev_close = closes[-2]
-                    change = ((latest_close - prev_close) / prev_close) * 100 if prev_close != 0 else 0.0
-                
-                is_after_hours = False  # Yields don't have after hours
-                
-                return {
-                    'closes': sparkline,
-                    'datetimes': [latest_datetime],
+                # Year: last 365 days (daily)
+                year_data = data[-365:] if len(data) >= 365 else data
+                year_closes = [d['value'] for d in year_data]
+                timeframe_data['year'] = {
+                    'closes': year_closes,
                     'latest': {
-                        'datetime': latest_datetime,
-                        'close': latest_close,
-                        'change': round(change, 2),
-                        'is_after_hours': is_after_hours
+                        'datetime': year_data[-1]['date'].strftime('%m/%d/%y'),
+                        'close': year_closes[-1],
+                        'change': self._calculate_change(year_closes, 'year'),
+                        'is_after_hours': False
                     }
                 }
+                
+                # Month: last 30 days (daily)
+                month_data = data[-30:] if len(data) >= 30 else data
+                month_closes = [d['value'] for d in month_data]
+                timeframe_data['month'] = {
+                    'closes': month_closes,
+                    'latest': {
+                        'datetime': month_data[-1]['date'].strftime('%m/%d/%y'),
+                        'close': month_closes[-1],
+                        'change': self._calculate_change(month_closes, 'month'),
+                        'is_after_hours': False
+                    }
+                }
+                
+                # Week: last 7 days (daily)
+                week_data = data[-7:] if len(data) >= 7 else data
+                week_closes = [d['value'] for d in week_data]
+                timeframe_data['week'] = {
+                    'closes': week_closes,
+                    'latest': {
+                        'datetime': week_data[-1]['date'].strftime('%m/%d/%y'),
+                        'close': week_closes[-1],
+                        'change': self._calculate_change(week_closes, 'week'),
+                        'is_after_hours': False
+                    }
+                }
+                
+                # Day: last value (no sparkline for single point)
+                timeframe_data['day'] = {
+                    'closes': [data[-1]['value']],
+                    'latest': {
+                        'datetime': data[-1]['date'].strftime('%m/%d/%y'),
+                        'close': data[-1]['value'],
+                        'change': 0.0,  # No change for single point
+                        'is_after_hours': False
+                    }
+                }
+                
+                return timeframe_data
             
             # Use yfinance for all tickers except FRED series
             if not ticker.startswith('DGS'):
                 import yfinance as yf
                 
-                # Fetch 2 days of 1-minute data (includes pre/post-market)
-                with yf_lock:
-                    df = yf.download(ticker, period='2d', interval='1m', prepost=True, progress=False)
-                if df.empty:
-                    raise ValueError(f"No data found for ticker {ticker}")
+                timeframe_data = {}
                 
-                # Flatten MultiIndex columns for single ticker
-                df.columns = df.columns.droplevel(1)
-                
-                df.reset_index(inplace=True)
-                df['Datetime'] = pd.to_datetime(df['Datetime'])
-                # Convert to US/Eastern timezone
-                df['Datetime'] = df['Datetime'].dt.tz_convert('US/Eastern')
-                df.set_index('Datetime', inplace=True)
-                df.sort_index(inplace=True)
-                
-                # Get all closes in chronological order (oldest to newest)
-                all_closes = df['Close'].tolist()
-                
-                # Sparkline: last 24 closes (or all if less)
-                sparkline_24h = all_closes[-24:] if len(all_closes) >= 24 else all_closes
-                
-                # Latest data
-                latest = df.iloc[-1]
-                latest_datetime = df.index[-1].strftime('%m/%d/%y - %I:%M %p')
-                latest_close = float(latest['Close'])
-                
-                # Determine if after hours
-                eastern = pytz.timezone('US/Eastern')
-                now = pd.Timestamp.now(tz=eastern)
-                market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
-                market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
-                is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
-                
-                # Calculate change
-                change = 0.0
-                if len(all_closes) >= 24:
-                    close_24h_ago = all_closes[-25] if len(all_closes) > 25 else all_closes[0]
-                    change = ((latest_close - close_24h_ago) / close_24h_ago) * 100 if close_24h_ago != 0 else 0.0
-                
-                return {
-                    'closes': sparkline_24h,
-                    'datetimes': [latest_datetime],
-                    'latest': {
-                        'datetime': latest_datetime,
-                        'close': latest_close,
-                        'change': round(change, 2),
-                        'is_after_hours': is_after_hours
-                    }
+                # Fetch data for different timeframes
+                timeframes = {
+                    'day': {'period': '2d', 'interval': '5m'},      # 5-minute intervals for day
+                    'week': {'period': '5d', 'interval': '1h'},     # 1-hour intervals for week
+                    'month': {'period': '1mo', 'interval': '1d'},    # Daily for month
+                    'year': {'period': '1y', 'interval': '1d'}       # Daily for year
                 }
+                
+                for tf_name, tf_params in timeframes.items():
+                    try:
+                        with yf_lock:
+                            df = yf.download(ticker, period=tf_params['period'], interval=tf_params['interval'], prepost=True, progress=False)
+                        
+                        if df.empty:
+                            # Provide default empty data for this timeframe
+                            timeframe_data[tf_name] = {
+                                'closes': [],
+                                'latest': {
+                                    'datetime': '',
+                                    'close': 0.0,
+                                    'change': 0.0,
+                                    'is_after_hours': False
+                                }
+                            }
+                            continue
+                        
+                        # Flatten MultiIndex columns for single ticker
+                        df.columns = df.columns.droplevel(1)
+                        
+                        # Reset index to make Datetime a column
+                        df.reset_index(inplace=True)
+                        
+                        # Ensure Datetime column is datetime type and convert to US/Eastern timezone
+                        df['Datetime'] = pd.to_datetime(df['Datetime'])
+                        if df['Datetime'].dt.tz is None:
+                            df['Datetime'] = df['Datetime'].dt.tz_localize('UTC')
+                        df['Datetime'] = df['Datetime'].dt.tz_convert('US/Eastern')
+                        
+                        df.set_index('Datetime', inplace=True)
+                        df.sort_index(inplace=True)
+                        
+                        # Get all closes in chronological order (oldest to newest)
+                        closes = df['Close'].tolist()
+                        
+                        # Latest data
+                        latest = df.iloc[-1]
+                        latest_datetime = df.index[-1].strftime('%m/%d/%y - %I:%M %p')
+                        latest_close = float(latest['Close'])
+                        
+                        # Determine if after hours
+                        eastern = pytz.timezone('US/Eastern')
+                        now = pd.Timestamp.now(tz=eastern)
+                        market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
+                        market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
+                        is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
+                        
+                        timeframe_data[tf_name] = {
+                            'closes': closes,
+                            'latest': {
+                                'datetime': latest_datetime,
+                                'close': latest_close,
+                                'change': self._calculate_change(closes, tf_name),
+                                'is_after_hours': is_after_hours
+                            }
+                        }
+                    except Exception as e:
+                        # Provide default empty data for this timeframe on error
+                        timeframe_data[tf_name] = {
+                            'closes': [],
+                            'latest': {
+                                'datetime': '',
+                                'close': 0.0,
+                                'change': 0.0,
+                                'is_after_hours': False
+                            }
+                        }
+                
+                return timeframe_data
         except Exception as e:
-            raise ValueError(f"Error fetching 24h data for {ticker}: {e}")
+            raise ValueError(f"Error fetching data for {ticker}: {e}")
+
+    def _calculate_change(self, closes, timeframe):
+        """
+        Calculate percentage change based on timeframe.
+        
+        Args:
+            closes (list): List of closing prices
+            timeframe (str): 'day', 'week', 'month', or 'year'
+        
+        Returns:
+            float: Percentage change
+        """
+        if len(closes) < 2:
+            return 0.0
+        
+        latest_close = closes[-1]
+        
+        # For day timeframe, compare to first value in the period
+        if timeframe == 'day':
+            prev_close = closes[0]
+        # For other timeframes, compare to the previous period's equivalent
+        else:
+            # Use a reasonable comparison point (e.g., for week, compare to 24 hours ago)
+            comparison_index = max(0, len(closes) - 2)  # Compare to second-to-last
+            prev_close = closes[comparison_index]
+        
+        if prev_close == 0:
+            return 0.0
+        
+        return round(((latest_close - prev_close) / prev_close) * 100, 2)
 
     def fetch_relative_volume(self, ticker):
         """

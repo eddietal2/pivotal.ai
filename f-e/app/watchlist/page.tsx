@@ -109,6 +109,10 @@ export default function WatchlistPage() {
   // Track collapsible section states
   const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
+  // Track selected timeframe for market data
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  // Track brief loading state when switching timeframes
+  const [timeframeSwitching, setTimeframeSwitching] = useState(false);
 
   // Market data state (from b-e financial_data)
   const [marketData, setMarketData] = useState<Record<string, any>>({});
@@ -247,21 +251,24 @@ export default function WatchlistPage() {
   const filteredPulse = React.useMemo(() => {
     const backendEntries = Object.keys(marketData || {});
     if (backendEntries.length > 0) {
-      return backendEntries.map((ticker) => ({
-        ticker: tickerNames[ticker] || ticker,
-        symbol: ticker,
-        price: marketData[ticker]?.close ? Number(marketData[ticker].close).toFixed(2) : 'N/A',
-        change: marketData[ticker]?.change ?? 0,
-        sparkline: marketData[ticker]?.sparkline ?? [],
-        timeframe: '24H',
-        afterHours: marketData[ticker]?.is_after_hours ?? false,
-        rv: marketData[ticker]?.rv ?? null
-      }));
+      return backendEntries.map((ticker) => {
+        const timeframeData = marketData[ticker]?.timeframes?.[selectedTimeframe];
+        return {
+          ticker: tickerNames[ticker] || ticker,
+          symbol: ticker,
+          price: timeframeData?.latest?.close ? Number(timeframeData.latest.close).toFixed(2) : 'N/A',
+          change: timeframeData?.latest?.change ?? 0,
+          sparkline: timeframeData?.closes ?? [],
+          timeframe: selectedTimeframe.toUpperCase(),
+          afterHours: timeframeData?.latest?.is_after_hours ?? false,
+          rv: marketData[ticker]?.rv ?? null
+        };
+      });
     }
 
     // Return empty array when loading or no data - no fallback to mock data
     return [];
-  }, [marketData, pulseTimeframe]);
+  }, [marketData, selectedTimeframe]);
 
   // Loading skeleton component for Market Pulse items
   const PulseSkeleton = () => (
@@ -362,22 +369,6 @@ export default function WatchlistPage() {
                     >
                       <Info className="w-5 h-5 text-orange-300" />
                     </button>
-                    {/* Timeframe filter */}
-                    <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                      {(['D','W','M','Y'] as const).map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                          aria-pressed={pulseTimeframe === t}
-                          aria-label={`Show ${t} timeframe`}
-                          data-testid={`pulse-filter-${t}`}
-                          onClick={() => setPulseTimeframe(t)}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -403,23 +394,6 @@ export default function WatchlistPage() {
                   >
                     <Info className="w-5 h-5 text-orange-300" />
                   </button>
-                  {/* Timeframe filter */}
-                  <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
-                    {(['D','W','M','Y'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={`min-w-[30px] px-2 py-1 text-xs rounded ${pulseTimeframe === t ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                        aria-pressed={pulseTimeframe === t}
-                        aria-label={`Show ${t} timeframe`}
-                        data-testid={`pulse-filter-${t}`}
-                        onClick={() => setPulseTimeframe(t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
@@ -435,7 +409,7 @@ export default function WatchlistPage() {
                 </div>
               )}
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-4">
-                {loading ? (
+                {loading || timeframeSwitching ? (
                   // Show loading skeletons for all expected tickers
                   Object.keys(tickerNames).map((ticker) => (
                     <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
@@ -533,8 +507,20 @@ export default function WatchlistPage() {
                     {(['Day', 'Week', 'Month', 'Year'] as const).map((mode) => (
                       <button
                         key={mode}
-                        className="flex-1 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        onClick={() => setIsDrawerOpen(false)}
+                        className={`flex-1 px-3 py-1 text-sm rounded transition-colors ${
+                          selectedTimeframe === mode.toLowerCase()
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                        onClick={() => {
+                          const newTimeframe = mode.toLowerCase() as 'day' | 'week' | 'month' | 'year';
+                          if (newTimeframe !== selectedTimeframe) {
+                            setTimeframeSwitching(true);
+                            setSelectedTimeframe(newTimeframe);
+                            setTimeout(() => setTimeframeSwitching(false), 500);
+                          }
+                          setIsDrawerOpen(false);
+                        }}
                       >
                         {mode}
                       </button>

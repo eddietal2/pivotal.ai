@@ -9,10 +9,10 @@ def fetch_ticker_data(ticker):
     service = FinancialDataService()
     try:
         print(f"Fetching data for {ticker}")
-        # Get intraday data for sparkline and latest close
-        data = service.fetch_data(ticker)
+        # Get data for all timeframes
+        timeframe_data = service.fetch_data(ticker)
         
-        # Get RV
+        # Get RV (using day timeframe for RV calculation)
         try:
             rv_info = service.fetch_relative_volume(ticker)
             rv = rv_info.get('daily_rv', None)
@@ -21,14 +21,9 @@ def fetch_ticker_data(ticker):
             rv = None
             rv_grade = None
         
-        # Sparkline: now contains 24 hours of data from the service
-        sparkline = data.get('closes', [])
-        
+        # Return data for all timeframes
         return ticker, {
-            'close': round(data['latest']['close'], 2) if data.get('latest') else None,
-            'change': data['latest'].get('change', 0.0) if data.get('latest') else 0.0,
-            'sparkline': sparkline,
-            'is_after_hours': data['latest'].get('is_after_hours', False) if data.get('latest') else False,
+            'timeframes': timeframe_data,
             'rv': rv,
             'rv_grade': rv_grade
         }
