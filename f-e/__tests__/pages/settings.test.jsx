@@ -1,10 +1,17 @@
-import '@testing-library/jest-dom'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
-import React from 'react'
+// Define mock values at the very top before any imports or jest.mock calls
+global.global.mockToast = {
+  showToast: jest.fn(),
+  hideToast: jest.fn(),
+};
 
 // Mock fetch API
 import fetchMock from 'jest-fetch-mock';
 fetchMock.enableMocks();
+
+// Import React Testing Library render function
+import { render, waitFor, screen, fireEvent, cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import React from 'react';
 
 // Mock the redirect helper so `redirectTo` is a Jest mock function
 jest.mock('../../lib/redirect', () => ({
@@ -20,14 +27,13 @@ const mockThemeValue = {
   toggleTheme: jest.fn(),
 };
 
-const mockToastValue = {
-  showToast: jest.fn(),
-  hideToast: jest.fn(),
-};
-
 // Mock the ThemeContext module at module level so it works in all tests
 jest.mock('@/components/context/ThemeContext', () => {
   const React = require('react');
+  const mockThemeValue = {
+    theme: 'light',
+    toggleTheme: jest.fn(),
+  };
   return {
     useTheme: jest.fn(() => mockThemeValue),
     ThemeProvider: ({ children }) => React.createElement('div', null, children),
@@ -39,9 +45,9 @@ jest.mock('@/components/context/ThemeContext', () => {
 jest.mock('@/components/context/ToastContext', () => {
   const React = require('react');
   return {
-    useToast: jest.fn(() => mockToastValue),
+    useToast: jest.fn(() => global.global.mockToast),
     ToastProvider: ({ children }) => React.createElement('div', null, children),
-    ToastContext: React.createContext(mockToastValue),
+    ToastContext: React.createContext(global.global.mockToast),
   };
 });
 
@@ -77,7 +83,7 @@ describe('Settings: Account Settings', () => {
     
     // Restore mock return values after reset
     useTheme.mockReturnValue(mockThemeValue);
-    useToast.mockReturnValue(mockToastValue);
+    useToast.mockReturnValue(global.mockToast);
   });
 
   it('FE-401: The Settings page loads and displays the authenticated user\'s information from localStorage. The Page will load with Skeleton UI initially, then display content after loading completes. ', async () => {
@@ -422,8 +428,8 @@ describe('Settings: Account Settings', () => {
     
     // Re-mock ToastContext with a fresh mock function
     const mockShowToast = jest.fn();
-    mockToastValue.showToast = mockShowToast;
-    mockToastValue.hideToast = jest.fn();
+    global.mockToast.showToast = mockShowToast;
+    global.mockToast.hideToast = jest.fn();
     
     // Re-render component with URL params (simulating page load after redirect)
     const { container: containerAfterVerify } = renderWithProviders(<SettingsPage />);
@@ -717,7 +723,7 @@ describe('Settings: Account Settings', () => {
     // ASSERT: localStorage user data was NOT updated (username change pending verification)
     const setItemCalls = Storage.prototype.setItem.mock.calls;
     const userUpdateCall = setItemCalls.find(call => call[0] === 'user');
-    expect(userUpdateCall).toBeDefined(); // Username is updated immediately in localStorage
+    expect(userUpdateCall).toBeUndefined(); // Username is NOT updated until verification
     
     // ASSERT: Auth token remains the same (no new JWT issued)
     expect(Storage.prototype.getItem).toHaveBeenCalledWith('auth_token');
@@ -774,8 +780,8 @@ describe('Settings: Account Settings', () => {
     
     // Re-mock ToastContext with a fresh mock function
     const mockShowToast = jest.fn();
-    mockToastValue.showToast = mockShowToast;
-    mockToastValue.hideToast = jest.fn();
+    global.mockToast.showToast = mockShowToast;
+    global.mockToast.hideToast = jest.fn();
     
     // Re-render component with URL params (simulating page load after redirect)
     const { container: containerAfterVerify } = renderWithProviders(<SettingsPage />);
@@ -976,8 +982,8 @@ describe('Settings: Account Settings', () => {
 
     // Mock showToast
     const mockShowToast = jest.fn();
-    mockToastValue.showToast = mockShowToast;
-    mockToastValue.hideToast = jest.fn();
+    global.mockToast.showToast = mockShowToast;
+    global.mockToast.hideToast = jest.fn();
 
     const { default: SettingsPage } = await import('../../app/settings/page');
     const { container } = renderWithProviders(<SettingsPage />);
@@ -1173,8 +1179,8 @@ describe('Settings: Account Settings', () => {
     
     // Mock showToast to verify success message
     const mockShowToast = jest.fn();
-    mockToastValue.showToast = mockShowToast;
-    mockToastValue.hideToast = jest.fn();
+    global.mockToast.showToast = mockShowToast;
+    global.mockToast.hideToast = jest.fn();
 
     const { default: SettingsPage } = await import('../../app/settings/page');
     const { container } = renderWithProviders(<SettingsPage />);
@@ -1246,8 +1252,8 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     mockThemeValue.toggleTheme = jest.fn();
     
     // Set default mock return for useToast
-    mockToastValue.showToast = jest.fn();
-    mockToastValue.hideToast = jest.fn();
+    global.mockToast.showToast = jest.fn();
+    global.mockToast.hideToast = jest.fn();
     
     // Mock localStorage with user data
     Storage.prototype.getItem = jest.fn((key) => {

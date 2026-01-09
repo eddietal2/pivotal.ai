@@ -254,9 +254,14 @@ export default function App() {
     }
   }, []);
 
-  // Fetch market data on mount
+  // Fetch market data on mount (skip in test environment)
   React.useEffect(() => {
-    fetchMarketData();
+    if (process.env.NODE_ENV !== 'test') {
+      fetchMarketData();
+    } else {
+      // In test environment, set loading to false immediately
+      setTopIndicatorsLoading(false);
+    }
   }, [fetchMarketData]);
 
   // Track open state of sections

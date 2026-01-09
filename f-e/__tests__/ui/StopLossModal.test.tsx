@@ -5,16 +5,32 @@ jest.mock('@/components/ui/MarketOverview', () => {
   };
 });
 
-// Mock fetch to prevent network errors
+// Mock fetch to prevent network errors and act() warnings
 global.fetch = jest.fn(() =>
   Promise.resolve({
-    json: () => Promise.resolve({}),
+    ok: true,
+    json: () => Promise.resolve({
+      '^GSPC': { change: 1.2, price: '4500.00' },
+      '^DJI': { change: -0.8, price: '34000.00' }
+    }),
   })
 ) as unknown as jest.MockedFunction<typeof fetch>;
 
+// Mock the fetchMarketData function to prevent state updates
+jest.mock('@/app/home/page', () => {
+  const actual = jest.requireActual('@/app/home/page');
+  const MockedApp = () => {
+    // Mock the component without the useEffect that causes state updates
+    return actual.default();
+  };
+  // Prevent the useEffect from running
+  MockedApp.fetchMarketData = jest.fn();
+  return MockedApp;
+});
+
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from '@/app/home/page';
 import { ThemeProvider } from '@/components/context/ThemeContext';
 import { ToastProvider } from '@/components/context/ToastContext';

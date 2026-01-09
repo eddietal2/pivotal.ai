@@ -6,6 +6,17 @@ import { ThemeProvider } from '@/components/context/ThemeContext';
 import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 
+// Mock fetch to prevent network errors and act() warnings
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({
+      '^GSPC': { change: 1.2, price: '4500.00' },
+      '^DJI': { change: -0.8, price: '34000.00' }
+    }),
+  })
+) as unknown as jest.MockedFunction<typeof fetch>;
+
 // Mock MarketOverview to simulate its behavior without async delays
 const mockGenerateAiOverview = jest.fn();
 jest.mock('@/components/ui/MarketOverview', () => {
