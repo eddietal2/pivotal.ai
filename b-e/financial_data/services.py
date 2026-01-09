@@ -177,6 +177,7 @@ class FinancialDataService:
                                 }
                             }
                             continue
+                            continue
                         
                         # Flatten MultiIndex columns for single ticker
                         df.columns = df.columns.droplevel(1)
@@ -184,14 +185,24 @@ class FinancialDataService:
                         # Reset index to make Datetime a column
                         df.reset_index(inplace=True)
                         
-                        # Ensure Datetime column is datetime type and convert to US/Eastern timezone
-                        df['Datetime'] = pd.to_datetime(df['Datetime'])
-                        if df['Datetime'].dt.tz is None:
-                            df['Datetime'] = df['Datetime'].dt.tz_localize('UTC')
-                        df['Datetime'] = df['Datetime'].dt.tz_convert('US/Eastern')
+                        # Handle different index names (Datetime vs Date)
+                        datetime_col = None
+                        if 'Datetime' in df.columns:
+                            datetime_col = 'Datetime'
+                        elif 'Date' in df.columns:
+                            datetime_col = 'Date'
                         
-                        df.set_index('Datetime', inplace=True)
-                        df.sort_index(inplace=True)
+                        if datetime_col:
+                            # Ensure Datetime column is datetime type and convert to US/Eastern timezone
+                            df[datetime_col] = pd.to_datetime(df[datetime_col])
+                            if df[datetime_col].dt.tz is None:
+                                df[datetime_col] = df[datetime_col].dt.tz_localize('UTC')
+                            df[datetime_col] = df[datetime_col].dt.tz_convert('US/Eastern')
+                            
+                            df.set_index(datetime_col, inplace=True)
+                            df.sort_index(inplace=True)
+                        else:
+                            raise ValueError(f"No datetime column found in dataframe for {tf_name}")
                         
                         # Get all closes in chronological order (oldest to newest)
                         closes = df['Close'].tolist()
