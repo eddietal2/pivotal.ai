@@ -218,7 +218,7 @@ export default function WatchlistPage() {
         const item = {
           ticker: tickerNames[ticker] || ticker,
           symbol: ticker,
-          price: timeframeData?.latest?.close ? Number(timeframeData.latest.close).toFixed(2) : 'N/A',
+          price: timeframeData?.latest?.close || 'N/A',
           change: timeframeData?.latest?.change ?? 0,
           valueChange: timeframeData?.latest?.value_change ?? 0,
           sparkline: timeframeData?.closes ?? [],

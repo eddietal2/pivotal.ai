@@ -1,14 +1,40 @@
-# financial_data/services.py
 import pandas as pd
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
 import os
 import threading
 import logging
+import locale
 # from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
+
+# Set locale for number formatting
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_ALL, 'en_US')
+    except:
+        pass  # Use default locale if en_US is not available
 
 # Lock for yfinance calls to prevent concurrent access issues
 yf_lock = threading.Lock()
+
+def format_number_with_commas(value, decimals=2):
+    """
+    Format a number with commas as thousands separators.
+    
+    Args:
+        value (float): The number to format
+        decimals (int): Number of decimal places
+    
+    Returns:
+        str: Formatted string with commas
+    """
+    try:
+        return locale.format_string(f"%.{decimals}f", value, grouping=True)
+    except:
+        # Fallback formatting if locale doesn't work
+        return f"{value:,.{decimals}f}"
 
 # Market Indicator Symbols (yfinance format or FRED series):
 # ----------------------------------------------------------
@@ -106,7 +132,7 @@ class FinancialDataService:
                     'closes': year_closes,
                     'latest': {
                         'datetime': year_data[-1]['date'].strftime('%m/%d/%y'),
-                        'close': year_closes[-1],
+                        'close': format_number_with_commas(year_closes[-1]),
                         'change': self._calculate_change(year_closes, 'year'),
                         'value_change': self._calculate_value_change(year_closes, 'year'),
                         'is_after_hours': False
@@ -120,7 +146,7 @@ class FinancialDataService:
                     'closes': month_closes,
                     'latest': {
                         'datetime': month_data[-1]['date'].strftime('%m/%d/%y'),
-                        'close': month_closes[-1],
+                        'close': format_number_with_commas(month_closes[-1]),
                         'change': self._calculate_change(month_closes, 'month'),
                         'value_change': self._calculate_value_change(month_closes, 'month'),
                         'is_after_hours': False
@@ -134,7 +160,7 @@ class FinancialDataService:
                     'closes': week_closes,
                     'latest': {
                         'datetime': week_data[-1]['date'].strftime('%m/%d/%y'),
-                        'close': week_closes[-1],
+                        'close': format_number_with_commas(week_closes[-1]),
                         'change': self._calculate_change(week_closes, 'week'),
                         'value_change': self._calculate_value_change(week_closes, 'week'),
                         'is_after_hours': False
@@ -146,7 +172,7 @@ class FinancialDataService:
                     'closes': [data[-1]['value']],
                     'latest': {
                         'datetime': data[-1]['date'].strftime('%m/%d/%y'),
-                        'close': data[-1]['value'],
+                        'close': format_number_with_commas(data[-1]['value']),
                         'change': 0.0,  # No change for single point
                         'value_change': 0.0,  # No change for single point
                         'is_after_hours': False
@@ -232,7 +258,7 @@ class FinancialDataService:
                             'closes': closes,
                             'latest': {
                                 'datetime': latest_datetime,
-                                'close': latest_close,
+                                'close': format_number_with_commas(latest_close),
                                 'change': self._calculate_change(closes, tf_name),
                                 'value_change': self._calculate_value_change(closes, tf_name),
                                 'is_after_hours': is_after_hours
@@ -367,7 +393,7 @@ class FinancialDataService:
                             'closes': sparkline,
                             'latest': {
                                 'datetime': today.strftime('%m/%d/%y'),
-                                'close': round(ratio, 2),
+                                'close': format_number_with_commas(ratio),
                                 'change': 0.0,
                                 'value_change': 0.0,
                                 'is_after_hours': False
@@ -493,8 +519,8 @@ class FinancialDataService:
                         'closes': sparkline,
                         'latest': {
                             'datetime': today.strftime('%m/%d/%y'),
-                            'close': round(ratio, 2),
-                            'change': 0.0,  # No historical comparison for options data
+                            'close': format_number_with_commas(ratio),
+                            'change': self._calculate_call_put_change(ratio, tf_name),
                             'value_change': 0.0,
                             'is_after_hours': False
                         }
@@ -509,8 +535,8 @@ class FinancialDataService:
                         'closes': sparkline,
                         'latest': {
                             'datetime': today.strftime('%m/%d/%y'),
-                            'close': ratio,
-                            'change': 0.0,
+                            'close': format_number_with_commas(ratio),
+                            'change': self._calculate_call_put_change(ratio, tf_name),
                             'value_change': 0.0,
                             'is_after_hours': False
                         }
@@ -529,8 +555,8 @@ class FinancialDataService:
                     'closes': [fallback_ratio] * points,
                     'latest': {
                         'datetime': datetime.now().strftime('%m/%d/%y'),
-                        'close': fallback_ratio,
-                        'change': 0.0,
+                        'close': format_number_with_commas(fallback_ratio),
+                        'change': self._calculate_call_put_change(fallback_ratio, tf),
                         'value_change': 0.0,
                         'is_after_hours': False
                     }
@@ -638,7 +664,7 @@ def fetch_watchlist(tickers_csv: str):
             sparkline = data.get('closes', [])[-24:]
 
             result[ticker] = {
-                'close': round(data['latest']['close'], 2) if data.get('latest') else None,
+                'close': data['latest']['close'] if data.get('latest') else None,
                 'change': change,
                 'sparkline': sparkline,
                 'is_after_hours': data['latest']['is_after_hours'],
