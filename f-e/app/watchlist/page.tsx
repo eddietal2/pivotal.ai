@@ -38,18 +38,18 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   minerals: {
     name: 'Precious Metals',
     tickers: ['GC=F', 'SI=F', 'HG=F'],
-    icon: '🥇'
+    icon: '⛏️'
   },
   energy: {
     name: 'Energy',
     tickers: ['CL=F', 'NG=F'],
     icon: '⚡'
   },
-  sentiment: {
-    name: 'Market Sentiment',
-    tickers: ['CALL/PUT Ratio'],
-    icon: '📊'
-  }
+  // sentiment: {
+  //   name: 'Market Sentiment',
+  //   tickers: ['CALL/PUT Ratio'],
+  //   icon: '📊'
+  // }
 };
 
 
@@ -68,6 +68,30 @@ export default function WatchlistPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
   // Track brief loading state when switching timeframes
   const [timeframeSwitching, setTimeframeSwitching] = useState(false);
+
+  // Rearrange mode state
+  const [isRearrangeMode, setIsRearrangeMode] = useState(false);
+  const [assetClassOrder, setAssetClassOrder] = useState<string[]>(() => {
+    // Load saved order from localStorage, fallback to default
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('assetClassOrder');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Validate that all saved keys exist in assetClasses
+          const validKeys = parsed.filter((key: string) => key in assetClasses);
+          const missingKeys = Object.keys(assetClasses).filter(key => !parsed.includes(key));
+          return [...validKeys, ...missingKeys];
+        } catch (e) {
+          console.warn('Failed to parse saved asset class order:', e);
+        }
+      }
+    }
+    return Object.keys(assetClasses);
+  });
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
 
   // Market data state (from b-e financial_data)
   const [marketData, setMarketData] = useState<Record<string, any>>({});
@@ -298,6 +322,104 @@ export default function WatchlistPage() {
     };
   }, [isDrawerOpen]);
 
+  // Drag and drop handlers for rearranging asset classes
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+
+    // Create a custom drag image with better positioning
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.opacity = '0.8';
+    dragImage.style.transform = 'rotate(2deg) scale(1.02)';
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    dragImage.style.pointerEvents = 'none';
+    dragImage.style.zIndex = '1000';
+    document.body.appendChild(dragImage);
+
+    // Position the drag image at the cursor
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newOrder = [...assetClassOrder];
+    const [draggedItem] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, draggedItem);
+
+    setAssetClassOrder(newOrder);
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  // Touch event handlers for mobile drag and drop
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    setTouchStartY(e.touches[0].clientY);
+    setTouchCurrentIndex(index);
+    setDraggedIndex(index);
+
+    // Add haptic feedback if available
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY === null || touchCurrentIndex === null) return;
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = Math.abs(currentY - touchStartY);
+
+    // Only start dragging if moved more than 10px
+    if (deltaY < 10) return;
+
+    // Find the target index based on the Y position
+    const container = e.currentTarget.parentElement;
+    if (!container) return;
+
+    const items = container.querySelectorAll('[data-draggable-item]');
+    let targetIndex = touchCurrentIndex;
+
+    items.forEach((item, index) => {
+      const rect = item.getBoundingClientRect();
+      const itemCenter = rect.top + rect.height / 2;
+      if (Math.abs(currentY - itemCenter) < rect.height / 2) {
+        targetIndex = index;
+      }
+    });
+
+    if (targetIndex !== touchCurrentIndex) {
+      // Reorder the array
+      const newOrder = [...assetClassOrder];
+      const [draggedItem] = newOrder.splice(touchCurrentIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedItem);
+      setAssetClassOrder(newOrder);
+      setTouchCurrentIndex(targetIndex);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartY(null);
+    setTouchCurrentIndex(null);
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="min-h-screen pb-62 bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
 
@@ -430,9 +552,60 @@ export default function WatchlistPage() {
                       {loading ? 'Retrying...' : 'Try Again'}
                     </button>
                   </div>
+                ) : isRearrangeMode ? (
+                  // Rearrange mode: show draggable list of asset classes
+                  <div className="space-y-3 transition-all duration-300 ease-in-out">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Drag to Reorder Asset Classes</h3>
+                    {assetClassOrder.map((classKey, index) => {
+                      const classData = assetClasses[classKey];
+                      const items = groupedPulse[classKey] || [];
+                      const itemCount = items.length;
+
+                      return (
+                        <div
+                          key={classKey}
+                          data-draggable-item
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, index)}
+                          onDragEnd={handleDragEnd}
+                          onTouchStart={(e) => handleTouchStart(e, index)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 cursor-move hover:shadow-md transition-all duration-200 ease-in-out touch-none select-none transform ${
+                            draggedIndex === index ? 'opacity-50 scale-95 shadow-lg rotate-1' : ''
+                          } ${draggedIndex !== null && draggedIndex !== index ? 'hover:border-blue-300 dark:hover:border-blue-600 hover:scale-105' : ''}`}
+                        >
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-lg">{classData.icon}</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{classData.name}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">({itemCount} items)</span>
+                          </div>
+                          <div className="text-gray-400 mr-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16M4 12h16" />
+                            </svg>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        onClick={() => {
+                          // Save the current order to localStorage
+                          localStorage.setItem('assetClassOrder', JSON.stringify(assetClassOrder));
+                          setIsRearrangeMode(false);
+                        }}
+                        className="px-6 py-2 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors"
+                      >
+                        Done Reordering
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  // Show actual data when loaded, grouped by asset class
-                  Object.keys(assetClasses).map((classKey) => {
+                  // Normal mode: show grouped data by asset class
+                  assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
                     const items = groupedPulse[classKey] || [];
 
@@ -506,7 +679,7 @@ export default function WatchlistPage() {
             <div className="flex-1 overflow-y-auto p-4">
               {/* Timeframes */}
               <button
-                className={`text-2xl mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection1Expanded(!section1Expanded);
                   setSection2Expanded(false); // Close other sections
@@ -551,20 +724,31 @@ export default function WatchlistPage() {
                 </div>
               )}
 
-              {/* Section 2 */}
+              {/* Arrange */}
               <button
-                className={`text-2xl mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
                   setSection1Expanded(false); // Close other sections
                 }}
               >
-                <h3>Section 2</h3>
+                <h3>Arrange Market Pulse Asset Classes</h3>
                 <ChevronDown className={`w-5 h-5 transition-transform ${section2Expanded ? 'rotate-180' : ''}`} />
               </button>
               {section2Expanded && (
                 <div className="mt-2">
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Section 2 Content</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Arrange market indicators by asset class. On mobile devices, you can drag and drop asset class sections within the Market Pulse to reorder them.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsRearrangeMode(!isRearrangeMode);
+                      setIsDrawerOpen(false);
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white text-sm float-right rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    {isRearrangeMode ? 'Exit Re-arrange' : 'Re-arrange'}
+                  </button>
                 </div>
               )}
             </div>
