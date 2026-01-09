@@ -103,6 +103,7 @@ class FinancialDataService:
                         'datetime': year_data[-1]['date'].strftime('%m/%d/%y'),
                         'close': year_closes[-1],
                         'change': self._calculate_change(year_closes, 'year'),
+                        'value_change': self._calculate_value_change(year_closes, 'year'),
                         'is_after_hours': False
                     }
                 }
@@ -116,6 +117,7 @@ class FinancialDataService:
                         'datetime': month_data[-1]['date'].strftime('%m/%d/%y'),
                         'close': month_closes[-1],
                         'change': self._calculate_change(month_closes, 'month'),
+                        'value_change': self._calculate_value_change(month_closes, 'month'),
                         'is_after_hours': False
                     }
                 }
@@ -129,6 +131,7 @@ class FinancialDataService:
                         'datetime': week_data[-1]['date'].strftime('%m/%d/%y'),
                         'close': week_closes[-1],
                         'change': self._calculate_change(week_closes, 'week'),
+                        'value_change': self._calculate_value_change(week_closes, 'week'),
                         'is_after_hours': False
                     }
                 }
@@ -140,6 +143,7 @@ class FinancialDataService:
                         'datetime': data[-1]['date'].strftime('%m/%d/%y'),
                         'close': data[-1]['value'],
                         'change': 0.0,  # No change for single point
+                        'value_change': 0.0,  # No change for single point
                         'is_after_hours': False
                     }
                 }
@@ -225,6 +229,7 @@ class FinancialDataService:
                                 'datetime': latest_datetime,
                                 'close': latest_close,
                                 'change': self._calculate_change(closes, tf_name),
+                                'value_change': self._calculate_value_change(closes, tf_name),
                                 'is_after_hours': is_after_hours
                             }
                         }
@@ -260,19 +265,30 @@ class FinancialDataService:
         
         latest_close = closes[-1]
         
-        # For day timeframe, compare to first value in the period
-        if timeframe == 'day':
-            prev_close = closes[0]
-        # For other timeframes, compare to the previous period's equivalent
-        else:
-            # Use a reasonable comparison point (e.g., for week, compare to 24 hours ago)
-            comparison_index = max(0, len(closes) - 2)  # Compare to second-to-last
-            prev_close = closes[comparison_index]
-        
-        if prev_close == 0:
-            return 0.0
+        # For all timeframes, compare to the first value in the period
+        # This gives the change from the beginning of the timeframe to now
+        prev_close = closes[0]
         
         return round(((latest_close - prev_close) / prev_close) * 100, 2)
+
+    def _calculate_value_change(self, closes, timeframe):
+        """
+        Calculate absolute value change based on timeframe.
+        
+        Args:
+            closes (list): List of closing prices
+            timeframe (str): 'day', 'week', 'month', or 'year'
+        
+        Returns:
+            float: Absolute value change
+        """
+        if len(closes) < 2:
+            return 0.0
+        
+        latest_close = closes[-1]
+        prev_close = closes[0]
+        
+        return round(latest_close - prev_close, 2)
 
     def fetch_relative_volume(self, ticker):
         """

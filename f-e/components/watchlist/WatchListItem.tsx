@@ -9,6 +9,7 @@ type Props = {
   symbol: string;
   price: string;
   change?: number; // percent change
+  valueChange?: number; // absolute value change
   sparkline?: number[]; // numeric array for sparkline values
   timeframe?: string;
   afterHours?: boolean;
@@ -16,7 +17,7 @@ type Props = {
   onClick?: () => void;
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -53,10 +54,17 @@ export default function WatchListItem({ name, symbol, price, change = 0, sparkli
             )}
           </div>
         </div>
-        <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
-          {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}
-          {change >= 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`}
-        </span>
+        <div className="flex flex-col items-end">
+          <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
+            {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}
+            {change >= 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`}
+          </span>
+          {valueChange !== undefined && valueChange !== 0 && (
+            <span className={`text-xs ${changeClass} mt-0.5`}>
+              {valueChange >= 0 ? `+${valueChange.toFixed(2)}` : `${valueChange.toFixed(2)}`}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );

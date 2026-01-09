@@ -258,6 +258,7 @@ export default function WatchlistPage() {
           symbol: ticker,
           price: timeframeData?.latest?.close ? Number(timeframeData.latest.close).toFixed(2) : 'N/A',
           change: timeframeData?.latest?.change ?? 0,
+          valueChange: timeframeData?.latest?.value_change ?? 0,
           sparkline: timeframeData?.closes ?? [],
           timeframe: selectedTimeframe.toUpperCase(),
           afterHours: timeframeData?.latest?.is_after_hours ?? false,
@@ -443,6 +444,7 @@ export default function WatchlistPage() {
                         symbol={(pulse as any).symbol ?? (pulse as any).ticker ?? '—'}
                         price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
                         change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
+                        valueChange={(pulse as any).valueChange}
                         sparkline={(pulse as any).sparkline ?? (pulse as any).trend}
                         timeframe={(pulse as any).timeframe}
                         afterHours={(pulse as any).afterHours}
