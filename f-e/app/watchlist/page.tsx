@@ -229,7 +229,7 @@ export default function WatchlistPage() {
     fetchMarketData();
   }, [fetchMarketData]);
 
-  // Poll for real-time updates every 60 seconds
+  // Poll for real-time updates every 20 seconds
   React.useEffect(() => {
     const interval = setInterval(() => {
       fetchMarketData(true); // Don't show loading for polling
