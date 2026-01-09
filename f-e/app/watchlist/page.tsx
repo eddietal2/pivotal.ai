@@ -23,80 +23,35 @@ const tickerNames: Record<string, string> = {
   'NG=F': 'Natural Gas'
 };
 
-// Mock data for the Global Market Pulse
-const mockPulse = [
-  // Daily data (D)
-  { index: 'S&P 500', value: 5210.45, change: '+0.82%', color: 'text-green-500', trend: [5180, 5190, 5200, 5205, 5210], timeframe: '1D', afterHours: false },
-  { index: 'DOW', value: 39850.20, change: '+0.65%', color: 'text-green-500', trend: [39500, 39600, 39700, 39800, 39850], timeframe: '1D', afterHours: false },
-  { index: 'Nasdaq', value: 16250.75, change: '+1.15%', color: 'text-green-500', trend: [16000, 16100, 16150, 16200, 16250], timeframe: '1D', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 50.20, change: '3.10%', color: 'text-green-500', trend: [16.1, 15.2, 14.0, 13.8, 56.2], timeframe: '1D', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 13.20, change: '-3.10%', color: 'text-green-500', trend: [16.1, 15.2, 14.0, 13.8, 13.2], timeframe: '1D', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 14.85, change: '-8.20%', color: 'text-green-500', trend: [18.5, 17.2, 16.1, 15.4, 14.8], timeframe: '1W', afterHours: false },
-  { index: '10-Yr Yield', value: 4.15, change: '+0.05%', color: 'text-red-500', trend: [4.05, 4.06, 4.10, 4.12, 4.15], timeframe: '1D', afterHours: false },
-  { index: 'Bitcoin', value: 43250.00, change: '+2.15%', color: 'text-green-500', trend: [41200, 42000, 42500, 43000, 43250], timeframe: '24H', afterHours: true },
-  { index: 'Gold', value: 2150.50, change: '+1.25%', color: 'text-green-500', trend: [2100, 2120, 2130, 2140, 2150], timeframe: '1D', afterHours: false },
-  { index: 'Silver', value: 28.75, change: '-0.50%', color: 'text-red-500', trend: [29.0, 28.8, 28.6, 28.5, 28.7], timeframe: '1D', afterHours: false },
-  { index: 'Crude Oil', value: 85.50, change: '+1.20%', color: 'text-green-500', trend: [83.0, 84.0, 84.5, 85.0, 85.5], timeframe: '1D', afterHours: false },
-  { index: 'Russell 2000', value: 2200.45, change: '+1.50%', color: 'text-green-500', trend: [2150, 2170, 2180, 2190, 2200], timeframe: '1D', afterHours: false },
-  { index: '2-Yr Yield', value: 4.25, change: '-0.02%', color: 'text-red-500', trend: [4.27, 4.26, 4.25, 4.24, 4.25], timeframe: '1D', afterHours: false },
-  { index: 'Ethereum', value: 3500.00, change: '+2.80%', color: 'text-green-500', trend: [3400, 3450, 3475, 3490, 3500], timeframe: '24H', afterHours: true },
-  { index: 'Copper', value: 4.50, change: '+1.10%', color: 'text-green-500', trend: [4.35, 4.40, 4.45, 4.48, 4.50], timeframe: '1D', afterHours: false },
-  { index: 'Natural Gas', value: 3.20, change: '-0.50%', color: 'text-red-500', trend: [3.25, 3.22, 3.20, 3.18, 3.20], timeframe: '1D', afterHours: false },
+// Asset class groupings
+const assetClasses: Record<string, { name: string; tickers: string[]; icon?: string }> = {
+  indexes: {
+    name: 'Stock Indexes',
+    tickers: ['^GSPC', '^DJI', '^IXIC', '^RUT', '^VIX'],
+    icon: '📈'
+  },
+  crypto: {
+    name: 'Cryptocurrency',
+    tickers: ['BTC-USD', 'ETH-USD'],
+    icon: '₿'
+  },
+  minerals: {
+    name: 'Precious Metals',
+    tickers: ['GC=F', 'SI=F', 'HG=F'],
+    icon: '🥇'
+  },
+  energy: {
+    name: 'Energy',
+    tickers: ['CL=F', 'NG=F'],
+    icon: '⚡'
+  },
+  sentiment: {
+    name: 'Market Sentiment',
+    tickers: ['CALL/PUT Ratio'],
+    icon: '📊'
+  }
+};
 
-  // Weekly data (W)
-  { index: 'S&P 500', value: 5185.32, change: '+2.45%', color: 'text-green-500', trend: [5120, 5140, 5160, 5170, 5185], timeframe: '1W', afterHours: false },
-  { index: 'DOW', value: 39500.10, change: '+1.80%', color: 'text-green-500', trend: [38800, 39000, 39200, 39400, 39500], timeframe: '1W', afterHours: false },
-  { index: 'Nasdaq', value: 16000.50, change: '+3.20%', color: 'text-green-500', trend: [15500, 15600, 15700, 15800, 16000], timeframe: '1W', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 48.50, change: '2.80%', color: 'text-green-500', trend: [15.5, 16.0, 16.5, 17.0, 48.5], timeframe: '1W', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 14.10, change: '-2.50%', color: 'text-red-500', trend: [16.5, 15.8, 15.0, 14.5, 14.1], timeframe: '1W', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 14.85, change: '-8.20%', color: 'text-green-500', trend: [18.5, 17.2, 16.1, 15.4, 14.8], timeframe: '1W', afterHours: false },
-  { index: '10-Yr Yield', value: 4.12, change: '+0.18%', color: 'text-red-500', trend: [3.95, 4.02, 4.08, 4.10, 4.12], timeframe: '1W', afterHours: false },
-  { index: 'Bitcoin', value: 42800.50, change: '+5.75%', color: 'text-green-500', trend: [39500, 40500, 41500, 42000, 42800], timeframe: '1W', afterHours: false },
-  { index: 'Gold', value: 2120.25, change: '+2.10%', color: 'text-green-500', trend: [2050, 2080, 2100, 2110, 2120], timeframe: '1W', afterHours: false },
-  { index: 'Silver', value: 27.90, change: '+1.20%', color: 'text-green-500', trend: [26.5, 27.0, 27.2, 27.5, 27.9], timeframe: '1W', afterHours: false },
-  { index: 'Crude Oil', value: 82.30, change: '+2.50%', color: 'text-green-500', trend: [78.0, 79.5, 80.5, 81.5, 82.3], timeframe: '1W', afterHours: false },
-  { index: 'Russell 2000', value: 2185.32, change: '+2.80%', color: 'text-green-500', trend: [2120, 2140, 2160, 2170, 2185], timeframe: '1W', afterHours: false },
-  { index: '2-Yr Yield', value: 4.22, change: '+0.15%', color: 'text-red-500', trend: [4.05, 4.12, 4.18, 4.20, 4.22], timeframe: '1W', afterHours: false },
-  { index: 'Ethereum', value: 3450.50, change: '+6.20%', color: 'text-green-500', trend: [31500, 32500, 33500, 34000, 34500], timeframe: '1W', afterHours: false },
-  { index: 'Copper', value: 4.35, change: '+2.50%', color: 'text-green-500', trend: [4.10, 4.15, 4.20, 4.30, 4.35], timeframe: '1W', afterHours: false },
-  { index: 'Natural Gas', value: 3.15, change: '+1.00%', color: 'text-green-500', trend: [3.05, 3.08, 3.10, 3.12, 3.15], timeframe: '1W', afterHours: false },
-
-  // Monthly data (M)
-  { index: 'S&P 500', value: 5120.78, change: '+4.12%', color: 'text-green-500', trend: [4850, 4920, 4980, 5050, 5120], timeframe: '1M', afterHours: false },
-  { index: 'DOW', value: 38500.45, change: '+3.50%', color: 'text-green-500', trend: [37500, 37800, 38000, 38200, 38500], timeframe: '1M', afterHours: false },
-  { index: 'Nasdaq', value: 15500.30, change: '+5.80%', color: 'text-green-500', trend: [14500, 14800, 15000, 15200, 15500], timeframe: '1M', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 45.30, change: '4.50%', color: 'text-green-500', trend: [14.0, 15.0, 16.0, 17.0, 45.3], timeframe: '1M', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 15.20, change: '-1.80%', color: 'text-red-500', trend: [17.0, 16.5, 16.0, 15.5, 15.2], timeframe: '1M', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 16.42, change: '-12.85%', color: 'text-green-500', trend: [22.1, 20.5, 19.2, 17.8, 16.4], timeframe: '1M', afterHours: false },
-  { index: '10-Yr Yield', value: 4.08, change: '+0.32%', color: 'text-red-500', trend: [3.78, 3.85, 3.92, 4.01, 4.08], timeframe: '1M', afterHours: false },
-  { index: 'Bitcoin', value: 41500.25, change: '+8.92%', color: 'text-green-500', trend: [36500, 37500, 38500, 39500, 41500], timeframe: '1M', afterHours: false },
-  { index: 'Gold', value: 2080.75, change: '+3.50%', color: 'text-green-500', trend: [1950, 2000, 2050, 2070, 2080], timeframe: '1M', afterHours: false },
-  { index: 'Silver', value: 26.40, change: '+2.80%', color: 'text-green-500', trend: [24.0, 24.5, 25.0, 25.5, 26.4], timeframe: '1M', afterHours: false },
-  { index: 'Crude Oil', value: 78.75, change: '+5.00%', color: 'text-green-500', trend: [70.0, 72.0, 74.0, 76.0, 78.8], timeframe: '1M', afterHours: false },
-  { index: 'Russell 2000', value: 2120.78, change: '+4.50%', color: 'text-green-500', trend: [1950, 2020, 2080, 2100, 2120], timeframe: '1M', afterHours: false },
-  { index: '2-Yr Yield', value: 4.05, change: '+0.45%', color: 'text-red-500', trend: [3.62, 3.75, 3.88, 3.98, 4.05], timeframe: '1M', afterHours: false },
-  { index: 'Ethereum', value: 33500.25, change: '+12.50%', color: 'text-green-500', trend: [28500, 29500, 30500, 31500, 33500], timeframe: '1M', afterHours: false },
-  { index: 'Copper', value: 4.20, change: '+6.00%', color: 'text-green-500', trend: [3.80, 3.90, 4.00, 4.10, 4.20], timeframe: '1M', afterHours: false },
-  { index: 'Natural Gas', value: 3.00, change: '+3.50%', color: 'text-green-500', trend: [2.80, 2.85, 2.90, 2.95, 3.00], timeframe: '1M', afterHours: false },
-
-  // Yearly data (Y)
-  { index: 'S&P 500', value: 4850.92, change: '+15.68%', color: 'text-green-500', trend: [4200, 4350, 4500, 4650, 4850], timeframe: '1Y', afterHours: false },
-  { index: 'DOW', value: 36000.00, change: '+12.50%', color: 'text-green-500', trend: [32000, 33000, 34000, 35000, 36000], timeframe: '1Y', afterHours: false },
-  { index: 'Nasdaq', value: 14000.00, change: '+20.00%', color: 'text-green-500', trend: [11500, 12000, 12500, 13000, 14000], timeframe: '1Y', afterHours: false },
-  { index: 'CALL/PUT Ratio', value: 40.00, change: '10.20%', color: 'text-green-500', trend: [10.0, 12.0, 15.0, 20.0, 40.0], timeframe: '1Y', afterHours: false },
-  { index: 'AAII Retailer Investor Sentiment', value: 16.50, change: '-5.00%', color: 'text-red-500', trend: [20.0, 18.5, 17.5, 17.0, 16.5], timeframe: '1Y', afterHours: false },
-  { index: 'VIX (Fear Index)', value: 18.75, change: '-25.42%', color: 'text-green-500', trend: [28.5, 26.2, 24.1, 21.5, 18.7], timeframe: '1Y', afterHours: false },
-  { index: '10-Yr Yield', value: 3.95, change: '+0.85%', color: 'text-red-500', trend: [3.12, 3.25, 3.45, 3.75, 3.95], timeframe: '1Y', afterHours: false },
-  { index: 'Bitcoin', value: 38500.75, change: '+45.23%', color: 'text-green-500', trend: [26500, 28500, 30500, 33500, 38500], timeframe: '1Y', afterHours: false },
-  { index: 'Gold', value: 1950.00, change: '+10.00%', color: 'text-green-500', trend: [1750, 1800, 1850, 1900, 1950], timeframe: '1Y', afterHours: false },
-  { index: 'Silver', value: 24.00, change: '+15.50%', color: 'text-green-500', trend: [20.0, 21.0, 22.0, 23.0, 24.0], timeframe: '1Y', afterHours: false },
-  { index: 'Crude Oil', value: 75.00, change: '+12.00%', color: 'text-green-500', trend: [65.0, 67.0, 70.0, 72.0, 75.0], timeframe: '1Y', afterHours: false },
-  { index: 'Russell 2000', value: 1950.92, change: '+18.50%', color: 'text-green-500', trend: [1650, 1700, 1750, 1850, 1950], timeframe: '1Y', afterHours: false },
-  { index: '2-Yr Yield', value: 3.85, change: '+1.20%', color: 'text-red-500', trend: [3.45, 3.55, 3.65, 3.75, 3.85], timeframe: '1Y', afterHours: false },
-  { index: 'Ethereum', value: 31500.75, change: '+55.00%', color: 'text-green-500', trend: [20500, 22500, 24500, 28500, 31500], timeframe: '1Y', afterHours: false },
-  { index: 'Copper', value: 3.90, change: '+15.00%', color: 'text-green-500', trend: [3.40, 3.50, 3.60, 3.70, 3.90], timeframe: '1Y', afterHours: false },
-  { index: 'Natural Gas', value: 2.80, change: '+8.00%', color: 'text-green-500', trend: [2.50, 2.55, 2.60, 2.70, 2.80], timeframe: '1Y', afterHours: false },
-];
 
 export default function WatchlistPage() {
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
@@ -247,13 +202,20 @@ export default function WatchlistPage() {
     return () => clearInterval(interval);
   }, [fetchMarketData]);
 
-  // Filter pulses by chosen timeframe (prefer backend market data when available)
-  const filteredPulse = React.useMemo(() => {
+  // Filter pulses by chosen timeframe and group by asset class (prefer backend market data when available)
+  const groupedPulse = React.useMemo(() => {
     const backendEntries = Object.keys(marketData || {});
     if (backendEntries.length > 0) {
-      return backendEntries.map((ticker) => {
+      const grouped: Record<string, any[]> = {};
+
+      // Initialize groups
+      Object.keys(assetClasses).forEach(classKey => {
+        grouped[classKey] = [];
+      });
+
+      backendEntries.forEach((ticker) => {
         const timeframeData = marketData[ticker]?.timeframes?.[selectedTimeframe];
-        return {
+        const item = {
           ticker: tickerNames[ticker] || ticker,
           symbol: ticker,
           price: timeframeData?.latest?.close ? Number(timeframeData.latest.close).toFixed(2) : 'N/A',
@@ -264,11 +226,27 @@ export default function WatchlistPage() {
           afterHours: timeframeData?.latest?.is_after_hours ?? false,
           rv: marketData[ticker]?.rv ?? null
         };
+
+        // Find which asset class this ticker belongs to
+        let foundClass = 'sentiment'; // Default fallback
+        for (const [classKey, classData] of Object.entries(assetClasses)) {
+          if (classData.tickers.includes(ticker)) {
+            foundClass = classKey;
+            break;
+          }
+        }
+        grouped[foundClass].push(item);
       });
+
+      return grouped;
     }
 
-    // Return empty array when loading or no data - no fallback to mock data
-    return [];
+    // Return empty groups when loading or no data
+    const emptyGrouped: Record<string, any[]> = {};
+    Object.keys(assetClasses).forEach(classKey => {
+      emptyGrouped[classKey] = [];
+    });
+    return emptyGrouped;
   }, [marketData, selectedTimeframe]);
 
   // Loading skeleton component for Market Pulse items
@@ -409,14 +387,27 @@ export default function WatchlistPage() {
                   </div>
                 </div>
               )}
-              <div data-testid="market-pulse-container" className="relative flex flex-col gap-4">
+              <div data-testid="market-pulse-container" className="relative flex flex-col gap-6">
                 {loading || timeframeSwitching ? (
                   // Show loading skeletons for all expected tickers
-                  Object.keys(tickerNames).map((ticker) => (
-                    <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
-                      <PulseSkeleton />
-                    </div>
-                  ))
+                  Object.keys(assetClasses).map((classKey) => {
+                    const classData = assetClasses[classKey];
+                    return (
+                      <div key={`skeleton-group-${classKey}`} className="space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg">{classData.icon}</span>
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            {classData.name}
+                          </h3>
+                        </div>
+                        {classData.tickers.map((ticker) => (
+                          <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
+                            <PulseSkeleton />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })
                 ) : error ? (
                   // Show error state with retry option
                   <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -426,9 +417,13 @@ export default function WatchlistPage() {
                       </svg>
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{error}</p>
 
                     <button
-                      onClick={() => fetchMarketData()}
+                      onClick={() => {
+                        setRetryCount(0); // Reset retry count for manual retry
+                        fetchMarketData();
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                       disabled={loading}
                     >
@@ -436,22 +431,40 @@ export default function WatchlistPage() {
                     </button>
                   </div>
                 ) : (
-                  // Show actual data when loaded
-                  filteredPulse.map((pulse, index) => (
-                    <div key={index} className="flex-shrink-0 w-full">
-                      <WatchListItem
-                        name={(pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—'}
-                        symbol={(pulse as any).symbol ?? (pulse as any).ticker ?? '—'}
-                        price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
-                        change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
-                        valueChange={(pulse as any).valueChange}
-                        sparkline={(pulse as any).sparkline ?? (pulse as any).trend}
-                        timeframe={(pulse as any).timeframe}
-                        afterHours={(pulse as any).afterHours}
-                        rv={(pulse as any).rv}
-                      />
-                    </div>
-                  ))
+                  // Show actual data when loaded, grouped by asset class
+                  Object.keys(assetClasses).map((classKey) => {
+                    const classData = assetClasses[classKey];
+                    const items = groupedPulse[classKey] || [];
+
+                    // Only show sections that have items
+                    if (items.length === 0) return null;
+
+                    return (
+                      <div key={classKey} className="space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg">{classData.icon}</span>
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            {classData.name}
+                          </h3>
+                        </div>
+                        {items.map((pulse, index) => (
+                          <div key={`${classKey}-${index}`} className="flex-shrink-0 w-full">
+                            <WatchListItem
+                              name={(pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—'}
+                              symbol={(pulse as any).symbol ?? (pulse as any).ticker ?? '—'}
+                              price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
+                              change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
+                              valueChange={(pulse as any).valueChange}
+                              sparkline={(pulse as any).sparkline ?? (pulse as any).trend}
+                              timeframe={(pulse as any).timeframe}
+                              afterHours={(pulse as any).afterHours}
+                              rv={(pulse as any).rv}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </CollapsibleSection>
