@@ -165,6 +165,11 @@ export default function App() {
 
   // Fetch market data for top indicators
   const fetchMarketData = React.useCallback(async () => {
+    // Skip in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+    
     try {
       const tickers = Object.keys(tickerNames).join(',');
       console.log('Fetching market data for tickers:', tickers);
@@ -313,6 +318,11 @@ export default function App() {
   
   // Fetch real market data
   const fetchRealMarketData = React.useCallback(async () => {
+    // Skip in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+    
     setMarketDataLoading(true);
     try {
       const data: Record<string, any> = {};

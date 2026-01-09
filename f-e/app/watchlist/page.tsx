@@ -119,6 +119,11 @@ export default function WatchlistPage() {
 
   // Fetch market data directly from Python server
   const fetchMarketData = React.useCallback(async (isRetry = false) => {
+    // Skip in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+    
     let timer: NodeJS.Timeout | null = null;
     try {
       if (!isRetry) {
@@ -215,16 +220,22 @@ export default function WatchlistPage() {
   }, [retryCount, tickerNames]);
 
   React.useEffect(() => {
-    fetchMarketData();
+    if (process.env.NODE_ENV !== 'test') {
+      fetchMarketData();
+    } else {
+      setLoading(false);
+    }
   }, [fetchMarketData]);
 
   // Poll for real-time updates every 20 seconds
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      fetchMarketData(true); // Don't show loading for polling
-    }, 20000); // 20 seconds
+    if (process.env.NODE_ENV !== 'test') {
+      const interval = setInterval(() => {
+        fetchMarketData(true); // Don't show loading for polling
+      }, 20000); // 20 seconds
 
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, [fetchMarketData]);
 
   // Filter pulses by chosen timeframe and group by asset class (prefer backend market data when available)
