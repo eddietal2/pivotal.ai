@@ -232,7 +232,7 @@ export default function WatchlistPage() {
   // Poll for real-time updates every 60 seconds
   React.useEffect(() => {
     const interval = setInterval(() => {
-      fetchMarketData();
+      fetchMarketData(true); // Don't show loading for polling
     }, 60000); // 60 seconds
 
     return () => clearInterval(interval);
