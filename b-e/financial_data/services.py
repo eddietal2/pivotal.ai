@@ -156,7 +156,7 @@ class FinancialDataService:
                 timeframes = {
                     'day': {'period': '2d', 'interval': '5m'},      # 5-minute intervals for day
                     'week': {'period': '5d', 'interval': '1h'},     # 1-hour intervals for week
-                    'month': {'period': '1mo', 'interval': '1d'},    # Daily for month
+                    'month': {'period': '1mo', 'interval': '4h'},    # 4-hour intervals for month
                     'year': {'period': '1y', 'interval': '1d'}       # Daily for year
                 }
                 
