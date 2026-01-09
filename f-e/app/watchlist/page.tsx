@@ -11,13 +11,13 @@ const tickerNames: Record<string, string> = {
   '^DJI': 'DOW',
   '^IXIC': 'Nasdaq',
   '^VIX': 'VIX (Fear Index)',
-  'DGS10': '10-Yr Yield',
+  // 'DGS10': '10-Yr Yield',  // Temporarily disabled
   'BTC-USD': 'Bitcoin',
   'GC=F': 'Gold',
   'SI=F': 'Silver',
   'CL=F': 'Crude Oil',
   '^RUT': 'Russell 2000',
-  'DGS2': '2-Yr Yield',
+  // 'DGS2': '2-Yr Yield',  // Temporarily disabled
   'ETH-USD': 'Ethereum',
   'HG=F': 'Copper',
   'NG=F': 'Natural Gas'
@@ -233,7 +233,7 @@ export default function WatchlistPage() {
   React.useEffect(() => {
     const interval = setInterval(() => {
       fetchMarketData(true); // Don't show loading for polling
-    }, 60000); // 60 seconds
+    }, 20000); // 20 seconds
 
     return () => clearInterval(interval);
   }, [fetchMarketData]);
@@ -294,7 +294,7 @@ export default function WatchlistPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
+    <div className="min-h-screen pb-62 bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
 
       {/* Custom scrollbar styles */}
       <style>
