@@ -1,4 +1,4 @@
-import pandas as pd
+# import pandas as pd  # Moved inside functions to avoid circular import issues
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
 import os
@@ -97,6 +97,7 @@ class FinancialDataService:
             
             # Handle FRED series for Treasury yields
             if ticker.startswith('DGS'):
+                import pandas as pd
                 import requests
                 import csv
                 from io import StringIO
@@ -183,6 +184,7 @@ class FinancialDataService:
             
             # Use yfinance for all tickers except FRED series
             if not ticker.startswith('DGS'):
+                import pandas as pd
                 import yfinance as yf
                 
                 timeframe_data = {}
@@ -605,6 +607,7 @@ class FinancialDataService:
         try:
             # Use yfinance for all tickers except FRED series
             if not ticker.startswith('DGS'):
+                import pandas as pd
                 import yfinance as yf
                 # Fetch 6 months of daily data
                 with yf_lock:
