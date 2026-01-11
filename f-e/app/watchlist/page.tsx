@@ -1043,7 +1043,10 @@ export default function WatchlistPage() {
             >
               {/* Caption explaining limit */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Your top {MAX_FAVORITES} most important assets for quick access
+                Your top {MAX_FAVORITES} most important assets for quick access.
+                Most importanty, these are the assets that will be tracked
+                in the Swing Screening section.
+                <TrendingUp className="w-5 h-5 text-purple-500 ml-1 inline" />
               </p>
               {favorites.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
