@@ -971,6 +971,112 @@ def fetch_watchlist(tickers_csv: str):
 
     print(json.dumps(result))
 
+
+def fetch_stock_detail(symbol, timeframe='day'):
+    """
+    Fetch detailed stock data for a single ticker.
+    
+    Args:
+        symbol (str): Ticker symbol
+        timeframe (str): 'day', 'week', 'month', or 'year'
+    
+    Returns:
+        dict: Detailed stock information including price, change, statistics, and sparkline
+    """
+    import pandas as pd
+    import yfinance as yf
+    
+    try:
+        with yf_lock:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info or {}
+            
+            # Determine period and interval based on timeframe
+            timeframe_config = {
+                'day': {'period': '2d', 'interval': '5m'},
+                'week': {'period': '7d', 'interval': '1h'},
+                'month': {'period': '1mo', 'interval': '1d'},
+                'year': {'period': '1y', 'interval': '1d'},
+            }
+            
+            config = timeframe_config.get(timeframe, timeframe_config['day'])
+            
+            # Fetch historical data
+            hist = ticker.history(period=config['period'], interval=config['interval'], prepost=True)
+            
+            if hist.empty:
+                return None
+            
+            # Get closes for sparkline
+            closes = hist['Close'].dropna().tolist()
+            
+            # Calculate change
+            if len(closes) >= 2:
+                current_price = closes[-1]
+                # For day, compare to previous day's close or first value
+                if timeframe == 'day' and len(closes) > 1:
+                    # Find first close of today
+                    today = hist.index[-1].date()
+                    today_mask = hist.index.date == today
+                    if today_mask.any():
+                        first_today_idx = hist.index[today_mask][0]
+                        # Get previous close (last close before today)
+                        prev_closes = hist.loc[hist.index < first_today_idx, 'Close'].dropna()
+                        if not prev_closes.empty:
+                            prev_close = prev_closes.iloc[-1]
+                        else:
+                            prev_close = closes[0]
+                    else:
+                        prev_close = closes[0]
+                else:
+                    prev_close = closes[0]
+                
+                value_change = current_price - prev_close
+                pct_change = (value_change / prev_close * 100) if prev_close != 0 else 0
+            else:
+                current_price = closes[-1] if closes else 0
+                value_change = 0
+                pct_change = 0
+                prev_close = current_price
+            
+            # Get today's high/low from intraday data or info
+            if timeframe == 'day':
+                today = hist.index[-1].date()
+                today_data = hist[hist.index.date == today]
+                high = today_data['High'].max() if not today_data.empty else info.get('dayHigh')
+                low = today_data['Low'].min() if not today_data.empty else info.get('dayLow')
+                open_price = today_data['Open'].iloc[0] if not today_data.empty else info.get('open')
+            else:
+                high = hist['High'].max()
+                low = hist['Low'].min()
+                open_price = hist['Open'].iloc[0] if not hist.empty else None
+            
+            result = {
+                'symbol': symbol,
+                'name': info.get('shortName') or info.get('longName') or symbol,
+                'price': current_price,
+                'change': pct_change,
+                'valueChange': value_change,
+                'high': high,
+                'low': low,
+                'open': open_price,
+                'previousClose': info.get('previousClose') or prev_close,
+                'volume': info.get('volume'),
+                'avgVolume': info.get('averageVolume'),
+                'marketCap': info.get('marketCap'),
+                'pe': info.get('trailingPE'),
+                'week52High': info.get('fiftyTwoWeekHigh'),
+                'week52Low': info.get('fiftyTwoWeekLow'),
+                'sparkline': closes[-100:],  # Last 100 data points for chart
+            }
+            
+            return result
+            
+    except Exception as e:
+        print(f"Error fetching stock detail for {symbol}: {e}")
+        return None
+
+
 def main():
     if len(sys.argv) >= 3 and sys.argv[1] == 'fetch_watchlist':
         tickers_csv = sys.argv[2]

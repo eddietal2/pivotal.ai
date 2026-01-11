@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 import WatchListItem from '../../components/watchlist/WatchListItem';
-import { Info, LineChart, Plus, ChevronDown, Settings } from 'lucide-react';
+import StockPreviewModal from '../../components/stock/StockPreviewModal';
+import { Info, LineChart, ChevronDown, Settings } from 'lucide-react';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -77,6 +78,17 @@ export default function WatchlistPage() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
   const [showReorderSkeleton, setShowReorderSkeleton] = useState(false);
+
+  // Selected stock for preview modal
+  const [selectedStock, setSelectedStock] = useState<{
+    symbol: string;
+    name: string;
+    price: number;
+    change: number;
+    valueChange: number;
+    sparkline: number[];
+    timeframe: string;
+  } | null>(null);
 
   // Market data state (from b-e financial_data)
   const [marketData, setMarketData] = useState<Record<string, any>>({});
@@ -689,6 +701,15 @@ export default function WatchlistPage() {
                               timeframe={(pulse as any).timeframe}
                               afterHours={(pulse as any).afterHours}
                               rv={(pulse as any).rv}
+                              onClick={() => setSelectedStock({
+                                symbol: (pulse as any).symbol ?? (pulse as any).ticker ?? '—',
+                                name: (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—',
+                                price: typeof (pulse as any).price === 'number' ? (pulse as any).price : parseFloat(String((pulse as any).price)),
+                                change: typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change,
+                                valueChange: (pulse as any).valueChange ?? 0,
+                                sparkline: (pulse as any).sparkline ?? (pulse as any).trend ?? [],
+                                timeframe: (pulse as any).timeframe ?? '',
+                              })}
                             />
                           </div>
                         ))}
@@ -823,6 +844,19 @@ export default function WatchlistPage() {
         </div>
       </div>
       </>
+
+      {/* Stock Preview Modal */}
+      <StockPreviewModal
+        isOpen={selectedStock !== null}
+        onClose={() => setSelectedStock(null)}
+        symbol={selectedStock?.symbol || ''}
+        name={selectedStock?.name || ''}
+        price={selectedStock?.price || 0}
+        change={selectedStock?.change || 0}
+        valueChange={selectedStock?.valueChange || 0}
+        sparkline={selectedStock?.sparkline || []}
+        timeframe={selectedStock?.timeframe || ''}
+      />
     </div>
   );
 }
