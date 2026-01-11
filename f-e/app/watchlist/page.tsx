@@ -125,9 +125,10 @@ export default function WatchlistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const abortControllerRef = React.useRef<AbortController | null>(null);
-  const retryCountRef = React.useRef(0);
+  const retryCountRef = React.useRef(0); // Internal ref for callback access
   const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = React.useRef(true);
   const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -169,6 +170,7 @@ export default function WatchlistPage() {
         setLoading(true);
         setError(null);
         retryCountRef.current = 0; // Reset retry count on fresh fetch
+        setRetryCount(0);
       }
 
       const tickers = Object.keys(tickerNames).join(',');
@@ -202,6 +204,7 @@ export default function WatchlistPage() {
       setMarketData(data);
       setError(null);
       retryCountRef.current = 0;
+      setRetryCount(0);
       
       // Start timer to count seconds since last successful call
       if (betweenCallTimerRef.current) {
@@ -236,12 +239,18 @@ export default function WatchlistPage() {
       
       setError(errorMessage);
       
-      // Auto-retry up to 3 times with delay (only if still mounted)
-      if (retryCountRef.current < 3 && isMountedRef.current) {
-        const delay = 10000; // every 10s
+      // Auto-retry up to 5 times with exponential backoff (only if still mounted)
+      // This helps when the backend server just started and needs time to warm up
+      if (retryCountRef.current < 5 && isMountedRef.current) {
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+        const delay = Math.min(2000 * Math.pow(2, retryCountRef.current), 32000);
         retryCountRef.current++;
+        setRetryCount(retryCountRef.current);
+        if (DEBUG_LOGS) console.log(`⏳ Will retry in ${delay / 1000}s (attempt ${retryCountRef.current}/5)`);
         retryTimeoutRef.current = setTimeout(() => {
           if (isMountedRef.current) {
+            // Keep loading state during retries for better UX on cold starts
+            setLoading(true);
             fetchMarketData(true);
           }
         }, delay);
@@ -259,9 +268,14 @@ export default function WatchlistPage() {
     }
   }, [fetchMarketData]);
 
-  // Poll for real-time updates every 5 seconds
+  // Poll for real-time updates every 5 seconds (only after initial data is loaded)
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
+      // Don't start polling until we have initial data loaded successfully
+      // This prevents polling from interfering with retry logic on cold starts
+      const hasData = Object.keys(marketData).length > 0;
+      if (!hasData) return;
+      
       const interval = setInterval(() => {
         if (isMountedRef.current) {
           fetchMarketData(true); // Don't show loading for polling
@@ -270,7 +284,7 @@ export default function WatchlistPage() {
 
       return () => clearInterval(interval);
     }
-  }, [fetchMarketData]);
+  }, [fetchMarketData, marketData]);
 
   // Cleanup abort controller and retry timeout on unmount
   React.useEffect(() => {
@@ -722,19 +736,31 @@ export default function WatchlistPage() {
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-6">
                 {!mounted || loading || timeframeSwitching || showReorderSkeleton ? (
                   // Show loading skeletons for all expected tickers
-                  assetClassOrder.map((classKey) => {
-                    const classData = assetClasses[classKey];
-                    return (
-                      <div key={`skeleton-group-${classKey}`} className="space-y-3">
-                        <AssetClassHeaderSkeleton />
-                        {classData.tickers.map((ticker) => (
-                          <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
-                            <PulseSkeleton />
-                          </div>
-                        ))}
+                  <>
+                    {/* Show connecting message when retrying */}
+                    {retryCount > 0 && (
+                      <div className="flex items-center justify-center gap-2 py-2 text-sm text-gray-500 dark:text-gray-400">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        <span>Connecting to market data server... (attempt {retryCount}/5)</span>
                       </div>
-                    );
-                  })
+                    )}
+                    {assetClassOrder.map((classKey) => {
+                      const classData = assetClasses[classKey];
+                      return (
+                        <div key={`skeleton-group-${classKey}`} className="space-y-3">
+                          <AssetClassHeaderSkeleton />
+                          {classData.tickers.map((ticker) => (
+                            <div key={`skeleton-${ticker}`} className="flex-shrink-0 w-full">
+                              <PulseSkeleton />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </>
                 ) : error ? (
                   // Show error state with retry option
                   <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -749,6 +775,7 @@ export default function WatchlistPage() {
                     <button
                       onClick={() => {
                         retryCountRef.current = 0; // Reset retry count for manual retry
+                        setRetryCount(0);
                         fetchMarketData();
                       }}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
