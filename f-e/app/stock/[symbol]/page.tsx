@@ -300,7 +300,7 @@ export default function StockDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-24">
+    <div className="min-h-screen bg-white dark:bg-gray-900 pb-28">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4 max-w-4xl mx-auto">
@@ -452,6 +452,15 @@ export default function StockDetailPage() {
           display: none;
         }
       `}</style>
+
+      {/* Fixed floating close button */}
+      <button
+        onClick={() => router.push('/watchlist')}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-3rem)] max-w-md py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-2 border-blue-200 dark:border-blue-700 font-semibold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2 shadow-lg"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Watchlist
+      </button>
     </div>
   );
 }

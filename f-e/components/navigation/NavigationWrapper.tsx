@@ -10,8 +10,8 @@ export default function NavigationWrapper() {
   // Hide navigation on auth pages (login, signup)
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/';
   
-  // Hide BottomNav on pivy/chat pages
-  const hideBottomNav = pathname.startsWith('/pivy/chat');
+  // Hide BottomNav on pivy/chat pages, live-screen detail pages, and stock detail pages
+  const hideBottomNav = pathname.startsWith('/pivy/chat') || pathname.startsWith('/watchlist/live-screen/') || pathname.startsWith('/stock/');
   
   if (isAuthPage) {
     return null;

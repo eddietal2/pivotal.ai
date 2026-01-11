@@ -54,7 +54,7 @@ export default function LiveScreenDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6 max-w-2xl mx-auto">
+      <div className="p-4 pb-28 space-y-6 max-w-2xl mx-auto">
         
         {/* Live Status Banner */}
         <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -241,6 +241,15 @@ export default function LiveScreenDetailPage() {
         </div>
 
       </div>
+
+      {/* Fixed floating close button */}
+      <button
+        onClick={() => router.push('/watchlist')}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-3rem)] max-w-md py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 font-semibold rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all flex items-center justify-center gap-2 shadow-lg"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Watchlist
+      </button>
     </div>
   );
 }
