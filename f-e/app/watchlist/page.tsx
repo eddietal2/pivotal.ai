@@ -80,9 +80,11 @@ export default function WatchlistPage() {
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Array<{ symbol: string; name: string; type?: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
+  const searchAbortRef = React.useRef<AbortController | null>(null);
   // Track collapsible section states
   const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
@@ -430,6 +432,95 @@ export default function WatchlistPage() {
       }, 100);
     }
   }, [isSearchOpen]);
+
+  // Search function that calls the backend API
+  const performSearch = React.useCallback(async (query: string) => {
+    if (query.length < 1) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    // Abort any in-flight search request
+    if (searchAbortRef.current) {
+      searchAbortRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
+    setSearchLoading(true);
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/market-data/search/?q=${encodeURIComponent(query)}`,
+        { signal: controller.signal }
+      );
+
+      if (!res.ok) {
+        throw new Error('Search failed');
+      }
+
+      const data = await res.json();
+      
+      // Also add matching Market Pulse items at the top
+      const marketPulseResults: Array<{ symbol: string; name: string; type: string }> = [];
+      Object.entries(tickerNames).forEach(([symbol, name]) => {
+        if (symbol.toUpperCase().includes(query.toUpperCase()) || name.toUpperCase().includes(query.toUpperCase())) {
+          marketPulseResults.push({ symbol, name, type: 'Market Pulse' });
+        }
+      });
+
+      // Merge results, Market Pulse first, avoiding duplicates
+      const apiResults = data.results || [];
+      const mergedResults = [...marketPulseResults];
+      
+      apiResults.forEach((result: { symbol: string; name: string; type?: string }) => {
+        if (!mergedResults.find(r => r.symbol === result.symbol)) {
+          mergedResults.push({ symbol: result.symbol, name: result.name, type: result.type || 'Stock' });
+        }
+      });
+
+      setSearchResults(mergedResults.slice(0, 15));
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      console.error('Search error:', err);
+      
+      // Fallback to local search if API fails
+      const results: Array<{ symbol: string; name: string; type: string }> = [];
+      Object.entries(tickerNames).forEach(([symbol, name]) => {
+        if (symbol.toUpperCase().includes(query.toUpperCase()) || name.toUpperCase().includes(query.toUpperCase())) {
+          results.push({ symbol, name, type: 'Market Pulse' });
+        }
+      });
+      setSearchResults(results.slice(0, 10));
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Debounced search handler
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearchQuery(value);
+    
+    // Clear existing debounce
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (value.length < 1) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    
+    // Debounce API call by 300ms
+    searchDebounceRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300);
+  }, [performSearch]);
 
   // Drag and drop handlers for rearranging asset classes
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -1038,61 +1129,7 @@ export default function WatchlistPage() {
                 type="text"
                 placeholder="Search stocks, ETFs, crypto..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  // Debounced search
-                  if (e.target.value.length >= 1) {
-                    setSearchLoading(true);
-                    // Search through tickerNames and common stocks
-                    const query = e.target.value.toUpperCase();
-                    const results: Array<{ symbol: string; name: string; type?: string }> = [];
-                    
-                    // Search in tickerNames (Market Pulse assets)
-                    Object.entries(tickerNames).forEach(([symbol, name]) => {
-                      if (symbol.toUpperCase().includes(query) || name.toUpperCase().includes(query)) {
-                        results.push({ symbol, name, type: 'Market Pulse' });
-                      }
-                    });
-                    
-                    // Add some popular stocks for demo
-                    const popularStocks = [
-                      { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stock' },
-                      { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stock' },
-                      { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'Stock' },
-                      { symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'Stock' },
-                      { symbol: 'TSLA', name: 'Tesla Inc.', type: 'Stock' },
-                      { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stock' },
-                      { symbol: 'META', name: 'Meta Platforms Inc.', type: 'Stock' },
-                      { symbol: 'JPM', name: 'JPMorgan Chase & Co.', type: 'Stock' },
-                      { symbol: 'V', name: 'Visa Inc.', type: 'Stock' },
-                      { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stock' },
-                      { symbol: 'WMT', name: 'Walmart Inc.', type: 'Stock' },
-                      { symbol: 'PG', name: 'Procter & Gamble Co.', type: 'Stock' },
-                      { symbol: 'UNH', name: 'UnitedHealth Group', type: 'Stock' },
-                      { symbol: 'HD', name: 'Home Depot Inc.', type: 'Stock' },
-                      { symbol: 'BAC', name: 'Bank of America Corp.', type: 'Stock' },
-                      { symbol: 'SPY', name: 'SPDR S&P 500 ETF', type: 'ETF' },
-                      { symbol: 'QQQ', name: 'Invesco QQQ Trust', type: 'ETF' },
-                      { symbol: 'IWM', name: 'iShares Russell 2000 ETF', type: 'ETF' },
-                      { symbol: 'DIA', name: 'SPDR Dow Jones ETF', type: 'ETF' },
-                      { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'ETF' },
-                    ];
-                    
-                    popularStocks.forEach((stock) => {
-                      if (stock.symbol.includes(query) || stock.name.toUpperCase().includes(query)) {
-                        // Don't add duplicates
-                        if (!results.find(r => r.symbol === stock.symbol)) {
-                          results.push(stock);
-                        }
-                      }
-                    });
-                    
-                    setSearchResults(results.slice(0, 10)); // Limit to 10 results
-                    setSearchLoading(false);
-                  } else {
-                    setSearchResults([]);
-                  }
-                }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400"
                 autoFocus
               />
@@ -1173,36 +1210,7 @@ export default function WatchlistPage() {
                   {['AAPL', 'TSLA', 'NVDA', 'SPY', 'BTC-USD', 'GOOGL'].map((symbol) => (
                     <button
                       key={symbol}
-                      onClick={() => {
-                        setSearchQuery(symbol);
-                        // Trigger search
-                        const event = { target: { value: symbol } } as React.ChangeEvent<HTMLInputElement>;
-                        searchInputRef.current?.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        // Manual search trigger
-                        const query = symbol.toUpperCase();
-                        const results: Array<{ symbol: string; name: string; type?: string }> = [];
-                        Object.entries(tickerNames).forEach(([s, name]) => {
-                          if (s.toUpperCase().includes(query) || name.toUpperCase().includes(query)) {
-                            results.push({ symbol: s, name, type: 'Market Pulse' });
-                          }
-                        });
-                        const popularStocks = [
-                          { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stock' },
-                          { symbol: 'TSLA', name: 'Tesla Inc.', type: 'Stock' },
-                          { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stock' },
-                          { symbol: 'SPY', name: 'SPDR S&P 500 ETF', type: 'ETF' },
-                          { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stock' },
-                        ];
-                        popularStocks.forEach((stock) => {
-                          if (stock.symbol.includes(query) || stock.name.toUpperCase().includes(query)) {
-                            if (!results.find(r => r.symbol === stock.symbol)) {
-                              results.push(stock);
-                            }
-                          }
-                        });
-                        setSearchResults(results.slice(0, 10));
-                      }}
+                      onClick={() => handleSearchChange(symbol)}
                       className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                       {symbol}
