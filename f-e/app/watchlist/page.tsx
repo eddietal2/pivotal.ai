@@ -694,6 +694,39 @@ export default function WatchlistPage() {
             </h1>
           </div>
 
+          {/* Getting Started Alert */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
+                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  How Pivy Watchlist Works
+                </h3>
+                <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1.5">
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">1</span>
+                    <span><strong>Search or Browse</strong> — Find assets using the search bar or explore the Market Pulse section</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">2</span>
+                    <span><strong>Build Your Watchlist</strong> — Tap ⭐ to add up to 10 assets you want to track</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">3</span>
+                    <span><strong>Enable Swing Screens</strong> — Tap 
+                      <Heart className="w-3.5 h-3.5 mx-1 relative bottom-0.5 inline text-pink-500 fill-pink-500" />
+                      to favorite assets and automatically analyze them for swing trade setups</span>
+                  </li>
+                </ol>
+              </div>
+              <button className="flex-shrink-0 p-1 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded transition-colors">
+                <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </button>
+            </div>
+          </div>
+
           {/* Search Bar Button */}
           <button
             onClick={() => setIsSearchOpen(true)}
