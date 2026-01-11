@@ -71,24 +71,8 @@ export default function WatchlistPage() {
 
   // Rearrange mode state
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
-  const [assetClassOrder, setAssetClassOrder] = useState<string[]>(() => {
-    // Load saved order from localStorage, fallback to default
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('assetClassOrder');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          // Validate that all saved keys exist in assetClasses
-          const validKeys = parsed.filter((key: string) => key in assetClasses);
-          const missingKeys = Object.keys(assetClasses).filter(key => !parsed.includes(key));
-          return [...validKeys, ...missingKeys];
-        } catch (e) {
-          console.warn('Failed to parse saved asset class order:', e);
-        }
-      }
-    }
-    return Object.keys(assetClasses);
-  });
+  // Initialize with default order - will be updated from localStorage after mount
+  const [assetClassOrder, setAssetClassOrder] = useState<string[]>(Object.keys(assetClasses));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
@@ -99,6 +83,7 @@ export default function WatchlistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const callCountRef = React.useRef(0);
   const lastCallStartRef = React.useRef<number | null>(null);
@@ -328,6 +313,25 @@ export default function WatchlistPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Set mounted state and load saved asset class order from localStorage
+  React.useEffect(() => {
+    setMounted(true);
+    
+    // Load saved order from localStorage after mount
+    const saved = localStorage.getItem('assetClassOrder');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Validate that all saved keys exist in assetClasses
+        const validKeys = parsed.filter((key: string) => key in assetClasses);
+        const missingKeys = Object.keys(assetClasses).filter(key => !parsed.includes(key));
+        setAssetClassOrder([...validKeys, ...missingKeys]);
+      } catch (e) {
+        console.warn('Failed to parse saved asset class order:', e);
+      }
+    }
+  }, []);
+
   // Disable body scroll when drawer is open
   React.useEffect(() => {
     if (isDrawerOpen) {
@@ -530,7 +534,7 @@ export default function WatchlistPage() {
                 </div>
               )}
               <div data-testid="market-pulse-container" className="relative flex flex-col gap-6">
-                {loading || timeframeSwitching || showReorderSkeleton ? (
+                {!mounted || loading || timeframeSwitching || showReorderSkeleton ? (
                   // Show loading skeletons for all expected tickers
                   assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];

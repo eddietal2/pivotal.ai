@@ -58,11 +58,13 @@ def market_data(request):
     
     result = {}
     
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(fetch_ticker_data, ticker): ticker for ticker in tickers}
-        for future in as_completed(futures):
-            ticker, data = future.result()
-            result[ticker] = data
+    # Fetch data sequentially to avoid ThreadPoolExecutor shutdown issues
+    for ticker in tickers:
+        try:
+            ticker_result, data = fetch_ticker_data(ticker)
+            result[ticker_result] = data
+        except Exception as e:
+            result[ticker] = {'error': str(e)}
     
     print("market_data completed")
     response = JsonResponse(result)
