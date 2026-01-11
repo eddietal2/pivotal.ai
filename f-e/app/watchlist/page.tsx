@@ -82,12 +82,13 @@ export default function WatchlistPage() {
   const [marketData, setMarketData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   const callCountRef = React.useRef(0);
   const lastCallStartRef = React.useRef<number | null>(null);
   const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+  const retryCountRef = React.useRef(0);
 
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
@@ -109,11 +110,21 @@ export default function WatchlistPage() {
       return;
     }
     
+    // Abort any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     let timer: NodeJS.Timeout | null = null;
     try {
       if (!isRetry) {
         setLoading(true);
         setError(null);
+        retryCountRef.current = 0; // Reset retry count on fresh fetch
 
         // Clear the between-call timer
         if (betweenCallTimerRef.current) {
@@ -140,15 +151,24 @@ export default function WatchlistPage() {
       const tickers = Object.keys(tickerNames).join(',');
       console.log('Fetching market data for tickers:', tickers);
       
-      // Call Python server directly (adjust URL/port as needed)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000); // 60 second timeout
+      // Set up timeout that will abort the request
+      const timeoutId = setTimeout(() => {
+        if (!controller.signal.aborted) {
+          controller.abort();
+        }
+      }, 60000); // 60 second timeout
       
       const res = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
+      
+      // Check if this request was aborted (by a newer request)
+      if (controller.signal.aborted) {
+        return; // Silently exit, a newer request is in progress
+      }
+      
       console.log('Fetch response status:', res.status);
       
       if (!res.ok) {
@@ -160,15 +180,23 @@ export default function WatchlistPage() {
       
       setMarketData(data);
       setError(null);
-      setRetryCount(0);
+      retryCountRef.current = 0;
     } catch (err: any) {
+      // Ignore abort errors from intentional cancellation (new request started)
+      if (err.name === 'AbortError') {
+        // Only log timeout aborts, not cancellation aborts
+        if (controller === abortControllerRef.current) {
+          console.log('Request timed out after 60s');
+          setError('Request timed out. The server may be busy fetching data. Please try again.');
+        }
+        return; // Don't retry on abort
+      }
+      
       console.error('Error fetching market data:', err);
       
       let errorMessage = 'Failed to load market data';
       
-      if (err.name === 'AbortError') {
-        errorMessage = 'Request timed out. The server may be busy fetching data. Please try again.';
-      } else if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
         errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
       } else if (err.message.includes('Server responded with status')) {
         errorMessage = `Server error: ${err.message}`;
@@ -178,12 +206,12 @@ export default function WatchlistPage() {
       
       setError(errorMessage);
       
-      // Auto-retry up to 2 times with exponential backoff
-      if (retryCount < 3) {
+      // Auto-retry up to 3 times with delay
+      if (retryCountRef.current < 3) {
         const delay = 10000; // every 10s
-        console.log(`Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+        console.log(`Retrying in ${delay}ms... (attempt ${retryCountRef.current + 1}/3)`);
+        retryCountRef.current++;
         setTimeout(() => {
-          setRetryCount(prev => prev + 1);
           fetchMarketData(true);
         }, delay);
       }
@@ -202,7 +230,7 @@ export default function WatchlistPage() {
         }, 1000);
       }
     }
-  }, [retryCount, tickerNames]);
+  }, [tickerNames]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
@@ -212,12 +240,12 @@ export default function WatchlistPage() {
     }
   }, [fetchMarketData]);
 
-  // Poll for real-time updates every 20 seconds
+  // Poll for real-time updates every 60 seconds
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
       const interval = setInterval(() => {
         fetchMarketData(true); // Don't show loading for polling
-      }, 20000); // 20 seconds
+      }, 60000); // 60 seconds
 
       return () => clearInterval(interval);
     }
@@ -562,7 +590,7 @@ export default function WatchlistPage() {
 
                     <button
                       onClick={() => {
-                        setRetryCount(0); // Reset retry count for manual retry
+                        retryCountRef.current = 0; // Reset retry count for manual retry
                         fetchMarketData();
                       }}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
