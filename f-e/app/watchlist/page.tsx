@@ -676,7 +676,7 @@ export default function WatchlistPage() {
           </button>
 
           {/* Fixed positioned market pulse header for Sticky Effect */}
-          {showFixedHeader && !error && (
+          {showFixedHeader && !error && activeSection === 'marketPulse' && (
             <div className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="lg:px-64 px-4 sm:px-8 py-3">
                 <div className="flex items-center justify-between">

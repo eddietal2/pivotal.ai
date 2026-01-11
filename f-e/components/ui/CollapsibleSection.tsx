@@ -128,6 +128,31 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
     }
   }, []);
 
+  // Sync DOM state when controlled `open` prop changes externally (without animation)
+  // This handles cases where parent changes the open state directly (e.g., fixed header toggle)
+  const prevOpenRef = React.useRef<boolean>(currentOpen);
+  React.useEffect(() => {
+    // Only sync if the value actually changed and we're not animating
+    if (prevOpenRef.current !== currentOpen && !isAnimating) {
+      const el = contentRef.current;
+      const inner = innerRef.current;
+      if (el && inner) {
+        if (!currentOpen) {
+          el.style.display = 'none';
+          el.style.height = '0px';
+          inner.style.opacity = '0';
+          inner.style.transform = 'translateY(-20px)';
+        } else {
+          el.style.display = 'block';
+          el.style.height = 'auto';
+          inner.style.opacity = '1';
+          inner.style.transform = 'translateY(0)';
+        }
+      }
+    }
+    prevOpenRef.current = currentOpen;
+  }, [currentOpen, isAnimating]);
+
   // If `openKey` changes, open the section. This is used by parent controls
   // (e.g., timeframe selectors) to ensure content opens when a relevant
   // setting has changed.
