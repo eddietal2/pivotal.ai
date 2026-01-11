@@ -10,6 +10,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
 import { useFavorites } from '@/components/context/FavoritesContext';
+import { useWatchlist } from '@/components/context/WatchlistContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 
 // Ticker to name mapping for Market Pulse
@@ -72,6 +73,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 
 export default function WatchlistPage() {
   const { favorites } = useFavorites();
+  const { watchlist } = useWatchlist();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   // Track which section is open (accordion behavior - only one open at a time)
   const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
@@ -696,7 +698,11 @@ export default function WatchlistPage() {
                     {activeSection === 'marketPulse' && 'Market Pulse'}
                     {activeSection === 'myWatchlist' && (
                       <span className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                         My Watchlist
+                        {watchlist.length > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length})</span>
+                        )}
                       </span>
                     )}
                     {activeSection === 'favorites' && (
@@ -932,21 +938,62 @@ export default function WatchlistPage() {
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                   My Watchlist
+                  {watchlist.length > 0 && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length})</span>
+                  )}
                 </span>
               }
               open={activeSection === 'myWatchlist'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'myWatchlist' : null)}
             >
-              <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  Your watchlist is empty
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                  Search for stocks and add them to your watchlist
-                </p>
-              </div>
+              {watchlist.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                  <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                    Your watchlist is empty
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                    Search for stocks and add them to your watchlist
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {watchlist.map((item, index) => {
+                    const itemData = marketData[item.symbol];
+                    const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
+                    const tfData = itemData?.timeframes?.[timeframeKey];
+                    
+                    return (
+                      <div key={`watchlist-${item.symbol}-${index}`} className="flex-shrink-0 w-full">
+                        <WatchListItem
+                          name={item.name}
+                          symbol={item.symbol}
+                          price={tfData?.latest?.close ?? itemData?.price ?? '—'}
+                          change={tfData?.latest?.change ?? itemData?.change ?? 0}
+                          valueChange={tfData?.latest?.value_change ?? itemData?.valueChange ?? 0}
+                          sparkline={tfData?.closes ?? itemData?.sparkline ?? []}
+                          timeframe={selectedTimeframe}
+                          afterHours={tfData?.latest?.is_after_hours}
+                          onClick={() => setSelectedStock({
+                            symbol: item.symbol,
+                            name: item.name,
+                            price: typeof tfData?.latest?.close === 'string' 
+                              ? parseFloat(tfData.latest.close.replace(/,/g, '')) 
+                              : (itemData?.price ?? 0),
+                            change: tfData?.latest?.change ?? itemData?.change ?? 0,
+                            valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                            sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                            timeframe: selectedTimeframe,
+                            timeframes: itemData?.timeframes,
+                          })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CollapsibleSection>
           </div>
 

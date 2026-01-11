@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart, Star } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
+import { useFavorites } from '@/components/context/FavoritesContext';
+import { useWatchlist } from '@/components/context/WatchlistContext';
 
 interface StockData {
   symbol: string;
@@ -34,9 +36,10 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
-  const [isWatchlisted, setIsWatchlisted] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isInWatchlist, toggleWatchlist } = useWatchlist();
 
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
@@ -312,11 +315,18 @@ export default function StockDetailPage() {
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsWatchlisted(!isWatchlisted)}
+              onClick={() => toggleWatchlist({ symbol, name: stockData?.name || symbol })}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-              title={isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
+              title={isInWatchlist(symbol) ? 'Remove from watchlist' : 'Add to watchlist'}
             >
-              <Heart className={`w-6 h-6 transition-colors ${isWatchlisted ? 'fill-pink-500 text-pink-500' : 'text-gray-400 hover:text-pink-400'}`} />
+              <Star className={`w-6 h-6 transition-colors ${isInWatchlist(symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
+            </button>
+            <button
+              onClick={() => toggleFavorite({ symbol, name: stockData?.name || symbol })}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              title={isFavorite(symbol) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'fill-pink-500 text-pink-500' : 'text-gray-400 hover:text-pink-400'}`} />
             </button>
             <button 
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"

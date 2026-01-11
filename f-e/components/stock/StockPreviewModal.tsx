@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart, Star } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites } from '@/components/context/FavoritesContext';
+import { useWatchlist } from '@/components/context/WatchlistContext';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -162,12 +163,13 @@ export default function StockPreviewModal({
   const router = useRouter();
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isInWatchlist, toggleWatchlist } = useWatchlist();
   const [isClosing, setIsClosing] = React.useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' } | null>(null);
 
   // Handle favorite toggle with toast notification
   const handleToggleFavorite = () => {
@@ -176,6 +178,18 @@ export default function StockPreviewModal({
     setToast({
       message: wasFavorite ? `${name} removed from favorites` : `${name} added to favorites`,
       type: wasFavorite ? 'info' : 'success',
+    });
+    // Auto-dismiss toast
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  // Handle watchlist toggle with toast notification
+  const handleToggleWatchlist = () => {
+    const wasInWatchlist = isInWatchlist(symbol);
+    toggleWatchlist({ symbol, name });
+    setToast({
+      message: wasInWatchlist ? `${name} removed from watchlist` : `${name} added to watchlist`,
+      type: 'watchlist',
     });
     // Auto-dismiss toast
     setTimeout(() => setToast(null), 2500);
@@ -398,6 +412,13 @@ export default function StockPreviewModal({
           </div>
           <div className="flex items-center gap-1">
             <button
+              onClick={handleToggleWatchlist}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              aria-label={isInWatchlist(symbol) ? 'Remove from watchlist' : 'Add to watchlist'}
+            >
+              <Star className={`w-6 h-6 transition-colors ${isInWatchlist(symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
+            </button>
+            <button
               onClick={handleToggleFavorite}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               aria-label={isFavorite(symbol) ? 'Remove from favorites' : 'Add to favorites'}
@@ -574,9 +595,15 @@ export default function StockPreviewModal({
           <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm ${
             toast.type === 'success' 
               ? 'bg-pink-500/90 text-white' 
+              : toast.type === 'watchlist'
+              ? 'bg-yellow-500/90 text-white'
               : 'bg-gray-800/90 text-white dark:bg-gray-700/90'
           }`}>
-            <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
+            {toast.type === 'watchlist' ? (
+              <Star className="w-4 h-4 fill-white" />
+            ) : (
+              <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
+            )}
             <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
           </div>
         </div>
