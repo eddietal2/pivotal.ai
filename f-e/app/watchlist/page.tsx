@@ -675,8 +675,8 @@ export default function WatchlistPage() {
             <span className="text-gray-500 dark:text-gray-400">Search stocks, ETFs, crypto...</span>
           </button>
 
-          {/* Fixed positioned market pulse header for Sticky Effect */}
-          {showFixedHeader && !error && activeSection === 'marketPulse' && (
+          {/* Fixed positioned headers for Sticky Effect */}
+          {showFixedHeader && activeSection && (
             <div className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="lg:px-64 px-4 sm:px-8 py-3">
                 <div className="flex items-center justify-between">
@@ -684,27 +684,48 @@ export default function WatchlistPage() {
                     type="button"
                     className="flex items-center gap-2 text-lg font-semibold hover:bg-gray-800 px-2 py-1 rounded transition-colors"
                     onClick={() => {
-                      setActiveSection(activeSection === 'marketPulse' ? null : 'marketPulse');
+                      setActiveSection(null);
                       // Scroll to top if not already at top
                       if (window.scrollY > 0) {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }
                     }}
-                    aria-label="Collapse Market Pulse section"
+                    aria-label={`Collapse ${activeSection} section`}
                   >
-                    <span className={`transition-transform duration-200 ${activeSection === 'marketPulse' ? '' : 'rotate-180'}`}>▼</span>
-                    Market Pulse
+                    <span className="transition-transform duration-200">▼</span>
+                    {activeSection === 'marketPulse' && 'Market Pulse'}
+                    {activeSection === 'myWatchlist' && (
+                      <span className="flex items-center gap-2">
+                        My Watchlist
+                      </span>
+                    )}
+                    {activeSection === 'favorites' && (
+                      <span className="flex items-center gap-2">
+                        <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
+                        Favorites
+                        {favorites.length > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length})</span>
+                        )}
+                      </span>
+                    )}
+                    {activeSection === 'swingScreening' && (
+                      <span className="flex items-center gap-2">
+                        Swing Screening
+                      </span>
+                    )}
                   </button>
                   <div className="flex items-center gap-2">
-                    {/* Overview info button */}
-                    <button
-                      type="button"
-                      className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                      title="Learn more about Market Overview"
-                      aria-label="More info about Market Overview"
-                    >
-                      <Info className="w-5 h-5 text-orange-300" />
-                    </button>
+                    {/* Overview info button - only show for Market Pulse */}
+                    {activeSection === 'marketPulse' && !error && (
+                      <button
+                        type="button"
+                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                        title="Learn more about Market Overview"
+                        aria-label="More info about Market Overview"
+                      >
+                        <Info className="w-5 h-5 text-orange-300" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
