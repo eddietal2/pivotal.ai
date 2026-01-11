@@ -7,7 +7,7 @@ import CollapsibleSection from '../../components/ui/CollapsibleSection';
 const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
-import { Info, LineChart, ChevronDown, Settings, Star, Heart } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
 import { useFavorites } from '@/components/context/FavoritesContext';
 
 // Ticker to name mapping for Market Pulse
@@ -77,6 +77,12 @@ export default function WatchlistPage() {
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Search drawer state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ symbol: string; name: string; type?: string }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   // Track collapsible section states
   const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
@@ -403,7 +409,7 @@ export default function WatchlistPage() {
 
   // Disable body scroll when drawer is open
   React.useEffect(() => {
-    if (isDrawerOpen) {
+    if (isDrawerOpen || isSearchOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -413,7 +419,17 @@ export default function WatchlistPage() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isSearchOpen]);
+
+  // Focus search input when search drawer opens
+  React.useEffect(() => {
+    if (isSearchOpen) {
+      // Small delay to ensure the drawer animation has started
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isSearchOpen]);
 
   // Drag and drop handlers for rearranging asset classes
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -532,6 +548,15 @@ export default function WatchlistPage() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
+
+          {/* Search Bar Button */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <Search className="w-5 h-5 text-gray-400" />
+            <span className="text-gray-500 dark:text-gray-400">Search stocks, ETFs, crypto...</span>
+          </button>
 
           {/* Fixed positioned market pulse header for Sticky Effect */}
           {showFixedHeader && !error && (
@@ -985,6 +1010,210 @@ export default function WatchlistPage() {
         </div>
       </div>
       </>
+
+      {/* Search Drawer */}
+      <div
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[99] transition-opacity ${isSearchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => {
+          setIsSearchOpen(false);
+          setSearchQuery('');
+          setSearchResults([]);
+        }}
+      >
+        <div
+          className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-lg z-[100] transform transition-transform h-[65vh] lg:max-h-[85vh] lg:h-auto rounded-t-3xl flex flex-col ${isSearchOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Handle bar */}
+          <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+            <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+          </div>
+
+          {/* Search Header */}
+          <div className="px-4 pb-4 flex-shrink-0">
+            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3">
+              <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search stocks, ETFs, crypto..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  // Debounced search
+                  if (e.target.value.length >= 1) {
+                    setSearchLoading(true);
+                    // Search through tickerNames and common stocks
+                    const query = e.target.value.toUpperCase();
+                    const results: Array<{ symbol: string; name: string; type?: string }> = [];
+                    
+                    // Search in tickerNames (Market Pulse assets)
+                    Object.entries(tickerNames).forEach(([symbol, name]) => {
+                      if (symbol.toUpperCase().includes(query) || name.toUpperCase().includes(query)) {
+                        results.push({ symbol, name, type: 'Market Pulse' });
+                      }
+                    });
+                    
+                    // Add some popular stocks for demo
+                    const popularStocks = [
+                      { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stock' },
+                      { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stock' },
+                      { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'Stock' },
+                      { symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'Stock' },
+                      { symbol: 'TSLA', name: 'Tesla Inc.', type: 'Stock' },
+                      { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stock' },
+                      { symbol: 'META', name: 'Meta Platforms Inc.', type: 'Stock' },
+                      { symbol: 'JPM', name: 'JPMorgan Chase & Co.', type: 'Stock' },
+                      { symbol: 'V', name: 'Visa Inc.', type: 'Stock' },
+                      { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stock' },
+                      { symbol: 'WMT', name: 'Walmart Inc.', type: 'Stock' },
+                      { symbol: 'PG', name: 'Procter & Gamble Co.', type: 'Stock' },
+                      { symbol: 'UNH', name: 'UnitedHealth Group', type: 'Stock' },
+                      { symbol: 'HD', name: 'Home Depot Inc.', type: 'Stock' },
+                      { symbol: 'BAC', name: 'Bank of America Corp.', type: 'Stock' },
+                      { symbol: 'SPY', name: 'SPDR S&P 500 ETF', type: 'ETF' },
+                      { symbol: 'QQQ', name: 'Invesco QQQ Trust', type: 'ETF' },
+                      { symbol: 'IWM', name: 'iShares Russell 2000 ETF', type: 'ETF' },
+                      { symbol: 'DIA', name: 'SPDR Dow Jones ETF', type: 'ETF' },
+                      { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'ETF' },
+                    ];
+                    
+                    popularStocks.forEach((stock) => {
+                      if (stock.symbol.includes(query) || stock.name.toUpperCase().includes(query)) {
+                        // Don't add duplicates
+                        if (!results.find(r => r.symbol === stock.symbol)) {
+                          results.push(stock);
+                        }
+                      }
+                    });
+                    
+                    setSearchResults(results.slice(0, 10)); // Limit to 10 results
+                    setSearchLoading(false);
+                  } else {
+                    setSearchResults([]);
+                  }
+                }}
+                className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    searchInputRef.current?.focus();
+                  }}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div className="flex-1 overflow-y-auto px-4 pb-8">
+            {searchLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="space-y-2">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.symbol}
+                    onClick={() => {
+                      // Open StockPreviewModal with this stock
+                      const existingData = marketData[result.symbol];
+                      const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
+                      const tfData = existingData?.timeframes?.[timeframeKey];
+                      
+                      setSelectedStock({
+                        symbol: result.symbol,
+                        name: result.name,
+                        price: tfData?.latest?.close 
+                          ? parseFloat(String(tfData.latest.close).replace(/,/g, '')) 
+                          : (existingData?.price ?? 0),
+                        change: tfData?.latest?.change ?? existingData?.change ?? 0,
+                        valueChange: tfData?.latest?.value_change ?? existingData?.valueChange ?? 0,
+                        sparkline: tfData?.closes ?? existingData?.sparkline ?? [],
+                        timeframe: selectedTimeframe,
+                        timeframes: existingData?.timeframes,
+                      });
+                      
+                      // Close search drawer
+                      setIsSearchOpen(false);
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold text-gray-900 dark:text-white">{result.symbol}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{result.name}</span>
+                    </div>
+                    {result.type && (
+                      <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                        {result.type}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : searchQuery.length > 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No results found for "{searchQuery}"</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different search term</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Popular Searches</p>
+                <div className="flex flex-wrap gap-2">
+                  {['AAPL', 'TSLA', 'NVDA', 'SPY', 'BTC-USD', 'GOOGL'].map((symbol) => (
+                    <button
+                      key={symbol}
+                      onClick={() => {
+                        setSearchQuery(symbol);
+                        // Trigger search
+                        const event = { target: { value: symbol } } as React.ChangeEvent<HTMLInputElement>;
+                        searchInputRef.current?.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Manual search trigger
+                        const query = symbol.toUpperCase();
+                        const results: Array<{ symbol: string; name: string; type?: string }> = [];
+                        Object.entries(tickerNames).forEach(([s, name]) => {
+                          if (s.toUpperCase().includes(query) || name.toUpperCase().includes(query)) {
+                            results.push({ symbol: s, name, type: 'Market Pulse' });
+                          }
+                        });
+                        const popularStocks = [
+                          { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stock' },
+                          { symbol: 'TSLA', name: 'Tesla Inc.', type: 'Stock' },
+                          { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stock' },
+                          { symbol: 'SPY', name: 'SPDR S&P 500 ETF', type: 'ETF' },
+                          { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stock' },
+                        ];
+                        popularStocks.forEach((stock) => {
+                          if (stock.symbol.includes(query) || stock.name.toUpperCase().includes(query)) {
+                            if (!results.find(r => r.symbol === stock.symbol)) {
+                              results.push(stock);
+                            }
+                          }
+                        });
+                        setSearchResults(results.slice(0, 10));
+                      }}
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      {symbol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Stock Preview Modal */}
       <StockPreviewModal
