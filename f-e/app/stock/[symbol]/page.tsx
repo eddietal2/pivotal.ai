@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Star, Share2, Bell, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Star, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
+import { usePivyChat } from '@/components/context/PivyChatContext';
 
 interface StockData {
   symbol: string;
@@ -35,6 +36,24 @@ export default function StockDetailPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
   const [isWatchlisted, setIsWatchlisted] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
+
+  // Check if asset is already in today's chat
+  const isInChat = isAssetInTodaysChat(symbol);
+
+  // Handle adding/removing asset from today's Pivy Chat
+  const handleTogglePivyChat = () => {
+    if (isInChat) {
+      removeAssetFromTodaysChat(symbol);
+    } else if (stockData) {
+      addAssetToTodaysChat({
+        symbol,
+        name: stockData.name || symbol,
+        price: stockData.price,
+        change: stockData.change,
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchStockData = async () => {
@@ -382,6 +401,26 @@ export default function StockDetailPage() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">More Information</h2>
           <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleTogglePivyChat}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                isInChat
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                  : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+              }`}
+            >
+              {isInChat ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Added to Today&apos;s Chat
+                </>
+              ) : (
+                <>
+                  <MessageSquarePlus className="w-4 h-4" />
+                  Add to Today&apos;s Chat
+                </>
+              )}
+            </button>
             <a
               href={`https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}`}
               target="_blank"
