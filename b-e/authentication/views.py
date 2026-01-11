@@ -1256,3 +1256,68 @@ def delete_account(request):
 print(f"DEBUG: FRONTEND_URL = {settings.FRONTEND_URL}")
 
 
+@csrf_exempt
+@api_view(['PUT'])
+def update_theme(request):
+    """
+    Update the authenticated user's theme preference.
+    Requires authentication.
+    """
+    # Manually authenticate using our custom authentication class
+    auth = CustomJWTAuthentication()
+    
+    try:
+        user_auth_tuple = auth.authenticate(request)
+        
+        if user_auth_tuple is None:
+            print(f"{custom_console.COLOR_YELLOW}Authentication returned None (no token provided){custom_console.RESET_COLOR}")
+            return JsonResponse({'status': 'error', 'message': 'Authentication failed'}, status=401)
+        
+        user, token = user_auth_tuple
+        print(f"{custom_console.COLOR_GREEN}Authentication successful: {user}{custom_console.RESET_COLOR}")
+        
+    except Exception as e:
+        print(f"{custom_console.COLOR_RED}Authentication error: {e}{custom_console.RESET_COLOR}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=401)
+    
+    print(f"{custom_console.COLOR_YELLOW}update_theme view called {custom_console.RESET_COLOR}")
+    
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+            theme = data.get('theme')
+            
+            if theme not in ['light', 'dark']:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid theme value. Must be "light" or "dark".'
+                }, status=400)
+            
+            user.theme = theme
+            user.save()
+            
+            print(f"Theme updated to '{theme}' for user {user.email}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'theme': theme
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON body'
+            }, status=400)
+        except Exception as e:
+            print(f"Error updating theme: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Server error: {e}'
+            }, status=500)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method. Only PUT requests are allowed.'
+    }, status=405)
+
+

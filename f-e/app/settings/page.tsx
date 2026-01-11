@@ -315,10 +315,14 @@ export default function SettingsPage() {
     // Toggle theme in context first for immediate UI feedback
     toggleTheme();
     
-    // Save theme preference to backend
+    // Save theme preference to backend (only if logged in)
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      // Not logged in - theme will only be saved locally
+      return;
+    }
+    
     try {
-      const token = localStorage.getItem('auth_token');
-      
       const response = await fetch('http://127.0.0.1:8000/auth/settings/theme', {
         method: 'PUT',
         headers: {
@@ -330,11 +334,23 @@ export default function SettingsPage() {
         }),
       });
 
+      if (response.status === 401) {
+        // Token expired - log out the user
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        showToast('Session expired. Please log in again.', 'error', 3000);
+        setTimeout(() => {
+          redirectTo(`${BASE_URL}/login`);
+        }, 1500);
+        return;
+      }
+
       if (!response.ok) {
-        console.error('Failed to save theme preference');
+        console.warn('Could not save theme preference to server');
       }
     } catch (error) {
-      console.error('Error saving theme preference:', error);
+      // Network error - theme still works locally
+      console.warn('Error saving theme preference:', error);
     }
   };
 

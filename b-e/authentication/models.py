@@ -4,6 +4,7 @@ class User(models.Model):
     email = models.TextField(max_length=255, unique=True)
     username = models.TextField(max_length=255)
     is_deleted = models.BooleanField(default=False)
+    theme = models.CharField(max_length=10, default='light')  # 'light' or 'dark'
     
     @property
     def is_authenticated(self):

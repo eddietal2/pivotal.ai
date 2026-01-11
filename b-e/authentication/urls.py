@@ -37,6 +37,7 @@ urlpatterns = [
     path("settings/email/verify", views.verify_email_change, name="change_email_verification"),
     path("settings/username", views.change_username, name="change_username"),
     path("settings/username/verify", views.verify_username_change, name="change_username_verification"),
+    path("settings/theme", views.update_theme, name="update_theme"),
     path("settings/account/delete", views.delete_account, name="delete_account"),
 
     # Example URL patterns for reference
