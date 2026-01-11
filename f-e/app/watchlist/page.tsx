@@ -84,11 +84,12 @@ export default function WatchlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const callCountRef = React.useRef(0);
-  const lastCallStartRef = React.useRef<number | null>(null);
-  const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const retryCountRef = React.useRef(0);
+  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = React.useRef(true);
+  const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const secondsSinceCallRef = React.useRef(0);
 
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
@@ -110,6 +111,8 @@ export default function WatchlistPage() {
       return;
     }
     
+    console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ''}`);
+    
     // Abort any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -119,37 +122,14 @@ export default function WatchlistPage() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
     
-    let timer: NodeJS.Timeout | null = null;
     try {
       if (!isRetry) {
         setLoading(true);
         setError(null);
         retryCountRef.current = 0; // Reset retry count on fresh fetch
-
-        // Clear the between-call timer
-        if (betweenCallTimerRef.current) {
-          clearInterval(betweenCallTimerRef.current);
-          betweenCallTimerRef.current = null;
-        }
-
-        const now = Date.now();
-        lastCallStartRef.current = now;
-
-        callCountRef.current++;
-        if (callCountRef.current === 1) console.log('Initial Call');
-        else console.log(`${['Second', 'Third', 'Fourth', 'Fifth'][callCountRef.current - 2] || `${callCountRef.current}th`} Call`);
-
-        const start = Date.now();
-        timer = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - start) / 1000);
-          if (elapsed > 0) {
-            console.log(elapsed);
-          }
-        }, 1000);
       }
 
       const tickers = Object.keys(tickerNames).join(',');
-      console.log('Fetching market data for tickers:', tickers);
       
       // Set up timeout that will abort the request
       const timeoutId = setTimeout(() => {
@@ -169,24 +149,30 @@ export default function WatchlistPage() {
         return; // Silently exit, a newer request is in progress
       }
       
-      console.log('Fetch response status:', res.status);
-      
       if (!res.ok) {
         throw new Error(`Server responded with status: ${res.status}`);
       }
       
       const data = await res.json();
-      console.log('Fetched market data:', data);
       
       setMarketData(data);
       setError(null);
       retryCountRef.current = 0;
+      
+      // Start timer to count seconds since last successful call
+      if (betweenCallTimerRef.current) {
+        clearInterval(betweenCallTimerRef.current);
+      }
+      secondsSinceCallRef.current = 0;
+      betweenCallTimerRef.current = setInterval(() => {
+        secondsSinceCallRef.current++;
+        console.log(`⏱️ ${secondsSinceCallRef.current}s since last API call`);
+      }, 1000);
     } catch (err: any) {
       // Ignore abort errors from intentional cancellation (new request started)
       if (err.name === 'AbortError') {
         // Only log timeout aborts, not cancellation aborts
         if (controller === abortControllerRef.current) {
-          console.log('Request timed out after 60s');
           setError('Request timed out. The server may be busy fetching data. Please try again.');
         }
         return; // Don't retry on abort
@@ -206,29 +192,18 @@ export default function WatchlistPage() {
       
       setError(errorMessage);
       
-      // Auto-retry up to 3 times with delay
-      if (retryCountRef.current < 3) {
+      // Auto-retry up to 3 times with delay (only if still mounted)
+      if (retryCountRef.current < 3 && isMountedRef.current) {
         const delay = 10000; // every 10s
-        console.log(`Retrying in ${delay}ms... (attempt ${retryCountRef.current + 1}/3)`);
         retryCountRef.current++;
-        setTimeout(() => {
-          fetchMarketData(true);
+        retryTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            fetchMarketData(true);
+          }
         }, delay);
       }
     } finally {
-      if (timer) clearInterval(timer);
       setLoading(false);
-
-      // Start the between-call timer
-      if (!isRetry && lastCallStartRef.current) {
-        betweenCallTimerRef.current = setInterval(() => {
-          const elapsed = Date.now() - lastCallStartRef.current!;
-          const seconds = Math.floor(elapsed / 1000);
-          if (seconds > 0) {
-            console.log(seconds);
-          }
-        }, 1000);
-      }
     }
   }, [tickerNames]);
 
@@ -244,12 +219,40 @@ export default function WatchlistPage() {
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
       const interval = setInterval(() => {
-        fetchMarketData(true); // Don't show loading for polling
+        if (isMountedRef.current) {
+          fetchMarketData(true); // Don't show loading for polling
+        }
       }, 5000); // 5 seconds
 
       return () => clearInterval(interval);
     }
   }, [fetchMarketData]);
+
+  // Cleanup abort controller and retry timeout on unmount
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+      
+      // Abort any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Clear any pending retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      
+      // Clear the between-call timer
+      if (betweenCallTimerRef.current) {
+        clearInterval(betweenCallTimerRef.current);
+        betweenCallTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Filter pulses by chosen timeframe and group by asset class (prefer backend market data when available)
   const groupedPulse = React.useMemo(() => {
