@@ -440,15 +440,28 @@ class FinancialDataService:
                     }
                 }
                 
-                # Day: last value (no sparkline for single point)
+                # Day: For FRED data, show last 5 trading days since there's no intraday data
+                # This gives users a sense of recent movement even on the "day" view
+                day_data = data[-5:] if len(data) >= 5 else data
+                day_closes = [d['value'] for d in day_data]
+                
+                # Calculate change from previous day if we have at least 2 data points
+                if len(day_closes) >= 2:
+                    day_change = round(((day_closes[-1] - day_closes[-2]) / day_closes[-2]) * 100, 2)
+                    day_value_change = round(day_closes[-1] - day_closes[-2], 2)
+                else:
+                    day_change = 0.0
+                    day_value_change = 0.0
+                
                 timeframe_data['day'] = {
-                    'closes': [data[-1]['value']],
+                    'closes': day_closes,
                     'latest': {
-                        'datetime': data[-1]['date'].strftime('%m/%d/%y'),
-                        'close': format_number_with_commas(data[-1]['value']),
-                        'change': 0.0,  # No change for single point
-                        'value_change': 0.0,  # No change for single point
-                        'is_after_hours': False
+                        'datetime': day_data[-1]['date'].strftime('%m/%d/%y'),
+                        'close': format_number_with_commas(day_closes[-1]),
+                        'change': day_change,
+                        'value_change': day_value_change,
+                        'is_after_hours': False,
+                        'is_daily_only': True  # Flag to indicate no intraday data available
                     }
                 }
                 

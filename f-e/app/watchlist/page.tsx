@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 
 // Set to true to enable timer/fetch logging
-const DEBUG_LOGS = false;
+const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import { Info, LineChart, ChevronDown, Settings } from 'lucide-react';
@@ -15,13 +15,13 @@ const tickerNames: Record<string, string> = {
   '^DJI': 'DOW',
   '^IXIC': 'Nasdaq',
   '^VIX': 'VIX (Fear Index)',
-  // 'DGS10': '10-Yr Yield',  // Temporarily disabled
+  'DGS10': '10-Yr Yield',
   'BTC-USD': 'Bitcoin',
   'GC=F': 'Gold',
   'SI=F': 'Silver',
   'CL=F': 'Crude Oil',
   '^RUT': 'Russell 2000',
-  // 'DGS2': '2-Yr Yield',  // Temporarily disabled
+  'DGS2': '2-Yr Yield',
   'ETH-USD': 'Ethereum',
   'HG=F': 'Copper',
   'NG=F': 'Natural Gas'
@@ -31,7 +31,7 @@ const tickerNames: Record<string, string> = {
 const assetClasses: Record<string, { name: string; tickers: string[]; icon?: string }> = {
   indexes: {
     name: 'Stock Indexes',
-    tickers: ['^GSPC', '^DJI', '^IXIC', '^RUT', '^VIX'],
+    tickers: ['^GSPC', '^DJI', '^IXIC', '^RUT'],
     icon: '📈'
   },
   crypto: {
@@ -49,11 +49,16 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
     tickers: ['CL=F', 'NG=F'],
     icon: '⚡'
   },
-  // sentiment: {
-  //   name: 'Market Sentiment',
-  //   tickers: ['CALL/PUT Ratio'],
-  //   icon: '📊'
-  // }
+  bonds: {
+    name: 'Treasury Yields',
+    tickers: ['DGS10', 'DGS2'],
+    icon: '🏛️'
+  },
+  sentiment: {
+    name: 'Market Sentiment',
+    tickers: ['^VIX'],
+    icon: '📊'
+  }
 };
 
 
@@ -169,6 +174,8 @@ export default function WatchlistPage() {
       }
       
       const data = await res.json();
+      
+      if (DEBUG_LOGS) console.log('📦 Market data response:', data);
       
       setMarketData(data);
       setError(null);
@@ -295,14 +302,17 @@ export default function WatchlistPage() {
         };
 
         // Find which asset class this ticker belongs to
-        let foundClass = 'sentiment'; // Default fallback
+        let foundClass: string | null = null;
         for (const [classKey, classData] of Object.entries(assetClasses)) {
           if (classData.tickers.includes(ticker)) {
             foundClass = classKey;
             break;
           }
         }
-        grouped[foundClass].push(item);
+        // Only add if we found a valid asset class for this ticker
+        if (foundClass && grouped[foundClass]) {
+          grouped[foundClass].push(item);
+        }
       });
 
       return grouped;
