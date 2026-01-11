@@ -1149,7 +1149,7 @@ export default function WatchlistPage() {
           </div>
 
           {/* Search Results */}
-          <div className="flex-1 overflow-y-auto px-4 pb-8">
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
             {searchLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -1219,6 +1219,20 @@ export default function WatchlistPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Close Button */}
+          <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery('');
+                setSearchResults([]);
+              }}
+              className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
