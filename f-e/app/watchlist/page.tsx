@@ -28,7 +28,10 @@ const tickerNames: Record<string, string> = {
   'CALL/PUT Ratio': 'Put/Call Ratio',
   'SOL-USD': 'Solana',
   'XRP-USD': 'Ripple',
-  'CRYPTO-FEAR-GREED': 'Crypto Fear & Greed'
+  'CRYPTO-FEAR-GREED': 'Crypto Fear & Greed',
+  'LIT': 'Lithium',
+  'PL=F': 'Platinum',
+  'PA=F': 'Palladium'
 };
 
 // Asset class groupings
@@ -45,7 +48,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   },
   minerals: {
     name: 'Precious Metals',
-    tickers: ['GC=F', 'SI=F', 'HG=F'],
+    tickers: ['GC=F', 'SI=F', 'HG=F', 'LIT', 'PL=F', 'PA=F'],
     icon: '⛏️'
   },
   energy: {

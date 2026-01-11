@@ -13,6 +13,9 @@ const CURRENCY_ASSETS = new Set([
   'HG=F',       // Copper
   'CL=F',       // Crude Oil
   'NG=F',       // Natural Gas
+  'LIT',        // Lithium
+  'PL=F',       // Platinum
+  'PA=F',       // Palladium
 ]);
 
 // Assets that are percentages (yields)
