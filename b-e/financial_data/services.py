@@ -5,6 +5,9 @@ import os
 import threading
 import logging
 import locale
+import time
+from functools import lru_cache
+from datetime import datetime, timedelta
 # from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
 
 # Set locale for number formatting
@@ -18,6 +21,11 @@ except:
 
 # Lock for yfinance calls to prevent concurrent access issues
 yf_lock = threading.Lock()
+
+# Simple in-memory cache for market data
+_market_data_cache = {}
+_cache_timestamp = None
+CACHE_DURATION_SECONDS = 60  # Cache for 60 seconds
 
 def format_number_with_commas(value, decimals=2):
     """
@@ -55,6 +63,226 @@ def format_number_with_commas(value, decimals=2):
 # HG=F: Copper
 # NG=F: Natural Gas
 # ----------------------------------------------------------
+
+def fetch_all_tickers_batch(tickers):
+    """
+    Fetch data for all tickers in a single batch download.
+    This is MUCH faster than fetching one ticker at a time.
+    
+    Uses 1 year of daily data to derive all timeframes.
+    
+    Args:
+        tickers (list): List of ticker symbols
+    
+    Returns:
+        dict: {ticker: {timeframes: {...}, rv: float, rv_grade: str}}
+    """
+    global _market_data_cache, _cache_timestamp
+    
+    # Check cache
+    cache_key = ','.join(sorted(tickers))
+    if _cache_timestamp and (time.time() - _cache_timestamp) < CACHE_DURATION_SECONDS:
+        if cache_key in _market_data_cache:
+            print("Returning cached market data")
+            return _market_data_cache[cache_key]
+    
+    import pandas as pd
+    import yfinance as yf
+    
+    # Filter out non-yfinance tickers
+    yf_tickers = [t for t in tickers if not t.startswith('DGS') and t != 'CALL/PUT Ratio']
+    fred_tickers = [t for t in tickers if t.startswith('DGS')]
+    special_tickers = [t for t in tickers if t == 'CALL/PUT Ratio']
+    
+    result = {}
+    service = FinancialDataService()
+    
+    # Batch download all yfinance tickers at once - this is the key optimization!
+    if yf_tickers:
+        print(f"Batch downloading {len(yf_tickers)} tickers...")
+        start_time = time.time()
+        
+        try:
+            with yf_lock:
+                # Download 1 year of daily data for all tickers at once
+                df_year = yf.download(
+                    yf_tickers, 
+                    period='1y', 
+                    interval='1d', 
+                    progress=False,
+                    group_by='ticker',
+                    threads=True  # Use threading for faster download
+                )
+            
+            print(f"Batch download completed in {time.time() - start_time:.2f}s")
+            
+            # Process each ticker from the batch data
+            for ticker in yf_tickers:
+                try:
+                    # Extract data for this ticker
+                    if len(yf_tickers) == 1:
+                        ticker_df = df_year.copy()
+                        # Single ticker doesn't have multi-level columns
+                        if isinstance(ticker_df.columns, pd.MultiIndex):
+                            ticker_df.columns = ticker_df.columns.droplevel(1)
+                    else:
+                        # Multi-ticker download has ticker as top-level column
+                        if ticker in df_year.columns.get_level_values(0):
+                            ticker_df = df_year[ticker].copy()
+                        else:
+                            # Try with different column structure
+                            ticker_df = df_year.xs(ticker, axis=1, level=0).copy()
+                    
+                    if ticker_df.empty or 'Close' not in ticker_df.columns:
+                        result[ticker] = {'error': f'No data for {ticker}'}
+                        continue
+                    
+                    # Drop NaN rows
+                    ticker_df = ticker_df.dropna(subset=['Close'])
+                    
+                    if ticker_df.empty:
+                        result[ticker] = {'error': f'No valid data for {ticker}'}
+                        continue
+                    
+                    # Calculate timeframes from daily data
+                    timeframe_data = {}
+                    
+                    # Get timezone info
+                    eastern = pytz.timezone('US/Eastern')
+                    now = pd.Timestamp.now(tz=eastern)
+                    market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
+                    market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
+                    is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
+                    
+                    closes = ticker_df['Close'].tolist()
+                    latest_close = float(closes[-1])
+                    latest_datetime = ticker_df.index[-1]
+                    if hasattr(latest_datetime, 'strftime'):
+                        latest_datetime_str = latest_datetime.strftime('%m/%d/%y')
+                    else:
+                        latest_datetime_str = str(latest_datetime)[:10]
+                    
+                    # Year: all data (up to 252 trading days)
+                    year_closes = closes[-252:] if len(closes) >= 252 else closes
+                    year_change = round(((year_closes[-1] - year_closes[0]) / year_closes[0]) * 100, 2) if len(year_closes) >= 2 else 0
+                    year_value_change = round(year_closes[-1] - year_closes[0], 2) if len(year_closes) >= 2 else 0
+                    timeframe_data['year'] = {
+                        'closes': year_closes,
+                        'latest': {
+                            'datetime': latest_datetime_str,
+                            'close': format_number_with_commas(latest_close),
+                            'change': year_change,
+                            'value_change': year_value_change,
+                            'is_after_hours': is_after_hours
+                        }
+                    }
+                    
+                    # Month: last 21 trading days
+                    month_closes = closes[-21:] if len(closes) >= 21 else closes
+                    month_change = round(((month_closes[-1] - month_closes[0]) / month_closes[0]) * 100, 2) if len(month_closes) >= 2 else 0
+                    month_value_change = round(month_closes[-1] - month_closes[0], 2) if len(month_closes) >= 2 else 0
+                    timeframe_data['month'] = {
+                        'closes': month_closes,
+                        'latest': {
+                            'datetime': latest_datetime_str,
+                            'close': format_number_with_commas(latest_close),
+                            'change': month_change,
+                            'value_change': month_value_change,
+                            'is_after_hours': is_after_hours
+                        }
+                    }
+                    
+                    # Week: last 5 trading days
+                    week_closes = closes[-5:] if len(closes) >= 5 else closes
+                    week_change = round(((week_closes[-1] - week_closes[0]) / week_closes[0]) * 100, 2) if len(week_closes) >= 2 else 0
+                    week_value_change = round(week_closes[-1] - week_closes[0], 2) if len(week_closes) >= 2 else 0
+                    timeframe_data['week'] = {
+                        'closes': week_closes,
+                        'latest': {
+                            'datetime': latest_datetime_str,
+                            'close': format_number_with_commas(latest_close),
+                            'change': week_change,
+                            'value_change': week_value_change,
+                            'is_after_hours': is_after_hours
+                        }
+                    }
+                    
+                    # Day: last 2 days (for day change calculation)
+                    day_closes = closes[-2:] if len(closes) >= 2 else closes
+                    day_change = round(((day_closes[-1] - day_closes[0]) / day_closes[0]) * 100, 2) if len(day_closes) >= 2 else 0
+                    day_value_change = round(day_closes[-1] - day_closes[0], 2) if len(day_closes) >= 2 else 0
+                    timeframe_data['day'] = {
+                        'closes': day_closes,
+                        'latest': {
+                            'datetime': latest_datetime_str,
+                            'close': format_number_with_commas(latest_close),
+                            'change': day_change,
+                            'value_change': day_value_change,
+                            'is_after_hours': is_after_hours
+                        }
+                    }
+                    
+                    # Calculate RV from the same data (no extra API call!)
+                    rv = None
+                    rv_grade = None
+                    if 'Volume' in ticker_df.columns:
+                        volumes = ticker_df['Volume'].tolist()
+                        if len(volumes) >= 20:
+                            avg_vol = sum(volumes[-20:]) / 20
+                            last_vol = volumes[-1]
+                            if avg_vol > 0:
+                                rv = round(last_vol / avg_vol, 2)
+                                rv_grade = service.grade_rv(rv)
+                    
+                    result[ticker] = {
+                        'timeframes': timeframe_data,
+                        'rv': rv,
+                        'rv_grade': rv_grade
+                    }
+                    
+                except Exception as e:
+                    print(f"Error processing {ticker}: {e}")
+                    result[ticker] = {'error': str(e)}
+        
+        except Exception as e:
+            print(f"Batch download error: {e}")
+            # Fallback: return errors for all tickers
+            for ticker in yf_tickers:
+                result[ticker] = {'error': str(e)}
+    
+    # Handle FRED tickers (treasury yields) - these are fast
+    for ticker in fred_tickers:
+        try:
+            data = service.fetch_data(ticker)
+            result[ticker] = {
+                'timeframes': data,
+                'rv': None,
+                'rv_grade': None
+            }
+        except Exception as e:
+            result[ticker] = {'error': str(e)}
+    
+    # Handle CALL/PUT Ratio - skip for now (expensive operation)
+    for ticker in special_tickers:
+        # Return placeholder data instead of expensive options calculation
+        result[ticker] = {
+            'timeframes': {
+                'day': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
+                'week': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
+                'month': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
+                'year': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
+            },
+            'rv': None,
+            'rv_grade': None
+        }
+    
+    # Update cache
+    _market_data_cache[cache_key] = result
+    _cache_timestamp = time.time()
+    
+    return result
+
+
 class FinancialDataService:
     @staticmethod
     def grade_rv(rv):

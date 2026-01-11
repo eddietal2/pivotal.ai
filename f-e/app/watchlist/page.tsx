@@ -240,12 +240,12 @@ export default function WatchlistPage() {
     }
   }, [fetchMarketData]);
 
-  // Poll for real-time updates every 60 seconds
+  // Poll for real-time updates every 5 seconds
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
       const interval = setInterval(() => {
         fetchMarketData(true); // Don't show loading for polling
-      }, 60000); // 60 seconds
+      }, 5000); // 5 seconds
 
       return () => clearInterval(interval);
     }

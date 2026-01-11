@@ -2,33 +2,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from .services import FinancialDataService
+from .services import FinancialDataService, fetch_all_tickers_batch
 
-def fetch_ticker_data(ticker):
-    service = FinancialDataService()
-    try:
-        print(f"Fetching data for {ticker}")
-        # Get data for all timeframes
-        timeframe_data = service.fetch_data(ticker)
-        
-        # Get RV (using day timeframe for RV calculation)
-        try:
-            rv_info = service.fetch_relative_volume(ticker)
-            rv = rv_info.get('daily_rv', None)
-            rv_grade = rv_info.get('daily_grade', None)
-        except Exception:
-            rv = None
-            rv_grade = None
-        
-        # Return data for all timeframes
-        return ticker, {
-            'timeframes': timeframe_data,
-            'rv': rv,
-            'rv_grade': rv_grade
-        }
-    except Exception as e:
-        return ticker, {'error': str(e)}
 
 @require_http_methods(["GET", "OPTIONS"])
 def market_data(request):
@@ -56,17 +31,13 @@ def market_data(request):
     if not tickers:
         return JsonResponse({'error': 'No valid tickers provided'}, status=400)
     
-    result = {}
+    # Use batch fetch for all tickers at once - MUCH faster!
+    import time
+    start_time = time.time()
+    result = fetch_all_tickers_batch(tickers)
+    elapsed = time.time() - start_time
+    print(f"market_data completed in {elapsed:.2f}s")
     
-    # Fetch data sequentially to avoid ThreadPoolExecutor shutdown issues
-    for ticker in tickers:
-        try:
-            ticker_result, data = fetch_ticker_data(ticker)
-            result[ticker_result] = data
-        except Exception as e:
-            result[ticker] = {'error': str(e)}
-    
-    print("market_data completed")
     response = JsonResponse(result)
     response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
     response['Access-Control-Allow-Credentials'] = 'true'
