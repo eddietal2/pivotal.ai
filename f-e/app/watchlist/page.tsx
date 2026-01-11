@@ -53,14 +53,9 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
     tickers: ['CL=F', 'NG=F'],
     icon: '⚡'
   },
-  bonds: {
-    name: 'Treasury Yields',
-    tickers: ['DGS10', 'DGS2'],
-    icon: '🏛️'
-  },
-  sentiment: {
-    name: 'Market Sentiment',
-    tickers: ['^VIX', 'CALL/PUT Ratio'],
+  indicators: {
+    name: 'Market Indicators',
+    tickers: ['^VIX', 'CALL/PUT Ratio', 'DGS10', 'DGS2'],
     icon: '📊'
   }
 };
