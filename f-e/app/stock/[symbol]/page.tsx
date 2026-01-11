@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Star, Share2, Bell, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 
 interface StockData {
   symbol: string;
@@ -87,6 +88,9 @@ export default function StockDetailPage() {
     };
   }, [symbol, selectedTimeframe]);
 
+  const pricePrefix = getPricePrefix(symbol);
+  const priceSuffix = getPriceSuffix(symbol);
+
   const formatNumber = (num: number | undefined | null, decimals = 2) => {
     if (num === undefined || num === null) return '—';
     if (num >= 1e12) return `${(num / 1e12).toFixed(decimals)}T`;
@@ -98,7 +102,7 @@ export default function StockDetailPage() {
 
   const formatPrice = (price: number | undefined | null) => {
     if (price === undefined || price === null) return '—';
-    return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${pricePrefix}${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${priceSuffix}`;
   };
 
   // Render sparkline as SVG with axes
@@ -135,17 +139,25 @@ export default function StockDetailPage() {
     // Generate Y-axis labels (5 price levels)
     const yLabels = [];
     for (let i = 0; i <= 4; i++) {
-      const price = paddedMax - (paddedRange * i) / 4;
-      yLabels.push(price);
+      const yPrice = paddedMax - (paddedRange * i) / 4;
+      yLabels.push(yPrice);
     }
 
     // Format price for Y-axis display
-    const formatAxisPrice = (p: number) => {
-      if (p >= 10000) return `$${(p / 1000).toFixed(0)}K`;
-      if (p >= 1000) return `$${(p / 1000).toFixed(1)}K`;
-      if (p >= 100) return `$${p.toFixed(0)}`;
-      if (p >= 1) return `$${p.toFixed(2)}`;
-      return `$${p.toFixed(4)}`;
+    const formatAxisPriceLocal = (p: number) => {
+      let formatted: string;
+      if (p >= 10000) {
+        formatted = `${(p / 1000).toFixed(0)}K`;
+      } else if (p >= 1000) {
+        formatted = `${(p / 1000).toFixed(1)}K`;
+      } else if (p >= 100) {
+        formatted = p.toFixed(0);
+      } else if (p >= 1) {
+        formatted = p.toFixed(2);
+      } else {
+        formatted = p.toFixed(4);
+      }
+      return `${pricePrefix}${formatted}${priceSuffix}`;
     };
 
     // Generate X-axis labels based on timeframe
@@ -210,8 +222,8 @@ export default function StockDetailPage() {
         </div>
         {/* Y-axis labels (right side) */}
         <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pl-3 py-1 min-w-[55px] text-left">
-          {yLabels.map((price, i) => (
-            <span key={i}>{formatAxisPrice(price)}</span>
+          {yLabels.map((yPrice, i) => (
+            <span key={i}>{formatAxisPriceLocal(yPrice)}</span>
           ))}
         </div>
       </div>
@@ -320,7 +332,7 @@ export default function StockDetailPage() {
               <div className={`flex items-center gap-1 ${(stockData.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {(stockData.change ?? 0) >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                 <span className="text-lg font-semibold">
-                  {(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.valueChange?.toFixed(2) || '0.00'} ({(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.change?.toFixed(2) || '0.00'}%)
+                  {pricePrefix}{(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.change?.toFixed(2) || '0.00'}%)
                 </span>
               </div>
             )}

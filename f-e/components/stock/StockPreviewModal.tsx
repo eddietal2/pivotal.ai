@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { X, ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
+import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 
 interface StockPreviewModalProps {
   isOpen: boolean;
@@ -76,6 +77,8 @@ export default function StockPreviewModal({
 
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
   const isPositive = change >= 0;
+  const pricePrefix = getPricePrefix(symbol);
+  const priceSuffix = getPriceSuffix(symbol);
 
   // Render sparkline chart with axes
   const renderSparkline = () => {
@@ -113,15 +116,6 @@ export default function StockPreviewModal({
       yLabels.push(price);
     }
 
-    // Format price for display
-    const formatAxisPrice = (p: number) => {
-      if (p >= 10000) return `${(p / 1000).toFixed(0)}K`;
-      if (p >= 1000) return `${(p / 1000).toFixed(1)}K`;
-      if (p >= 100) return p.toFixed(0);
-      if (p >= 1) return p.toFixed(2);
-      return p.toFixed(4);
-    };
-
     return (
       <div className="flex h-full overflow-hidden">
         {/* Chart area */}
@@ -158,8 +152,8 @@ export default function StockPreviewModal({
         </div>
         {/* Y-axis labels (right side) */}
         <div className="flex flex-col justify-between text-[10px] text-gray-400 pl-2 py-1 min-w-[45px] text-left flex-shrink-0">
-          {yLabels.map((price, i) => (
-            <span key={i}>${formatAxisPrice(price)}</span>
+          {yLabels.map((yPrice, i) => (
+            <span key={i}>{formatAxisPrice(yPrice, symbol)}</span>
           ))}
         </div>
       </div>
@@ -207,12 +201,12 @@ export default function StockPreviewModal({
           {/* Price */}
           <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
-              ${!isNaN(numericPrice) ? numericPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price}
+              {pricePrefix}{!isNaN(numericPrice) ? numericPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price}{priceSuffix}
             </span>
             <div className={`flex items-center gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span className="font-semibold">
-                {isPositive ? '+' : ''}{valueChange?.toFixed(2) || '0.00'} ({isPositive ? '+' : ''}{change?.toFixed(2) || '0.00'}%)
+                {pricePrefix}{isPositive ? '+' : ''}{valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({isPositive ? '+' : ''}{change?.toFixed(2) || '0.00'}%)
               </span>
             </div>
           </div>

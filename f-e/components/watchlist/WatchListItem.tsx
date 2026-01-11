@@ -3,6 +3,7 @@
 import React from 'react';
 import Sparkline from '@/components/ui/Sparkline';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
 type Props = {
   name: string;
@@ -21,6 +22,8 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
+  const pricePrefix = getPricePrefix(symbol);
+  const priceSuffix = getPriceSuffix(symbol);
 
   return (
     <button
@@ -48,7 +51,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
             )}
           </div>
           <div className="flex flex-col">
-            <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{price}</span>
+            <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{pricePrefix}{price}{priceSuffix}</span>
             {typeof rv === 'number' && (
               <span className="text-xs text-gray-500 dark:text-gray-400">RV: {rv.toFixed(2)}x</span>
             )}
@@ -61,7 +64,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
           </span>
           {valueChange !== undefined && valueChange !== 0 && (
             <span className={`text-xs ${changeClass} mt-0.5`}>
-              {valueChange >= 0 ? `+${valueChange.toFixed(2)}` : `${valueChange.toFixed(2)}`}
+              {pricePrefix}{valueChange >= 0 ? `+${valueChange.toFixed(2)}` : `${valueChange.toFixed(2)}`}{priceSuffix}
             </span>
           )}
         </div>
