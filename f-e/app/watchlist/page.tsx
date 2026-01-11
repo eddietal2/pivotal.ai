@@ -31,7 +31,10 @@ const tickerNames: Record<string, string> = {
   'CRYPTO-FEAR-GREED': 'Crypto Fear & Greed',
   'LIT': 'Lithium',
   'PL=F': 'Platinum',
-  'PA=F': 'Palladium'
+  'PA=F': 'Palladium',
+  'TAN': 'Solar ETF',
+  'ICLN': 'Clean Energy ETF',
+  'HYDR': 'Hydrogen ETF'
 };
 
 // Asset class groupings
@@ -53,7 +56,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   },
   energy: {
     name: 'Energy',
-    tickers: ['CL=F', 'NG=F'],
+    tickers: ['CL=F', 'NG=F', 'TAN', 'ICLN', 'HYDR'],
     icon: '⚡'
   },
   indicators: {
