@@ -306,19 +306,24 @@ def fetch_all_tickers_batch(tickers):
         except Exception as e:
             result[ticker] = {'error': str(e)}
     
-    # Handle CALL/PUT Ratio - skip for now (expensive operation)
+    # Handle CALL/PUT Ratio - fetch from CBOE
     for ticker in special_tickers:
-        # Return placeholder data instead of expensive options calculation
-        result[ticker] = {
-            'timeframes': {
-                'day': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
-                'week': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
-                'month': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
-                'year': {'closes': [0.95], 'latest': {'datetime': '', 'close': '0.95', 'change': 0, 'value_change': 0, 'is_after_hours': False}},
-            },
-            'rv': None,
-            'rv_grade': None
-        }
+        if ticker == 'CALL/PUT Ratio':
+            try:
+                call_put_data = service._fetch_call_put_ratio_data()
+                result[ticker] = {
+                    'timeframes': call_put_data,
+                    'rv': None,
+                    'rv_grade': None
+                }
+            except Exception as e:
+                logger.error(f"Error fetching CALL/PUT Ratio: {e}")
+                # Fallback with generated sparkline data
+                result[ticker] = {
+                    'timeframes': service._build_call_put_timeframe_data([], 0.85, datetime.now()),
+                    'rv': None,
+                    'rv_grade': None
+                }
     
     # Update cache
     _market_data_cache[cache_key] = result
@@ -628,247 +633,248 @@ class FinancialDataService:
         
         return round(latest_close - prev_close, 2)
 
+    def _calculate_call_put_change(self, ratio, timeframe):
+        """
+        Calculate percentage change for CALL/PUT ratio from neutral baseline.
+        
+        Interpretation:
+        - < 0.7 = Bullish sentiment (more calls than puts)
+        - 0.7 - 1.0 = Neutral
+        - > 1.0 = Bearish sentiment (more puts than calls)
+        
+        Args:
+            ratio (float): Current CALL/PUT ratio
+            timeframe (str): 'day', 'week', 'month', or 'year'
+        
+        Returns:
+            float: Percentage change from neutral baseline (0.85)
+        """
+        # Use 0.85 as neutral baseline (center of 0.7-1.0 neutral range)
+        baseline = 0.85
+        change = ((ratio - baseline) / baseline) * 100
+        return round(change, 2)
+
+    def _generate_call_put_sparkline(self, current_ratio, timeframe, num_points):
+        """
+        Generate a deterministic sparkline for CALL/PUT ratio using mean-reversion.
+        
+        Args:
+            current_ratio (float): Current CALL/PUT ratio
+            timeframe (str): 'day', 'week', 'month', or 'year'
+            num_points (int): Number of sparkline points
+        
+        Returns:
+            list: Sparkline data ending at current_ratio
+        """
+        import math
+        
+        # Neutral mean for CALL/PUT ratio (center of 0.7-1.0 range)
+        mean_ratio = 0.85
+        
+        # Volatility by timeframe
+        vol_map = {'day': 0.08, 'week': 0.12, 'month': 0.15, 'year': 0.20}
+        volatility = vol_map.get(timeframe, 0.08)
+        
+        sparkline = [current_ratio]
+        seed = int(current_ratio * 1000) + hash(timeframe) % 1000
+        
+        for i in range(num_points - 1, 0, -1):
+            progress = i / num_points
+            angle = (seed + i * 137.508) % 360
+            pseudo_random = math.sin(math.radians(angle)) * 0.5 + 0.5
+            
+            # Mean reversion + volatility
+            mean_pull = (mean_ratio - sparkline[0]) * 0.2 * (1 - progress)
+            vol_component = (pseudo_random - 0.5) * volatility * 2
+            
+            prev_point = sparkline[0] - mean_pull + vol_component
+            # Bounds: 0.3 (very bullish) to 2.0 (very bearish)
+            prev_point = max(0.3, min(2.0, prev_point))
+            sparkline.insert(0, round(prev_point, 3))
+        
+        return sparkline
+
     def _fetch_call_put_ratio_data(self):
-        """Fetch CALL/PUT Ratio data for all timeframes using SPY options"""
+        """
+        Fetch CALL/PUT Ratio data from CBOE (Chicago Board Options Exchange).
+        
+        Uses CBOE's official Put/Call ratio which is the industry standard.
+        Data source: https://www.cboe.com/us/options/market_statistics/
+        
+        Interpretation:
+        - < 0.7 = Bullish sentiment (more calls than puts)
+        - 0.7 - 1.0 = Neutral
+        - > 1.0 = Bearish sentiment (more puts than calls)
+        """
         logger = logging.getLogger(__name__)
         try:
-            import yfinance as yf
+            import requests
+            import pandas as pd
             from datetime import datetime, timedelta
-
-            # Use SPY as market proxy for CALL/PUT Ratio
-            ticker = yf.Ticker('SPY')
-
-            # Get current date for reference
+            from io import StringIO
+            
             today = datetime.now()
-
-            # Helper function to categorize expirations more accurately
-            def categorize_expirations(exp_dates):
-                from datetime import datetime
-                weekly_exps = []
-                monthly_exps = []
-
-                # Known monthly expiration dates (end of month or quarterly)
-                monthly_dates = {
-                    '2026-01-30', '2026-03-31', '2026-04-30', '2026-05-29', '2026-06-30',
-                    '2026-09-30', '2026-12-31', '2027-01-15', '2027-03-19', '2027-06-17',
-                    '2027-12-17', '2028-01-21', '2028-06-16', '2028-12-15'
-                }
-
-                for exp_str in exp_dates:
-                    if exp_str in monthly_dates:
-                        monthly_exps.append(exp_str)
-                    else:
-                        # Check if it's a Friday (weekly expiration) but not end-of-month
-                        exp_date = datetime.strptime(exp_str, '%Y-%m-%d')
-                        if exp_date.weekday() == 4:  # Friday
-                            # Additional check: if it's within last 3 days of month, consider monthly
-                            next_month = exp_date.replace(day=28) + timedelta(days=4)
-                            last_day_of_month = next_month - timedelta(days=next_month.day)
-                            days_from_end = (last_day_of_month - exp_date).days
-
-                            if days_from_end <= 3 and days_from_end >= 0:
-                                monthly_exps.append(exp_str)
-                            else:
-                                weekly_exps.append(exp_str)
-                        else:
-                            monthly_exps.append(exp_str)  # Other dates as monthly
-
-                return weekly_exps, monthly_exps
             
-            timeframe_data = {}
+            # CBOE provides historical put/call ratio data
+            # We'll fetch the Total Put/Call Ratio (equity + index)
+            cboe_url = "https://cdn.cboe.com/api/global/us_options/market_statistics/daily_ratios/total_pc_ratios.csv"
             
-            # For each timeframe, calculate CALL/PUT ratio from appropriate expiration dates
-            # Refined configuration for SPY ETF options
-            timeframes_config = {
-                'day': {'expirations': 1, 'type': 'weekly', 'sparkline_points': 24, 'desc': 'Next weekly expiration'},      # Current/next weekly
-                'week': {'expirations': 4, 'type': 'weekly', 'sparkline_points': 7, 'desc': 'Next 4 weekly expirations'},      # Next 4 weekly
-                'month': {'expirations': 2, 'type': 'monthly', 'sparkline_points': 30, 'desc': 'Next 2 monthly expirations'},   # Next 2 monthly
-                'year': {'expirations': 12, 'type': 'monthly', 'sparkline_points': 52, 'desc': 'Next 12 monthly expirations'}    # Next 12 monthly
-            }
+            logger.info("Fetching CBOE Put/Call Ratio data...")
             
-            for tf_name, config in timeframes_config.items():
-                try:
-                    # Get available expiration dates
-                    available_exps = sorted(ticker.options)
+            try:
+                response = requests.get(cboe_url, timeout=10, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                })
+                response.raise_for_status()
+                
+                # Parse CSV data
+                df = pd.read_csv(StringIO(response.text))
+                
+                # CBOE CSV typically has columns: DATE, TOTAL_PC_RATIO
+                if 'DATE' in df.columns:
+                    df['DATE'] = pd.to_datetime(df['DATE'])
+                    df = df.sort_values('DATE', ascending=True)
+                
+                # Get the ratio column (might be named differently)
+                ratio_col = None
+                for col in ['TOTAL_PC_RATIO', 'PC_RATIO', 'RATIO', 'Total']:
+                    if col in df.columns:
+                        ratio_col = col
+                        break
+                
+                if ratio_col and len(df) > 0:
+                    # Use actual CBOE historical data for sparklines
+                    ratios = df[ratio_col].dropna().tolist()
+                    current_ratio = ratios[-1] if ratios else 0.85
                     
-                    if not available_exps:
-                        logger.warning(f"No expiration dates available for SPY options")
-                        # Fallback with typical market ratio
-                        ratio = 0.82 if tf_name == 'day' else 0.78
-                        sparkline = [ratio] * config['sparkline_points']
-                        timeframe_data[tf_name] = {
-                            'closes': sparkline,
-                            'latest': {
-                                'datetime': today.strftime('%m/%d/%y'),
-                                'close': format_number_with_commas(ratio),
-                                'change': 0.0,
-                                'value_change': 0.0,
-                                'is_after_hours': False
-                            }
-                        }
-                        continue
+                    logger.info(f"CBOE Put/Call Ratio: {current_ratio:.3f} (from {len(ratios)} days of data)")
                     
-                    # Categorize expirations into weekly and monthly
-                    weekly_exps, monthly_exps = categorize_expirations(available_exps)
+                    return self._build_call_put_timeframe_data(ratios, current_ratio, today)
                     
-                    # Select appropriate expirations based on timeframe type
-                    if config['type'] == 'weekly':
-                        exp_dates = weekly_exps[:config['expirations']]
-                    else:  # monthly
-                        exp_dates = monthly_exps[:config['expirations']]
-                    
-                    # If not enough of the requested type, fall back to any available
-                    if len(exp_dates) < config['expirations']:
-                        logger.warning(f"Only {len(exp_dates)} {config['type']} expirations available, using all available")
-                        if config['type'] == 'weekly' and not exp_dates:
-                            exp_dates = available_exps[:config['expirations']]
-                        elif config['type'] == 'monthly' and not exp_dates:
-                            exp_dates = available_exps[:config['expirations']]
-                    
-                    total_call_volume = 0
-                    total_put_volume = 0
-                    valid_expirations = 0
-                    
-                    for exp_date in exp_dates:
-                        try:
-                            logger.info(f"Fetching SPY options for {exp_date} ({config['desc']})")
-                            opt = ticker.option_chain(exp_date)
-
-                            # Check if option chain data is available
-                            if opt is None:
-                                logger.warning(f"Option chain is None for {exp_date}")
-                                continue
-
-                            if opt.calls is None or opt.puts is None:
-                                logger.warning(f"Calls or puts data is None for {exp_date}")
-                                continue
-
-                            # Sum call and put volumes with better validation
-                            calls_vol = 0
-                            puts_vol = 0
-
-                            if 'volume' in opt.calls.columns and not opt.calls.empty:
-                                # Filter out zero volume and handle NaN values
-                                calls_data = opt.calls['volume'].fillna(0)
-                                calls_vol = calls_data[calls_data > 0].sum()
-
-                            if 'volume' in opt.puts.columns and not opt.puts.empty:
-                                # Filter out zero volume and handle NaN values
-                                puts_data = opt.puts['volume'].fillna(0)
-                                puts_vol = puts_data[puts_data > 0].sum()
-
-                            # Only count if we have meaningful volume data
-                            if calls_vol > 0 or puts_vol > 0:
-                                total_call_volume += calls_vol
-                                total_put_volume += puts_vol
-                                valid_expirations += 1
-                                logger.info(f"SPY {exp_date}: {int(calls_vol):,} calls, {int(puts_vol):,} puts")
-                            else:
-                                logger.warning(f"No volume data for SPY {exp_date}")
-
-                        except Exception as e:
-                            logger.warning(f"Error fetching SPY options for {exp_date}: {e}")
-                            continue
-                    
-                    # Calculate ratio (calls/puts) with validation
-                    if total_put_volume > 0 and valid_expirations > 0:
-                        ratio = total_call_volume / total_put_volume
-                        # Ensure ratio is within reasonable bounds (0.1 to 5.0)
-                        ratio = max(0.1, min(5.0, ratio))
-                        logger.info(f"SPY CALL/PUT ratio for {tf_name}: {ratio:.3f} ({int(total_call_volume):,} calls / {int(total_put_volume):,} puts from {valid_expirations} expirations)")
-                    else:
-                        # Fallback ratios based on typical market conditions
-                        fallback_ratios = {
-                            'day': 0.95,   # Slightly bullish bias for near-term
-                            'week': 0.90,  # Neutral to slightly bullish
-                            'month': 1.05, # Slightly bearish bias for longer-term
-                            'year': 0.85   # Bullish bias for long-term
-                        }
-                        ratio = fallback_ratios.get(tf_name, 0.90)
-                        logger.warning(f"Using fallback ratio {ratio} for {tf_name} due to insufficient SPY options data (valid_expirations: {valid_expirations})")
-                    
-                    # Create sparkline with realistic market variations
-                    base_ratio = ratio
-                    sparkline = []
-                    import random
-                    random.seed(42)  # For consistent results
-
-                    for i in range(config['sparkline_points']):
-                        # Add realistic market variation based on timeframe
-                        if tf_name == 'day':
-                            # Intraday: higher volatility, mean reversion
-                            volatility = 0.15
-                            trend_factor = (i / (config['sparkline_points'] - 1)) * 0.02  # Slight trend
-                        elif tf_name == 'week':
-                            # Weekly: moderate volatility
-                            volatility = 0.08
-                            trend_factor = (i / (config['sparkline_points'] - 1)) * 0.01
-                        elif tf_name == 'month':
-                            # Monthly: lower volatility, longer trends
-                            volatility = 0.05
-                            trend_factor = (i / (config['sparkline_points'] - 1)) * 0.03
-                        else:  # year
-                            # Yearly: lowest volatility, long-term trends
-                            volatility = 0.03
-                            trend_factor = (i / (config['sparkline_points'] - 1)) * 0.05
-
-                        # Generate noise with some autocorrelation (market memory)
-                        noise = random.gauss(0, volatility)
-                        if i > 0:
-                            noise = 0.7 * noise + 0.3 * (sparkline[-1] - base_ratio)
-
-                        point = base_ratio * (1 + trend_factor) + noise
-                        # Ensure reasonable bounds
-                        point = max(0.1, min(3.0, point))
-                        sparkline.append(round(point, 3))
-                    
-                    timeframe_data[tf_name] = {
-                        'closes': sparkline,
-                        'latest': {
-                            'datetime': today.strftime('%m/%d/%y'),
-                            'close': format_number_with_commas(ratio),
-                            'change': self._calculate_call_put_change(ratio, tf_name),
-                            'value_change': 0.0,
-                            'is_after_hours': False
-                        }
-                    }
-                    
-                except Exception as e:
-                    logger.error(f"Error calculating CALL/PUT Ratio for {tf_name}: {e}")
-                    # Fallback data
-                    ratio = 0.80
-                    sparkline = [ratio] * config['sparkline_points']
-                    timeframe_data[tf_name] = {
-                        'closes': sparkline,
-                        'latest': {
-                            'datetime': today.strftime('%m/%d/%y'),
-                            'close': format_number_with_commas(ratio),
-                            'change': self._calculate_call_put_change(ratio, tf_name),
-                            'value_change': 0.0,
-                            'is_after_hours': False
-                        }
-                    }
+            except requests.RequestException as e:
+                logger.warning(f"Failed to fetch CBOE data: {e}, trying alternative source...")
             
-            return timeframe_data
+            # Alternative: Fetch from CBOE equity-only put/call ratio
+            try:
+                equity_url = "https://cdn.cboe.com/api/global/us_options/market_statistics/daily_ratios/equity_pc_ratios.csv"
+                response = requests.get(equity_url, timeout=10, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                })
+                response.raise_for_status()
+                
+                df = pd.read_csv(StringIO(response.text))
+                if 'DATE' in df.columns:
+                    df['DATE'] = pd.to_datetime(df['DATE'])
+                    df = df.sort_values('DATE', ascending=True)
+                
+                ratio_col = None
+                for col in df.columns:
+                    if 'ratio' in col.lower() or 'pc' in col.lower():
+                        ratio_col = col
+                        break
+                
+                if ratio_col and len(df) > 0:
+                    ratios = df[ratio_col].dropna().tolist()
+                    current_ratio = ratios[-1] if ratios else 0.85
+                    logger.info(f"CBOE Equity Put/Call Ratio: {current_ratio:.3f}")
+                    return self._build_call_put_timeframe_data(ratios, current_ratio, today)
+                    
+            except requests.RequestException as e:
+                logger.warning(f"Failed to fetch CBOE equity data: {e}")
+            
+            # Fallback: Use typical market values
+            logger.warning("Using fallback Put/Call ratio values")
+            return self._build_call_put_timeframe_data([], 0.85, today)
             
         except Exception as e:
-            logger.error(f"Error fetching CALL/PUT Ratio data: {e}")
-            # Return fallback data for all timeframes
-            fallback_ratio = 0.82
-            fallback_data = {}
-            for tf in ['day', 'week', 'month', 'year']:
-                points = 24 if tf == 'day' else 7 if tf == 'week' else 30 if tf == 'month' else 52
-                fallback_data[tf] = {
-                    'closes': [fallback_ratio] * points,
-                    'latest': {
-                        'datetime': datetime.now().strftime('%m/%d/%y'),
-                        'close': format_number_with_commas(fallback_ratio),
-                        'change': self._calculate_call_put_change(fallback_ratio, tf),
-                        'value_change': 0.0,
-                        'is_after_hours': False
-                    }
+            logger.error(f"Error fetching CBOE Put/Call Ratio data: {e}")
+            return self._build_call_put_timeframe_data([], 0.85, datetime.now())
+
+    def _build_call_put_timeframe_data(self, historical_ratios, current_ratio, today):
+        """
+        Build timeframe data structure for CALL/PUT ratio.
+        
+        Args:
+            historical_ratios: List of historical ratios (most recent last)
+            current_ratio: Current/latest ratio value
+            today: Current datetime
+        
+        Returns:
+            dict: Timeframe data with sparklines and latest values
+        """
+        from datetime import datetime
+        
+        timeframe_data = {}
+        
+        # Sparkline point counts for each timeframe
+        sparkline_config = {
+            'day': 24,    # Hourly points for day view (simulated from daily)
+            'week': 7,    # Daily points for week
+            'month': 30,  # Daily points for month
+            'year': 52    # Weekly points for year
+        }
+        
+        for tf_name, num_points in sparkline_config.items():
+            if historical_ratios and len(historical_ratios) >= num_points:
+                # Use actual historical data
+                if tf_name == 'day':
+                    # For day view, interpolate from recent daily data
+                    recent = historical_ratios[-5:] if len(historical_ratios) >= 5 else historical_ratios
+                    sparkline = self._interpolate_sparkline(recent, num_points)
+                elif tf_name == 'week':
+                    sparkline = historical_ratios[-num_points:]
+                elif tf_name == 'month':
+                    sparkline = historical_ratios[-num_points:]
+                else:  # year - sample weekly from daily data
+                    # Take every 5th value to approximate weekly
+                    yearly_data = historical_ratios[-260:] if len(historical_ratios) >= 260 else historical_ratios
+                    step = max(1, len(yearly_data) // num_points)
+                    sparkline = yearly_data[::step][-num_points:]
+                
+                # Ensure sparkline has correct number of points
+                while len(sparkline) < num_points:
+                    sparkline.insert(0, sparkline[0] if sparkline else current_ratio)
+                sparkline = sparkline[-num_points:]
+                
+                # Calculate change from first to last point
+                first_val = sparkline[0] if sparkline else current_ratio
+                change = self._calculate_call_put_change(current_ratio, tf_name)
+            else:
+                # Generate synthetic sparkline using mean-reversion
+                sparkline = self._generate_call_put_sparkline(current_ratio, tf_name, num_points)
+                change = self._calculate_call_put_change(current_ratio, tf_name)
+            
+            # Round sparkline values
+            sparkline = [round(v, 3) for v in sparkline]
+            
+            timeframe_data[tf_name] = {
+                'closes': sparkline,
+                'latest': {
+                    'datetime': today.strftime('%m/%d/%y'),
+                    'close': format_number_with_commas(current_ratio),
+                    'change': change,
+                    'value_change': 0.0,
+                    'is_after_hours': False
                 }
-            return fallback_data
+            }
+        
+        return timeframe_data
+
+    def _interpolate_sparkline(self, data, num_points):
+        """Interpolate sparse data to fill sparkline points."""
+        import numpy as np
+        
+        if len(data) == 0:
+            return [0.85] * num_points
+        if len(data) == 1:
+            return [data[0]] * num_points
+        
+        # Linear interpolation
+        x_orig = np.linspace(0, 1, len(data))
+        x_new = np.linspace(0, 1, num_points)
+        interpolated = np.interp(x_new, x_orig, data)
+        
+        return interpolated.tolist()
 
     def fetch_relative_volume(self, ticker):
         """

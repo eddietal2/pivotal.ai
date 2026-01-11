@@ -24,7 +24,8 @@ const tickerNames: Record<string, string> = {
   'DGS2': '2-Yr Yield',
   'ETH-USD': 'Ethereum',
   'HG=F': 'Copper',
-  'NG=F': 'Natural Gas'
+  'NG=F': 'Natural Gas',
+  'CALL/PUT Ratio': 'Put/Call Ratio'
 };
 
 // Asset class groupings
@@ -56,7 +57,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   },
   sentiment: {
     name: 'Market Sentiment',
-    tickers: ['^VIX'],
+    tickers: ['^VIX', 'CALL/PUT Ratio'],
     icon: '📊'
   }
 };
