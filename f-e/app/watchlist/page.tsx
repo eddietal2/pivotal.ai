@@ -714,7 +714,7 @@ export default function WatchlistPage() {
                       </div>
                       {favorites.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                          <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                          <Heart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             No favorites yet
                           </p>

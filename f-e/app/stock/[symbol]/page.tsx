@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Star, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 
@@ -316,7 +316,7 @@ export default function StockDetailPage() {
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               title={isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
             >
-              <Star className={`w-6 h-6 ${isWatchlisted ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+              <Heart className={`w-6 h-6 ${isWatchlisted ? 'fill-yellow-400 text-yellow-400' : ''}`} />
             </button>
             <button 
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"

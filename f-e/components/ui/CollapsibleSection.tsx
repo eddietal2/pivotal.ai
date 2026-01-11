@@ -2,14 +2,20 @@ import React from 'react';
 
 export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange, open }: { title: React.ReactNode; infoButton?: React.ReactNode | ((open: boolean) => React.ReactNode); children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void; open?: boolean }) {
   const [internalOpen, setInternalOpen] = React.useState<boolean>(() => defaultOpen ?? true);
+  const [isAnimating, setIsAnimating] = React.useState(false);
   const isControlled = open !== undefined;
   const currentOpen = isControlled ? open : internalOpen;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const innerRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Sharp, cool easing curve - quick start, smooth deceleration
+  const EASING = 'cubic-bezier(0.16, 1, 0.3, 1)'; // expo out - feels snappy and premium
+  const DURATION = 350; // ms - long enough to feel smooth, short enough to feel responsive
 
   // toggle using animation on the content
   const toggle = () => {
-    if (!contentRef.current) {
+    if (!contentRef.current || !innerRef.current || isAnimating) {
       const newOpen = !currentOpen;
       if (!isControlled) {
         setInternalOpen(newOpen);
@@ -17,47 +23,85 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
       onOpenChange?.(newOpen);
       return;
     }
+    
+    setIsAnimating(true);
     const el = contentRef.current;
-    const currentHeight = el.scrollHeight;
+    const inner = innerRef.current;
+    
     if (currentOpen) {
-      // Close: set explicit height then animate to 0
-      el.style.height = `${currentHeight}px`;
-      // Force reflow so transition occurs
+      // === CLOSE ANIMATION ===
+      const targetHeight = inner.scrollHeight;
+      // Start from current height
+      el.style.height = `${targetHeight}px`;
+      el.style.overflow = 'hidden';
+      inner.style.transform = 'translateY(0)';
+      inner.style.opacity = '1';
+      
+      // Force reflow
       void el.offsetHeight;
-      el.style.transition = 'height 220ms cubic-bezier(0.4,0.8,0.2,1), opacity 160ms ease-out';
+      
+      // Animate to closed
+      el.style.transition = `height ${DURATION}ms ${EASING}`;
+      inner.style.transition = `transform ${DURATION}ms ${EASING}, opacity ${DURATION * 0.6}ms ease-out`;
+      
       el.style.height = '0px';
-      el.style.opacity = '0';
-      const handler = function (e: TransitionEvent) {
-        if ((e as TransitionEvent).propertyName === 'height') {
-          el.style.display = 'none';
-          el.style.transition = '';
-          el.removeEventListener('transitionend', handler as any);
-        }
+      inner.style.transform = 'translateY(-20px)';
+      inner.style.opacity = '0';
+      
+      const cleanup = () => {
+        el.style.display = 'none';
+        el.style.transition = '';
+        inner.style.transition = '';
+        setIsAnimating(false);
       };
-      el.addEventListener('transitionend', handler as any);
+      
+      setTimeout(cleanup, DURATION);
+      
       if (!isControlled) {
         setInternalOpen(false);
       }
       onOpenChange?.(false);
     } else {
-      // Open: make sure it's displayed and animate from 0 to scrollHeight
+      // === OPEN ANIMATION ===
+      // First, make visible but at 0 height to measure content
       el.style.display = 'block';
-      el.style.height = '0px';
-      el.style.opacity = '0';
-      // Force reflow
+      el.style.height = 'auto';
+      el.style.overflow = 'hidden';
+      el.style.visibility = 'hidden';
+      el.style.position = 'absolute';
+      
+      // Force reflow to measure
       void el.offsetHeight;
-      const target = `${el.scrollHeight}px`;
-      el.style.transition = 'height 220ms cubic-bezier(0.4,0.8,0.2,1), opacity 160ms ease-in';
-      el.style.height = target;
-      el.style.opacity = '1';
-      const handler = function (e: TransitionEvent) {
-        if ((e as TransitionEvent).propertyName === 'height') {
-          el.style.height = 'auto';
-          el.style.transition = '';
-          el.removeEventListener('transitionend', handler as any);
-        }
+      const targetHeight = inner.scrollHeight;
+      
+      // Reset to starting position for animation
+      el.style.visibility = '';
+      el.style.position = '';
+      el.style.height = '0px';
+      inner.style.transform = 'translateY(20px)';
+      inner.style.opacity = '0';
+      
+      // Force reflow before animation
+      void el.offsetHeight;
+      
+      // Animate to open
+      el.style.transition = `height ${DURATION}ms ${EASING}`;
+      inner.style.transition = `transform ${DURATION}ms ${EASING}, opacity ${DURATION * 0.7}ms ease-in ${DURATION * 0.1}ms`;
+      
+      el.style.height = `${targetHeight}px`;
+      inner.style.transform = 'translateY(0)';
+      inner.style.opacity = '1';
+      
+      const cleanup = () => {
+        el.style.height = 'auto';
+        el.style.overflow = '';
+        el.style.transition = '';
+        inner.style.transition = '';
+        setIsAnimating(false);
       };
-      el.addEventListener('transitionend', handler as any);
+      
+      setTimeout(cleanup, DURATION);
+      
       if (!isControlled) {
         setInternalOpen(true);
       }
@@ -66,19 +110,23 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
   };
 
   React.useEffect(() => {
-    // Ensure correct initial state immediately on mount
+    // Ensure correct initial state immediately on mount (no animation)
     const el = contentRef.current;
-    if (!el) return;
+    const inner = innerRef.current;
+    if (!el || !inner) return;
+    
     if (!currentOpen) {
       el.style.display = 'none';
       el.style.height = '0px';
-      el.style.opacity = '0';
+      inner.style.opacity = '0';
+      inner.style.transform = 'translateY(-20px)';
     } else {
       el.style.display = 'block';
       el.style.height = 'auto';
-      el.style.opacity = '1';
+      inner.style.opacity = '1';
+      inner.style.transform = 'translateY(0)';
     }
-  }, [currentOpen]);
+  }, []);
 
   // If `openKey` changes, open the section. This is used by parent controls
   // (e.g., timeframe selectors) to ensure content opens when a relevant
@@ -102,10 +150,16 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
         <button
           type="button"
           aria-label={currentOpen ? 'Collapse section' : 'Expand section'}
-          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800 focus:outline-none"
+          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800 focus:outline-none group"
           onClick={(e) => { e.stopPropagation(); toggle(); }}
+          disabled={isAnimating}
         >
-          <span className={`transition-transform duration-200 ${currentOpen ? '' : 'rotate-180'}`}>▼</span>
+          <span 
+            className={`transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentOpen ? '' : 'rotate-180'}`}
+            style={{ transformOrigin: 'center' }}
+          >
+            ▼
+          </span>
           {title}
         </button>
         {/* Info button (separate, does not toggle collapse) */}
@@ -115,8 +169,10 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
           </div>
         )}
       </div>
-      <div ref={contentRef} className="mt-4 overflow-hidden opacity-100">
-        {children}
+      <div ref={contentRef} className="overflow-hidden">
+        <div ref={innerRef} className="mt-4">
+          {children}
+        </div>
       </div>
     </div>
   );
