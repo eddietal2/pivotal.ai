@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 
 // Set to true to enable timer/fetch logging
@@ -74,6 +75,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 export default function WatchlistPage() {
   const { favorites } = useFavorites();
   const { watchlist } = useWatchlist();
+  const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   // Track which section is open (accordion behavior - only one open at a time)
   const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
@@ -392,6 +394,30 @@ export default function WatchlistPage() {
       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
     </div>
   );
+
+  // Handle URL search params to scroll to and open a specific section
+  React.useEffect(() => {
+    const section = searchParams.get('section');
+    if (section === 'watchlist' || section === 'my-watchlist') {
+      setActiveSection('myWatchlist');
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const element = document.getElementById('my-watchlist');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    } else if (section === 'favorites') {
+      setActiveSection('favorites');
+      setTimeout(() => {
+        const element = document.getElementById('favorites');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [searchParams]);
+
   React.useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -930,7 +956,7 @@ export default function WatchlistPage() {
           </div>
 
           {/* My Watchlist */}
-          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+          <div id="my-watchlist" className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 scroll-mt-20">
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
@@ -996,7 +1022,7 @@ export default function WatchlistPage() {
           </div>
 
           {/* Favorites */}
-          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+          <div id="favorites" className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 scroll-mt-20">
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">

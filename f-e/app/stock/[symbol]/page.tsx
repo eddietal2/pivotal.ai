@@ -36,7 +36,7 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
@@ -45,12 +45,23 @@ export default function StockDetailPage() {
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
 
+  // Handle navigating to a section from toast
+  const handleToastClick = (link?: string) => {
+    if (link) {
+      router.push(link);
+    }
+  };
+
   // Handle watchlist toggle with limit check
   const handleToggleWatchlist = () => {
     const wasInWatchlist = isInWatchlist(symbol);
     if (!wasInWatchlist && isWatchlistFull()) {
-      setToast({ message: `Watchlist limit reached (${MAX_WATCHLIST} max)`, type: 'error' });
-      setTimeout(() => setToast(null), 2500);
+      setToast({ 
+        message: `Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST}) - Tap to manage`, 
+        type: 'error',
+        link: '/watchlist?section=my-watchlist',
+      });
+      setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleWatchlist({ symbol, name: stockData?.name || symbol });
@@ -65,8 +76,12 @@ export default function StockDetailPage() {
   const handleToggleFavorite = () => {
     const wasFavorite = isFavorite(symbol);
     if (!wasFavorite && isFavoritesFull()) {
-      setToast({ message: `Favorites limit reached (${MAX_FAVORITES} max)`, type: 'error' });
-      setTimeout(() => setToast(null), 2500);
+      setToast({ 
+        message: `Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`, 
+        type: 'error',
+        link: '/watchlist?section=favorites',
+      });
+      setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleFavorite({ symbol, name: stockData?.name || symbol });
@@ -511,8 +526,14 @@ export default function StockDetailPage() {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] animate-toast-slide-up">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm ${
+        <div 
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] animate-toast-slide-up"
+          onClick={() => handleToastClick(toast.link)}
+          style={{ cursor: toast.link ? 'pointer' : 'default' }}
+        >
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm transition-transform ${
+            toast.link ? 'hover:scale-105 active:scale-95' : ''
+          } ${
             toast.type === 'success' 
               ? 'bg-pink-500/90 text-white' 
               : toast.type === 'watchlist'
@@ -524,7 +545,7 @@ export default function StockDetailPage() {
             {toast.type === 'watchlist' ? (
               <Star className="w-4 h-4 fill-white" />
             ) : toast.type === 'error' ? (
-              <X className="w-4 h-4" />
+              <ExternalLink className="w-4 h-4" />
             ) : (
               <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
             )}

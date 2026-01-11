@@ -169,17 +169,28 @@ export default function StockPreviewModal({
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error' } | null>(null);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
+
+  // Handle navigating to a section from toast
+  const handleToastClick = (link?: string) => {
+    if (link) {
+      handleClose();
+      setTimeout(() => {
+        router.push(link);
+      }, 280);
+    }
+  };
 
   // Handle favorite toggle with toast notification
   const handleToggleFavorite = () => {
     const wasFavorite = isFavorite(symbol);
     if (!wasFavorite && isFavoritesFull()) {
       setToast({
-        message: `Favorites limit reached (${MAX_FAVORITES} max)`,
+        message: `Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`,
         type: 'error',
+        link: '/watchlist?section=favorites',
       });
-      setTimeout(() => setToast(null), 2500);
+      setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleFavorite({ symbol, name });
@@ -196,10 +207,11 @@ export default function StockPreviewModal({
     const wasInWatchlist = isInWatchlist(symbol);
     if (!wasInWatchlist && isWatchlistFull()) {
       setToast({
-        message: `Watchlist limit reached (${MAX_WATCHLIST} max)`,
+        message: `Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST}) - Tap to manage`,
         type: 'error',
+        link: '/watchlist?section=my-watchlist',
       });
-      setTimeout(() => setToast(null), 2500);
+      setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleWatchlist({ symbol, name });
@@ -607,8 +619,14 @@ export default function StockPreviewModal({
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[102] animate-toast-slide-up">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm ${
+        <div 
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[102] animate-toast-slide-up"
+          onClick={() => handleToastClick(toast.link)}
+          style={{ cursor: toast.link ? 'pointer' : 'default' }}
+        >
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm transition-transform ${
+            toast.link ? 'hover:scale-105 active:scale-95' : ''
+          } ${
             toast.type === 'success' 
               ? 'bg-pink-500/90 text-white' 
               : toast.type === 'watchlist'
@@ -620,7 +638,7 @@ export default function StockPreviewModal({
             {toast.type === 'watchlist' ? (
               <Star className="w-4 h-4 fill-white" />
             ) : toast.type === 'error' ? (
-              <X className="w-4 h-4" />
+              <ExternalLink className="w-4 h-4" />
             ) : (
               <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
             )}
