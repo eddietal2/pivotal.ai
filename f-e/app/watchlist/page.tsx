@@ -7,7 +7,8 @@ import CollapsibleSection from '../../components/ui/CollapsibleSection';
 const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
-import { Info, LineChart, ChevronDown, Settings } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Heart } from 'lucide-react';
+import { useFavorites } from '@/components/context/FavoritesContext';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -68,6 +69,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 
 
 export default function WatchlistPage() {
+  const { favorites } = useFavorites();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   // Track open state of sections
   const [marketPulseOpen, setMarketPulseOpen] = useState(true);
@@ -698,7 +700,66 @@ export default function WatchlistPage() {
                   </div>
                 ) : (
                   // Normal mode: show grouped data by asset class
-                  assetClassOrder.map((classKey) => {
+                  <>
+                    {/* Favorites Section - Always show at top */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                          Favorites
+                        </h3>
+                        {favorites.length > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">({favorites.length})</span>
+                        )}
+                      </div>
+                      {favorites.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                          <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            No favorites yet
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                            Tap the ★ on any asset to add it here
+                          </p>
+                        </div>
+                      ) : (
+                        favorites.map((fav, index) => {
+                          const favData = marketData[fav.symbol];
+                          const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
+                          const tfData = favData?.timeframes?.[timeframeKey];
+                          
+                          return (
+                            <div key={`favorite-${fav.symbol}-${index}`} className="flex-shrink-0 w-full">
+                              <WatchListItem
+                                name={fav.name}
+                                symbol={fav.symbol}
+                                price={tfData?.latest?.close ?? favData?.price ?? '—'}
+                                change={tfData?.latest?.change ?? favData?.change ?? 0}
+                                valueChange={tfData?.latest?.value_change ?? favData?.valueChange ?? 0}
+                                sparkline={tfData?.closes ?? favData?.sparkline ?? []}
+                                timeframe={selectedTimeframe}
+                                afterHours={tfData?.latest?.is_after_hours}
+                                onClick={() => setSelectedStock({
+                                  symbol: fav.symbol,
+                                  name: fav.name,
+                                  price: typeof tfData?.latest?.close === 'string' 
+                                    ? parseFloat(tfData.latest.close.replace(/,/g, '')) 
+                                    : (favData?.price ?? 0),
+                                  change: tfData?.latest?.change ?? favData?.change ?? 0,
+                                  valueChange: tfData?.latest?.value_change ?? favData?.valueChange ?? 0,
+                                  sparkline: tfData?.closes ?? favData?.sparkline ?? [],
+                                  timeframe: selectedTimeframe,
+                                  timeframes: favData?.timeframes,
+                                })}
+                              />
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Asset Classes */}
+                    {assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
                     const items = groupedPulse[classKey] || [];
 
@@ -743,7 +804,8 @@ export default function WatchlistPage() {
                         })}
                       </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
               </div>
             </CollapsibleSection>

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/context/ThemeContext";
 import { ToastProvider } from "@/components/context/ToastContext";
 import { PivyChatProvider } from "@/components/context/PivyChatContext";
+import { FavoritesProvider } from "@/components/context/FavoritesContext";
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
 import { UIProvider } from "@/components/context/UIContext";
@@ -44,6 +45,7 @@ export default function RootLayout({
             {/* UIProvider for global modal state */}
             <UIProvider>
               <PivyChatProvider>
+              <FavoritesProvider>
               <div className="min-h-screen flex flex-col">
                 {/* Navigation wrapper conditionally renders TopNav and BottomNav */}
                 <NavigationWrapper />
@@ -52,6 +54,7 @@ export default function RootLayout({
                   {children}
                 </main>
               </div>
+              </FavoritesProvider>
               </PivyChatProvider>
             </UIProvider>
           </ToastProvider>
