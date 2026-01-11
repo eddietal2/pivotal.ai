@@ -101,7 +101,7 @@ export default function StockDetailPage() {
     return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Render sparkline as SVG
+  // Render sparkline as SVG with axes
   const renderChart = () => {
     const data = stockData?.sparkline || [];
     if (data.length < 2) {
@@ -115,12 +115,16 @@ export default function StockDetailPage() {
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1;
+    // Add padding to price range
+    const paddedMin = min - range * 0.05;
+    const paddedMax = max + range * 0.05;
+    const paddedRange = paddedMax - paddedMin;
     const isPositive = (stockData?.change ?? 0) >= 0;
 
     const points = data
       .map((val, i) => {
         const x = (i / (data.length - 1)) * 100;
-        const y = 100 - ((val - min) / range) * 100;
+        const y = 100 - ((val - paddedMin) / paddedRange) * 100;
         return `${x},${y}`;
       })
       .join(' ');
@@ -128,24 +132,89 @@ export default function StockDetailPage() {
     // Create gradient fill
     const fillPoints = `0,100 ${points} 100,100`;
 
+    // Generate Y-axis labels (5 price levels)
+    const yLabels = [];
+    for (let i = 0; i <= 4; i++) {
+      const price = paddedMax - (paddedRange * i) / 4;
+      yLabels.push(price);
+    }
+
+    // Format price for Y-axis display
+    const formatAxisPrice = (p: number) => {
+      if (p >= 10000) return `$${(p / 1000).toFixed(0)}K`;
+      if (p >= 1000) return `$${(p / 1000).toFixed(1)}K`;
+      if (p >= 100) return `$${p.toFixed(0)}`;
+      if (p >= 1) return `$${p.toFixed(2)}`;
+      return `$${p.toFixed(4)}`;
+    };
+
+    // Generate X-axis labels based on timeframe
+    const getXLabels = () => {
+      switch (selectedTimeframe) {
+        case '1D':
+          return ['9:30', '11:00', '12:30', '2:00', '4:00'];
+        case '1W':
+          return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        case '1M':
+          return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        case '3M':
+          return ['Month 1', 'Month 2', 'Month 3'];
+        case '1Y':
+          return ['Q1', 'Q2', 'Q3', 'Q4'];
+        case 'ALL':
+          return ['Start', '', 'Mid', '', 'Now'];
+        default:
+          return ['Open', '', '', '', 'Now'];
+      }
+    };
+
+    const xLabels = getXLabels();
+
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <polygon fill="url(#chartGradient)" points={fillPoints} />
-        <polyline
-          fill="none"
-          stroke={isPositive ? '#22c55e' : '#ef4444'}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={points}
-        />
-      </svg>
+      <div className="flex h-full">
+        {/* Chart area */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 relative">
+            <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
+                  <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {/* Horizontal grid lines */}
+              {[0, 25, 50, 75, 100].map((y) => (
+                <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+              ))}
+              {/* Vertical grid lines */}
+              {[0, 25, 50, 75, 100].map((x) => (
+                <line key={x} x1={x} y1="0" x2={x} y2="100" stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+              ))}
+              <polygon fill="url(#chartGradient)" points={fillPoints} />
+              <polyline
+                fill="none"
+                stroke={isPositive ? '#22c55e' : '#ef4444'}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={points}
+              />
+            </svg>
+          </div>
+          {/* X-axis labels */}
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 px-1">
+            {xLabels.map((label, i) => (
+              <span key={i}>{label}</span>
+            ))}
+          </div>
+        </div>
+        {/* Y-axis labels (right side) */}
+        <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pl-3 py-1 min-w-[55px] text-left">
+          {yLabels.map((price, i) => (
+            <span key={i}>{formatAxisPrice(price)}</span>
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -259,7 +328,7 @@ export default function StockDetailPage() {
         </div>
 
         {/* Chart */}
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-64">
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-72">
           {renderChart()}
         </div>
 

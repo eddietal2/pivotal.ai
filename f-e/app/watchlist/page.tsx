@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
+
+// Set to true to enable timer/fetch logging
+const DEBUG_LOGS = false;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import { Info, LineChart, ChevronDown, Settings } from 'lucide-react';
@@ -123,7 +126,7 @@ export default function WatchlistPage() {
       return;
     }
     
-    console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ''}`);
+    if (DEBUG_LOGS) console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ''}`);
     
     // Abort any in-flight request
     if (abortControllerRef.current) {
@@ -178,7 +181,7 @@ export default function WatchlistPage() {
       secondsSinceCallRef.current = 0;
       betweenCallTimerRef.current = setInterval(() => {
         secondsSinceCallRef.current++;
-        console.log(`⏱️ ${secondsSinceCallRef.current}s since last API call`);
+        if (DEBUG_LOGS) console.log(`⏱️ ${secondsSinceCallRef.current}s since last API call`);
       }, 1000);
     } catch (err: any) {
       // Ignore abort errors from intentional cancellation (new request started)
