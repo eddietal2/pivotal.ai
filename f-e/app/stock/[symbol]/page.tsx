@@ -276,7 +276,7 @@ export default function StockDetailPage() {
               <polyline
                 fill="none"
                 stroke={isPositive ? '#22c55e' : '#ef4444'}
-                strokeWidth="1.5"
+                strokeWidth="1"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 points={points}
