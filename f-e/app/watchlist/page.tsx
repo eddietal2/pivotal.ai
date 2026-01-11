@@ -9,7 +9,7 @@ const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
-import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X, Activity, TrendingUp } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
@@ -721,7 +721,12 @@ export default function WatchlistPage() {
                     aria-label={`Collapse ${activeSection} section`}
                   >
                     <span className="transition-transform duration-200">▼</span>
-                    {activeSection === 'marketPulse' && 'Market Pulse'}
+                    {activeSection === 'marketPulse' && (
+                      <span className="flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-green-500" />
+                        Market Pulse
+                      </span>
+                    )}
                     {activeSection === 'myWatchlist' && (
                       <span className="flex items-center gap-2">
                         <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
@@ -738,7 +743,8 @@ export default function WatchlistPage() {
                     )}
                     {activeSection === 'swingScreening' && (
                       <span className="flex items-center gap-2">
-                        Swing Screening
+                        <TrendingUp className="w-5 h-5 text-blue-500" />
+                        Swing Screens
                       </span>
                     )}
                   </button>
@@ -765,6 +771,7 @@ export default function WatchlistPage() {
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-green-500" />
                   Market Pulse
                 </span>
               }
@@ -1092,7 +1099,8 @@ export default function WatchlistPage() {
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
-                  Swing Screening
+                  <TrendingUp className="w-5 h-5 text-purple-500" />
+                  Swing Screens
                 </span>
               }
               open={activeSection === 'swingScreening'}
