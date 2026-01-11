@@ -101,6 +101,12 @@ export default function WatchlistPage() {
     valueChange: number;
     sparkline: number[];
     timeframe: string;
+    timeframes?: {
+      day?: { closes: number[]; latest: { close: string; change: number; value_change: number; is_after_hours: boolean } };
+      week?: { closes: number[]; latest: { close: string; change: number; value_change: number; is_after_hours: boolean } };
+      month?: { closes: number[]; latest: { close: string; change: number; value_change: number; is_after_hours: boolean } };
+      year?: { closes: number[]; latest: { close: string; change: number; value_change: number; is_after_hours: boolean } };
+    };
   } | null>(null);
 
   // Market data state (from b-e financial_data)
@@ -707,11 +713,13 @@ export default function WatchlistPage() {
                             {classData.name}
                           </h3>
                         </div>
-                        {items.map((pulse, index) => (
+                        {items.map((pulse, index) => {
+                          const pulseSymbol = (pulse as any).symbol ?? (pulse as any).ticker ?? '—';
+                          return (
                           <div key={`${classKey}-${index}`} className="flex-shrink-0 w-full">
                             <WatchListItem
                               name={(pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—'}
-                              symbol={(pulse as any).symbol ?? (pulse as any).ticker ?? '—'}
+                              symbol={pulseSymbol}
                               price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
                               change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
                               valueChange={(pulse as any).valueChange}
@@ -720,17 +728,19 @@ export default function WatchlistPage() {
                               afterHours={(pulse as any).afterHours}
                               rv={(pulse as any).rv}
                               onClick={() => setSelectedStock({
-                                symbol: (pulse as any).symbol ?? (pulse as any).ticker ?? '—',
+                                symbol: pulseSymbol,
                                 name: (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—',
-                                price: typeof (pulse as any).price === 'number' ? (pulse as any).price : parseFloat(String((pulse as any).price)),
+                                price: typeof (pulse as any).price === 'number' ? (pulse as any).price : parseFloat(String((pulse as any).price).replace(/,/g, '')),
                                 change: typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change,
                                 valueChange: (pulse as any).valueChange ?? 0,
                                 sparkline: (pulse as any).sparkline ?? (pulse as any).trend ?? [],
                                 timeframe: (pulse as any).timeframe ?? '',
+                                timeframes: marketData[pulseSymbol]?.timeframes,
                               })}
                             />
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     );
                   })
@@ -874,6 +884,7 @@ export default function WatchlistPage() {
         valueChange={selectedStock?.valueChange || 0}
         sparkline={selectedStock?.sparkline || []}
         timeframe={selectedStock?.timeframe || ''}
+        timeframes={selectedStock?.timeframes}
       />
     </div>
   );

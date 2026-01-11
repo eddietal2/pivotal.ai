@@ -2,8 +2,129 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
+
+// Static descriptions for each asset
+const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
+  // Indexes
+  '^GSPC': {
+    description: 'The S&P 500 tracks 500 large-cap U.S. companies, representing ~80% of U.S. equity market cap.',
+    interpretation: 'Widely used as a benchmark for overall U.S. stock market performance.'
+  },
+  '^DJI': {
+    description: 'The Dow Jones Industrial Average tracks 30 large, publicly-owned blue-chip companies.',
+    interpretation: 'A price-weighted index often cited as a barometer of U.S. economic health.'
+  },
+  '^IXIC': {
+    description: 'The Nasdaq Composite includes all stocks listed on the Nasdaq exchange, heavily weighted toward tech.',
+    interpretation: 'Often used as a proxy for technology sector performance.'
+  },
+  '^RUT': {
+    description: 'The Russell 2000 tracks 2,000 small-cap U.S. companies.',
+    interpretation: 'A key indicator of small-cap stock performance and domestic economic health.'
+  },
+  
+  // Crypto
+  'BTC-USD': {
+    description: 'Bitcoin is the first and largest cryptocurrency by market cap, created in 2009.',
+    interpretation: 'Often viewed as "digital gold" and a store of value in the crypto ecosystem.'
+  },
+  'ETH-USD': {
+    description: 'Ethereum is a decentralized platform for smart contracts and dApps.',
+    interpretation: 'The backbone of DeFi and NFTs; ETH is used for gas fees on the network.'
+  },
+  'SOL-USD': {
+    description: 'Solana is a high-performance blockchain known for fast transactions and low fees.',
+    interpretation: 'Popular for DeFi and NFT projects requiring high throughput.'
+  },
+  'XRP-USD': {
+    description: 'XRP is designed for fast, low-cost international payments and remittances.',
+    interpretation: 'Used by financial institutions for cross-border settlement.'
+  },
+  'CRYPTO-FEAR-GREED': {
+    description: 'The Crypto Fear & Greed Index measures market sentiment on a 0-100 scale.',
+    interpretation: '0-25: Extreme Fear (potential buying opportunity) • 25-50: Fear • 50-75: Greed • 75-100: Extreme Greed (potential correction ahead)'
+  },
+  
+  // Precious Metals
+  'GC=F': {
+    description: 'Gold futures track the price of gold, a precious metal and traditional safe-haven asset.',
+    interpretation: 'Often rises during economic uncertainty; inversely correlated with USD strength.'
+  },
+  'SI=F': {
+    description: 'Silver futures track the price of silver, used in jewelry, electronics, and as an investment.',
+    interpretation: 'More volatile than gold; has both industrial and precious metal demand.'
+  },
+  'HG=F': {
+    description: 'Copper futures track the price of copper, a key industrial metal.',
+    interpretation: '"Dr. Copper" is considered a leading economic indicator due to its industrial use.'
+  },
+  'PL=F': {
+    description: 'Platinum futures track the price of platinum, used in automotive catalysts and jewelry.',
+    interpretation: 'Demand tied to auto industry; historically traded above gold.'
+  },
+  'PA=F': {
+    description: 'Palladium futures track the price of palladium, primarily used in catalytic converters.',
+    interpretation: 'Highly sensitive to auto production and emissions regulations.'
+  },
+  'LIT': {
+    description: 'Global X Lithium & Battery Tech ETF tracks companies in lithium mining and battery production.',
+    interpretation: 'A proxy for EV and energy storage sector growth.'
+  },
+  
+  // Energy
+  'CL=F': {
+    description: 'WTI Crude Oil futures track the price of West Texas Intermediate crude oil.',
+    interpretation: 'The U.S. benchmark for oil prices; sensitive to OPEC decisions and global demand.'
+  },
+  'NG=F': {
+    description: 'Natural Gas futures track the price of natural gas delivered at Henry Hub.',
+    interpretation: 'Highly seasonal; demand spikes in winter for heating and summer for cooling.'
+  },
+  'TAN': {
+    description: 'Invesco Solar ETF tracks companies in the solar energy industry.',
+    interpretation: 'A pure-play on solar energy adoption and clean energy transition.'
+  },
+  'ICLN': {
+    description: 'iShares Global Clean Energy ETF tracks global clean energy companies.',
+    interpretation: 'Broad exposure to renewable energy including solar, wind, and other clean tech.'
+  },
+  'HYDR': {
+    description: 'Global X Hydrogen ETF tracks companies involved in hydrogen production and fuel cells.',
+    interpretation: 'Exposure to emerging hydrogen economy and green hydrogen initiatives.'
+  },
+  
+  // Market Sentiment
+  '^VIX': {
+    description: 'The VIX measures expected 30-day volatility of the S&P 500 based on options prices.',
+    interpretation: '<15: Low volatility (complacency) • 15-25: Normal • 25-35: Elevated fear • >35: Extreme fear'
+  },
+  'CALL/PUT Ratio': {
+    description: 'The Put/Call Ratio compares put option volume to call option volume.',
+    interpretation: '<0.7: Bullish sentiment (more calls) • 0.7-1.0: Neutral • >1.0: Bearish sentiment (more puts)'
+  },
+  
+  // Treasury Yields
+  'DGS10': {
+    description: 'The 10-Year Treasury Yield is the interest rate on U.S. 10-year government bonds.',
+    interpretation: 'Higher yields → higher mortgage/loan rates, signals growth or inflation expectations. Lower yields → cheaper borrowing, often indicates flight to safety.'
+  },
+  'DGS2': {
+    description: 'The 2-Year Treasury Yield is the interest rate on U.S. 2-year government bonds.',
+    interpretation: 'Higher yields → Fed expected to raise rates or keep them elevated. Lower yields → Fed expected to cut rates. When 2Y > 10Y (inverted), historically signals recession.'
+  },
+};
+
+interface TimeframeData {
+  closes: number[];
+  latest: {
+    close: string;
+    change: number;
+    value_change: number;
+    is_after_hours: boolean;
+  };
+}
 
 interface StockPreviewModalProps {
   isOpen: boolean;
@@ -15,6 +136,13 @@ interface StockPreviewModalProps {
   valueChange: number;
   sparkline: number[];
   timeframe: string;
+  // New: all timeframe data for switching
+  timeframes?: {
+    day?: TimeframeData;
+    week?: TimeframeData;
+    month?: TimeframeData;
+    year?: TimeframeData;
+  };
 }
 
 export default function StockPreviewModal({
@@ -27,9 +155,54 @@ export default function StockPreviewModal({
   valueChange,
   sparkline,
   timeframe,
+  timeframes,
 }: StockPreviewModalProps) {
   const router = useRouter();
   const [isClosing, setIsClosing] = React.useState(false);
+  const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
+    (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
+  );
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+  // Handle timeframe change with transition
+  const handleTimeframeChange = (tf: 'day' | 'week' | 'month' | 'year') => {
+    if (tf === selectedTimeframe) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedTimeframe(tf);
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
+  };
+
+  // Reset selected timeframe when modal opens with new data
+  React.useEffect(() => {
+    if (isOpen && timeframe) {
+      const tf = timeframe.toLowerCase();
+      if (tf === 'day' || tf === 'week' || tf === 'month' || tf === 'year') {
+        setSelectedTimeframe(tf);
+      }
+    }
+  }, [isOpen, timeframe]);
+
+  // Get current data based on selected timeframe
+  const currentData = React.useMemo(() => {
+    if (timeframes && timeframes[selectedTimeframe]) {
+      const tfData = timeframes[selectedTimeframe]!;
+      return {
+        sparkline: tfData.closes || [],
+        change: tfData.latest?.change ?? change,
+        valueChange: tfData.latest?.value_change ?? valueChange,
+        price: tfData.latest?.close ? parseFloat(tfData.latest.close.replace(/,/g, '')) : (typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price),
+      };
+    }
+    // Fallback to props
+    return {
+      sparkline,
+      change,
+      valueChange,
+      price: typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price,
+    };
+  }, [timeframes, selectedTimeframe, sparkline, change, valueChange, price]);
 
   // Handle close with animation
   const handleClose = React.useCallback(() => {
@@ -75,14 +248,15 @@ export default function StockPreviewModal({
     }, 280);
   };
 
-  const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
-  const isPositive = change >= 0;
+  const numericPrice = currentData.price;
+  const isPositive = currentData.change >= 0;
   const pricePrefix = getPricePrefix(symbol);
   const priceSuffix = getPriceSuffix(symbol);
 
   // Render sparkline chart with axes
   const renderSparkline = () => {
-    if (!sparkline || sparkline.length < 2) {
+    const chartData = currentData.sparkline;
+    if (!chartData || chartData.length < 2) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400 text-sm">
           No chart data available
@@ -90,17 +264,17 @@ export default function StockPreviewModal({
       );
     }
 
-    const min = Math.min(...sparkline);
-    const max = Math.max(...sparkline);
+    const min = Math.min(...chartData);
+    const max = Math.max(...chartData);
     const range = max - min || 1;
     // Add padding to price range
     const paddedMin = min - range * 0.05;
     const paddedMax = max + range * 0.05;
     const paddedRange = paddedMax - paddedMin;
 
-    const points = sparkline
+    const points = chartData
       .map((val, i) => {
-        const x = (i / (sparkline.length - 1)) * 100;
+        const x = (i / (chartData.length - 1)) * 100;
         const y = 100 - ((val - paddedMin) / paddedRange) * 100;
         return `${x},${y}`;
       })
@@ -146,7 +320,7 @@ export default function StockPreviewModal({
           {/* X-axis labels */}
           <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0">
             <span>Open</span>
-            <span>{timeframe}</span>
+            <span>{selectedTimeframe.charAt(0).toUpperCase() + selectedTimeframe.slice(1)}</span>
             <span>Now</span>
           </div>
         </div>
@@ -199,28 +373,59 @@ export default function StockPreviewModal({
         {/* Content */}
         <div className="p-4 space-y-4">
           {/* Price */}
-          <div className="flex items-baseline gap-3 flex-wrap">
+          <div className={`flex items-baseline gap-3 flex-wrap transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
               {pricePrefix}{!isNaN(numericPrice) ? numericPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price}{priceSuffix}
             </span>
-            <div className={`flex items-center gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`flex items-center gap-1 transition-colors duration-200 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span className="font-semibold">
-                {pricePrefix}{isPositive ? '+' : ''}{valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({isPositive ? '+' : ''}{change?.toFixed(2) || '0.00'}%)
+                {pricePrefix}{isPositive ? '+' : ''}{currentData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({isPositive ? '+' : ''}{currentData.change?.toFixed(2) || '0.00'}%)
               </span>
             </div>
           </div>
 
+
           {/* Chart */}
-          <div className="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden">
+          <div className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
             {renderSparkline()}
           </div>
+          
+          {/* Timeframe buttons */}
+          <div className="flex gap-2 mb-20 px-4">
+            {(['day', 'week', 'month', 'year'] as const).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => handleTimeframeChange(tf)}
+                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  selectedTimeframe === tf
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {tf === 'day' ? '1D' : tf === 'week' ? '1W' : tf === 'month' ? '1M' : '1Y'}
+              </button>
+            ))}
+          </div>
 
-          {/* Timeframe indicator */}
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            {timeframe} timeframe
-          </p>
+          {/* Brief Description */}
+          {assetDescriptions[symbol] && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {assetDescriptions[symbol].description}
+                </p>
+              </div>
+              {assetDescriptions[symbol].interpretation && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 border-l-2 border-blue-200 dark:border-blue-700 ml-1">
+                  {assetDescriptions[symbol].interpretation}
+                </p>
+              )}
+            </div>
+          )}
         </div>
+        
 
         {/* Actions */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
