@@ -90,9 +90,9 @@ def fetch_all_tickers_batch(tickers):
     import yfinance as yf
     
     # Filter out non-yfinance tickers
-    yf_tickers = [t for t in tickers if not t.startswith('DGS') and t != 'CALL/PUT Ratio']
+    yf_tickers = [t for t in tickers if not t.startswith('DGS') and t not in ['CALL/PUT Ratio', 'CRYPTO-FEAR-GREED']]
     fred_tickers = [t for t in tickers if t.startswith('DGS')]
-    special_tickers = [t for t in tickers if t == 'CALL/PUT Ratio']
+    special_tickers = [t for t in tickers if t in ['CALL/PUT Ratio', 'CRYPTO-FEAR-GREED']]
     
     result = {}
     service = FinancialDataService()
@@ -321,6 +321,22 @@ def fetch_all_tickers_batch(tickers):
                 # Fallback with generated sparkline data
                 result[ticker] = {
                     'timeframes': service._build_call_put_timeframe_data([], 0.85, datetime.now()),
+                    'rv': None,
+                    'rv_grade': None
+                }
+        elif ticker == 'CRYPTO-FEAR-GREED':
+            try:
+                fear_greed_data = service._fetch_crypto_fear_greed()
+                result[ticker] = {
+                    'timeframes': fear_greed_data,
+                    'rv': None,
+                    'rv_grade': None
+                }
+            except Exception as e:
+                logger.error(f"Error fetching Crypto Fear & Greed: {e}")
+                # Fallback with neutral value
+                result[ticker] = {
+                    'timeframes': service._build_fear_greed_timeframe_data([], 50, datetime.now()),
                     'rv': None,
                     'rv_grade': None
                 }
@@ -876,6 +892,170 @@ class FinancialDataService:
         
         return interpolated.tolist()
 
+    def _fetch_crypto_fear_greed(self):
+        """
+        Fetch Crypto Fear & Greed Index from Alternative.me API.
+        
+        The index is a 0-100 score:
+        - 0-25: Extreme Fear
+        - 25-50: Fear
+        - 50-75: Greed
+        - 75-100: Extreme Greed
+        
+        API: https://api.alternative.me/fng/?limit=365
+        """
+        logger = logging.getLogger(__name__)
+        try:
+            import requests
+            from datetime import datetime
+            
+            # Fetch last 365 days of data
+            url = "https://api.alternative.me/fng/?limit=365"
+            
+            logger.info("Fetching Crypto Fear & Greed Index...")
+            
+            response = requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if 'data' in data and len(data['data']) > 0:
+                # Data comes newest first, so reverse it
+                fear_greed_data = data['data'][::-1]
+                
+                # Extract values (they're strings in the API response)
+                values = [int(item['value']) for item in fear_greed_data]
+                current_value = values[-1] if values else 50
+                
+                logger.info(f"Crypto Fear & Greed Index: {current_value} (from {len(values)} days of data)")
+                
+                return self._build_fear_greed_timeframe_data(values, current_value, datetime.now())
+            
+            logger.warning("No data in Crypto Fear & Greed response")
+            return self._build_fear_greed_timeframe_data([], 50, datetime.now())
+            
+        except Exception as e:
+            logger.error(f"Error fetching Crypto Fear & Greed Index: {e}")
+            return self._build_fear_greed_timeframe_data([], 50, datetime.now())
+
+    def _build_fear_greed_timeframe_data(self, historical_values, current_value, today):
+        """
+        Build timeframe data structure for Crypto Fear & Greed Index.
+        
+        Args:
+            historical_values: List of historical values (oldest first, 0-100 scale)
+            current_value: Current/latest value
+            today: Current datetime
+        
+        Returns:
+            dict: Timeframe data with sparklines and latest values
+        """
+        from datetime import datetime
+        
+        timeframe_data = {}
+        
+        # Sparkline point counts for each timeframe
+        sparkline_config = {
+            'day': 24,    # For day view, we'll interpolate
+            'week': 7,    # Daily points for week
+            'month': 30,  # Daily points for month
+            'year': 52    # Weekly points for year
+        }
+        
+        for tf_name, num_points in sparkline_config.items():
+            if historical_values and len(historical_values) >= 2:
+                if tf_name == 'day':
+                    # For day view, interpolate from recent daily data
+                    recent = historical_values[-5:] if len(historical_values) >= 5 else historical_values
+                    sparkline = self._interpolate_fear_greed(recent, num_points)
+                elif tf_name == 'week':
+                    sparkline = historical_values[-num_points:] if len(historical_values) >= num_points else historical_values
+                elif tf_name == 'month':
+                    sparkline = historical_values[-num_points:] if len(historical_values) >= num_points else historical_values
+                else:  # year - sample weekly from daily data
+                    yearly_data = historical_values[-365:] if len(historical_values) >= 365 else historical_values
+                    step = max(1, len(yearly_data) // num_points)
+                    sparkline = yearly_data[::step][-num_points:]
+                
+                # Ensure sparkline has correct number of points
+                while len(sparkline) < num_points:
+                    sparkline.insert(0, sparkline[0] if sparkline else current_value)
+                sparkline = sparkline[-num_points:]
+                
+                # Calculate change from first to last point
+                first_val = sparkline[0] if sparkline else current_value
+                change = round(((current_value - first_val) / first_val) * 100, 2) if first_val > 0 else 0
+            else:
+                # Generate synthetic sparkline
+                sparkline = self._generate_fear_greed_sparkline(current_value, tf_name, num_points)
+                change = 0
+            
+            # Round sparkline values
+            sparkline = [round(v, 1) for v in sparkline]
+            
+            timeframe_data[tf_name] = {
+                'closes': sparkline,
+                'latest': {
+                    'datetime': today.strftime('%m/%d/%y'),
+                    'close': str(int(current_value)),
+                    'change': change,
+                    'value_change': 0.0,
+                    'is_after_hours': False
+                }
+            }
+        
+        return timeframe_data
+
+    def _interpolate_fear_greed(self, data, num_points):
+        """Interpolate Fear & Greed data to fill sparkline points."""
+        import numpy as np
+        
+        if len(data) == 0:
+            return [50] * num_points
+        if len(data) == 1:
+            return [data[0]] * num_points
+        
+        # Linear interpolation
+        x_orig = np.linspace(0, 1, len(data))
+        x_new = np.linspace(0, 1, num_points)
+        interpolated = np.interp(x_new, x_orig, data)
+        
+        return interpolated.tolist()
+
+    def _generate_fear_greed_sparkline(self, current_value, timeframe, num_points):
+        """
+        Generate a deterministic sparkline for Fear & Greed Index using mean-reversion.
+        """
+        import math
+        
+        # Neutral mean for Fear & Greed (50 = neutral)
+        mean_value = 50
+        
+        # Volatility by timeframe
+        vol_map = {'day': 5, 'week': 10, 'month': 15, 'year': 20}
+        volatility = vol_map.get(timeframe, 5)
+        
+        sparkline = [current_value]
+        seed = int(current_value * 100) + hash(timeframe) % 1000
+        
+        for i in range(num_points - 1, 0, -1):
+            progress = i / num_points
+            angle = (seed + i * 137.508) % 360
+            pseudo_random = math.sin(math.radians(angle)) * 0.5 + 0.5
+            
+            # Mean reversion + volatility
+            mean_pull = (mean_value - sparkline[0]) * 0.15 * (1 - progress)
+            vol_component = (pseudo_random - 0.5) * volatility * 2
+            
+            prev_point = sparkline[0] - mean_pull + vol_component
+            # Bounds: 0 to 100
+            prev_point = max(0, min(100, prev_point))
+            sparkline.insert(0, round(prev_point, 1))
+        
+        return sparkline
+
     def fetch_relative_volume(self, ticker):
         """
         Calculate daily and weekly Relative Volume (RV) for a ticker.
@@ -886,8 +1066,8 @@ class FinancialDataService:
         Returns:
             dict: {'daily_rv': float, 'weekly_rv': float}
         """
-        # FRED series and CALL/PUT Ratio don't have volume data
-        if ticker.startswith('DGS') or ticker == 'CALL/PUT Ratio':
+        # FRED series, CALL/PUT Ratio, and Crypto Fear & Greed don't have volume data
+        if ticker.startswith('DGS') or ticker in ['CALL/PUT Ratio', 'CRYPTO-FEAR-GREED']:
             return {
                 'daily_rv': None,
                 'daily_grade': None,

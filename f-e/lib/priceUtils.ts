@@ -6,6 +6,8 @@
 const CURRENCY_ASSETS = new Set([
   'BTC-USD',    // Bitcoin
   'ETH-USD',    // Ethereum
+  'SOL-USD',    // Solana
+  'XRP-USD',    // Ripple
   'GC=F',       // Gold
   'SI=F',       // Silver
   'HG=F',       // Copper
@@ -19,9 +21,10 @@ const PERCENTAGE_ASSETS = new Set([
   'DGS2',       // 2-Year Treasury Yield
 ]);
 
-// Assets that are ratios (no symbol needed)
+// Assets that are ratios/indexes without $ (no symbol needed)
 const RATIO_ASSETS = new Set([
   'CALL/PUT Ratio',
+  'CRYPTO-FEAR-GREED',  // 0-100 index
 ]);
 
 // Index assets (points, no $ symbol)
