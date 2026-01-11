@@ -28,6 +28,16 @@ export default function StockPreviewModal({
   timeframe,
 }: StockPreviewModalProps) {
   const router = useRouter();
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  // Handle close with animation
+  const handleClose = React.useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 280); // Match animation duration
+  }, [onClose]);
 
   // Prevent scroll on body when modal is open
   React.useEffect(() => {
@@ -45,20 +55,23 @@ export default function StockPreviewModal({
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleEscape);
     }
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 
   const handleOpenFullView = () => {
-    onClose();
-    router.push(`/stock/${encodeURIComponent(symbol)}`);
+    handleClose();
+    // Navigate after animation completes
+    setTimeout(() => {
+      router.push(`/stock/${encodeURIComponent(symbol)}`);
+    }, 280);
   };
 
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -114,14 +127,14 @@ export default function StockPreviewModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] transition-opacity animate-fade-in"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] transition-opacity ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Bottom Sheet Modal */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden animate-slide-up"
+        className={`fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="stock-preview-title"
@@ -138,7 +151,7 @@ export default function StockPreviewModal({
             <h2 id="stock-preview-title" className="text-xl font-bold text-gray-900 dark:text-white">{name}</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
             aria-label="Close preview"
           >
@@ -182,7 +195,7 @@ export default function StockPreviewModal({
             Open Full View
           </button>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             Close
@@ -199,6 +212,14 @@ export default function StockPreviewModal({
             transform: translateY(0);
           }
         }
+        @keyframes slide-down {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(100%);
+          }
+        }
         @keyframes fade-in {
           from {
             opacity: 0;
@@ -207,11 +228,25 @@ export default function StockPreviewModal({
             opacity: 1;
           }
         }
+        @keyframes fade-out {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
+        }
         .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
+          animation: slide-up 0.3s ease-out forwards;
+        }
+        .animate-slide-down {
+          animation: slide-down 0.28s ease-in forwards;
         }
         .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
+          animation: fade-in 0.2s ease-out forwards;
+        }
+        .animate-fade-out {
+          animation: fade-out 0.25s ease-in forwards;
         }
       `}</style>
     </>
