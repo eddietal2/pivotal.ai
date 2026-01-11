@@ -69,7 +69,7 @@ def fetch_all_tickers_batch(tickers):
     Fetch data for all tickers in a single batch download.
     This is MUCH faster than fetching one ticker at a time.
     
-    Uses 1 year of daily data to derive all timeframes.
+    Uses 1 year of daily data for week/month/year, and intraday data for day.
     
     Args:
         tickers (list): List of ticker symbols
@@ -97,6 +97,9 @@ def fetch_all_tickers_batch(tickers):
     result = {}
     service = FinancialDataService()
     
+    # Store intraday data for day sparklines
+    intraday_data = {}
+    
     # Batch download all yfinance tickers at once - this is the key optimization!
     if yf_tickers:
         print(f"Batch downloading {len(yf_tickers)} tickers...")
@@ -113,8 +116,44 @@ def fetch_all_tickers_batch(tickers):
                     group_by='ticker',
                     threads=True  # Use threading for faster download
                 )
+                
+                # Also download intraday data (5-min intervals, last 2 days) for day sparklines
+                df_intraday = yf.download(
+                    yf_tickers,
+                    period='2d',
+                    interval='5m',
+                    progress=False,
+                    group_by='ticker',
+                    threads=True,
+                    prepost=True  # Include pre/post market
+                )
             
             print(f"Batch download completed in {time.time() - start_time:.2f}s")
+            
+            # Process intraday data for each ticker
+            for ticker in yf_tickers:
+                try:
+                    if len(yf_tickers) == 1:
+                        intraday_df = df_intraday.copy()
+                        if isinstance(intraday_df.columns, pd.MultiIndex):
+                            intraday_df.columns = intraday_df.columns.droplevel(1)
+                    else:
+                        if ticker in df_intraday.columns.get_level_values(0):
+                            intraday_df = df_intraday[ticker].copy()
+                        else:
+                            intraday_df = pd.DataFrame()
+                    
+                    if not intraday_df.empty and 'Close' in intraday_df.columns:
+                        intraday_df = intraday_df.dropna(subset=['Close'])
+                        # Get last trading day's data only (filter to most recent day)
+                        if not intraday_df.empty:
+                            last_date = intraday_df.index[-1].date()
+                            day_mask = intraday_df.index.date == last_date
+                            day_df = intraday_df[day_mask]
+                            if not day_df.empty:
+                                intraday_data[ticker] = day_df['Close'].tolist()
+                except Exception as e:
+                    print(f"Error processing intraday for {ticker}: {e}")
             
             # Process each ticker from the batch data
             for ticker in yf_tickers:
@@ -207,12 +246,17 @@ def fetch_all_tickers_batch(tickers):
                         }
                     }
                     
-                    # Day: last 2 days (for day change calculation)
-                    day_closes = closes[-2:] if len(closes) >= 2 else closes
-                    day_change = round(((day_closes[-1] - day_closes[0]) / day_closes[0]) * 100, 2) if len(day_closes) >= 2 else 0
-                    day_value_change = round(day_closes[-1] - day_closes[0], 2) if len(day_closes) >= 2 else 0
+                    # Day: Use intraday data for sparkline (5-min intervals)
+                    # Get yesterday's close for change calculation
+                    yesterday_close = closes[-2] if len(closes) >= 2 else closes[-1]
+                    day_change = round(((latest_close - yesterday_close) / yesterday_close) * 100, 2) if yesterday_close else 0
+                    day_value_change = round(latest_close - yesterday_close, 2) if yesterday_close else 0
+                    
+                    # Use intraday closes for sparkline, fallback to daily if not available
+                    day_sparkline = intraday_data.get(ticker, closes[-1:])
+                    
                     timeframe_data['day'] = {
-                        'closes': day_closes,
+                        'closes': day_sparkline,
                         'latest': {
                             'datetime': latest_datetime_str,
                             'close': format_number_with_commas(latest_close),
