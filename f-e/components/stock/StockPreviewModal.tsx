@@ -365,18 +365,18 @@ export default function StockPreviewModal({
 
       {/* Bottom Sheet Modal */}
       <div 
-        className={`fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="stock-preview-title"
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-2">
+        <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{symbol}</p>
             <h2 id="stock-preview-title" className="text-xl font-bold text-gray-900 dark:text-white">{name}</h2>
@@ -445,10 +445,9 @@ export default function StockPreviewModal({
             </div>
           )}
         </div>
-        
 
-        {/* Actions */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+        {/* Actions - fixed at bottom */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3 flex-shrink-0">
           <button
             onClick={handleTogglePivyChat}
             className={`w-full py-3 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
