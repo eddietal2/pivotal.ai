@@ -10,6 +10,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
 import { useFavorites } from '@/components/context/FavoritesContext';
+import CandleStickAnim from '@/components/ui/CandleStickAnim';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -654,6 +655,16 @@ export default function WatchlistPage() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
         <div className="space-y-8 p-4 sm:p-8 md:mt-10">
+
+          {/* Header */}
+          <div className='flex items-center gap-2'>
+            <div className='w-[30px] h-[30px] flex items-center justify-center'>
+              <CandleStickAnim></CandleStickAnim>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white relative top-1.5 left-1.5">
+              WatchList
+            </h1>
+          </div>
 
           {/* Search Bar Button */}
           <button
