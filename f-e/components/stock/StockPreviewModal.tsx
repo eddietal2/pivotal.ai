@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart, Star } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart, Star, BarChart2, LineChart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
@@ -165,6 +165,7 @@ export default function StockPreviewModal({
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
   const [isClosing, setIsClosing] = React.useState(false);
+  const [chartMode, setChartMode] = React.useState<'line' | 'candle'>('line');
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
@@ -349,6 +350,104 @@ export default function StockPreviewModal({
     const paddedMax = max + range * 0.05;
     const paddedRange = paddedMax - paddedMin;
 
+    // Generate Y-axis labels (4 price levels)
+    const yLabels = [];
+    for (let i = 0; i <= 3; i++) {
+      const price = paddedMax - (paddedRange * i) / 3;
+      yLabels.push(price);
+    }
+
+    // Candlestick mode rendering
+    if (chartMode === 'candle') {
+      // Generate OHLC data from closes - group into candles
+      const candleCount = Math.min(20, Math.floor(chartData.length / 3));
+      const pointsPerCandle = Math.floor(chartData.length / candleCount);
+      const candles: { open: number; high: number; low: number; close: number }[] = [];
+      
+      for (let i = 0; i < candleCount; i++) {
+        const start = i * pointsPerCandle;
+        const end = Math.min(start + pointsPerCandle, chartData.length);
+        const segment = chartData.slice(start, end);
+        if (segment.length > 0) {
+          candles.push({
+            open: segment[0],
+            high: Math.max(...segment),
+            low: Math.min(...segment),
+            close: segment[segment.length - 1],
+          });
+        }
+      }
+
+      const candleWidth = 80 / candleCount;
+      const gap = candleWidth * 0.2;
+
+      return (
+        <div className="flex h-full overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 relative min-h-0">
+              <svg viewBox="0 0 100 100" className="w-full h-full absolute inset-0" preserveAspectRatio="none">
+                {/* Grid lines */}
+                {[0, 33, 66, 100].map((y) => (
+                  <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.5" />
+                ))}
+                {/* Candlesticks */}
+                {candles.map((candle, i) => {
+                  const x = 10 + (i / candleCount) * 80;
+                  const isBullish = candle.close >= candle.open;
+                  const color = isBullish ? '#22c55e' : '#ef4444';
+                  
+                  const highY = 100 - ((candle.high - paddedMin) / paddedRange) * 100;
+                  const lowY = 100 - ((candle.low - paddedMin) / paddedRange) * 100;
+                  const openY = 100 - ((candle.open - paddedMin) / paddedRange) * 100;
+                  const closeY = 100 - ((candle.close - paddedMin) / paddedRange) * 100;
+                  
+                  const bodyTop = Math.min(openY, closeY);
+                  const bodyHeight = Math.max(Math.abs(closeY - openY), 0.5);
+                  
+                  return (
+                    <g key={i}>
+                      {/* Wick */}
+                      <line
+                        x1={x + candleWidth / 2 - gap / 2}
+                        y1={highY}
+                        x2={x + candleWidth / 2 - gap / 2}
+                        y2={lowY}
+                        stroke={color}
+                        strokeWidth="0.5"
+                      />
+                      {/* Body */}
+                      <rect
+                        x={x}
+                        y={bodyTop}
+                        width={candleWidth - gap}
+                        height={bodyHeight}
+                        fill={isBullish ? color : color}
+                        stroke={color}
+                        strokeWidth="0.3"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+            {/* X-axis labels */}
+            <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0">
+              <span>Open</span>
+              <span>{selectedTimeframe.charAt(0).toUpperCase() + selectedTimeframe.slice(1)}</span>
+              <span>Now</span>
+            </div>
+          </div>
+          {/* Y-axis labels (right side) */}
+          <div className="flex flex-col justify-between text-[10px] text-gray-400 pl-2 py-1 min-w-[45px] text-left flex-shrink-0">
+            {yLabels.map((yPrice, i) => (
+              <span key={i}>{formatAxisPrice(yPrice, symbol)}</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Line chart mode (default)
     const points = chartData
       .map((val, i) => {
         const x = (i / (chartData.length - 1)) * 100;
@@ -359,13 +458,6 @@ export default function StockPreviewModal({
 
     // Create gradient fill
     const fillPoints = `0,100 ${points} 100,100`;
-
-    // Generate Y-axis labels (4 price levels)
-    const yLabels = [];
-    for (let i = 0; i <= 3; i++) {
-      const price = paddedMax - (paddedRange * i) / 3;
-      yLabels.push(price);
-    }
 
     return (
       <div className="flex h-full overflow-hidden">
@@ -499,6 +591,18 @@ export default function StockPreviewModal({
                 {tf === 'day' ? '1D' : tf === 'week' ? '1W' : tf === 'month' ? '1M' : '1Y'}
               </button>
             ))}
+            {/* Chart mode toggle */}
+            <button
+              onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                chartMode === 'candle'
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              title={chartMode === 'line' ? 'Switch to candlestick' : 'Switch to line chart'}
+            >
+              {chartMode === 'line' ? <BarChart2 className="w-4 h-4" /> : <LineChart className="w-4 h-4" />}
+            </button>
           </div>
 
           {/* Brief Description */}

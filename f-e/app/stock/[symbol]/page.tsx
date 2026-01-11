@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart, Star, X } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart, Star, X, BarChart2, LineChart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
@@ -36,6 +36,7 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
+  const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
@@ -195,17 +196,6 @@ export default function StockDetailPage() {
     const paddedRange = paddedMax - paddedMin;
     const isPositive = (stockData?.change ?? 0) >= 0;
 
-    const points = data
-      .map((val, i) => {
-        const x = (i / (data.length - 1)) * 100;
-        const y = 100 - ((val - paddedMin) / paddedRange) * 100;
-        return `${x},${y}`;
-      })
-      .join(' ');
-
-    // Create gradient fill
-    const fillPoints = `0,100 ${points} 100,100`;
-
     // Generate Y-axis labels (5 price levels)
     const yLabels = [];
     for (let i = 0; i <= 4; i++) {
@@ -251,6 +241,112 @@ export default function StockDetailPage() {
     };
 
     const xLabels = getXLabels();
+
+    // Candlestick mode rendering
+    if (chartMode === 'candle') {
+      // Generate OHLC data from closes - group into candles
+      const candleCount = Math.min(30, Math.floor(data.length / 3));
+      const pointsPerCandle = Math.floor(data.length / candleCount);
+      const candles: { open: number; high: number; low: number; close: number }[] = [];
+      
+      for (let i = 0; i < candleCount; i++) {
+        const start = i * pointsPerCandle;
+        const end = Math.min(start + pointsPerCandle, data.length);
+        const segment = data.slice(start, end);
+        if (segment.length > 0) {
+          candles.push({
+            open: segment[0],
+            high: Math.max(...segment),
+            low: Math.min(...segment),
+            close: segment[segment.length - 1],
+          });
+        }
+      }
+
+      const candleWidth = 80 / candleCount;
+      const gap = candleWidth * 0.2;
+
+      return (
+        <div className="flex h-full">
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 relative">
+              <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+                {/* Horizontal grid lines */}
+                {[0, 25, 50, 75, 100].map((y) => (
+                  <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+                ))}
+                {/* Vertical grid lines */}
+                {[0, 25, 50, 75, 100].map((x) => (
+                  <line key={x} x1={x} y1="0" x2={x} y2="100" stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+                ))}
+                {/* Candlesticks */}
+                {candles.map((candle, i) => {
+                  const x = 10 + (i / candleCount) * 80;
+                  const isBullish = candle.close >= candle.open;
+                  const color = isBullish ? '#22c55e' : '#ef4444';
+                  
+                  const highY = 100 - ((candle.high - paddedMin) / paddedRange) * 100;
+                  const lowY = 100 - ((candle.low - paddedMin) / paddedRange) * 100;
+                  const openY = 100 - ((candle.open - paddedMin) / paddedRange) * 100;
+                  const closeY = 100 - ((candle.close - paddedMin) / paddedRange) * 100;
+                  
+                  const bodyTop = Math.min(openY, closeY);
+                  const bodyHeight = Math.max(Math.abs(closeY - openY), 0.5);
+                  
+                  return (
+                    <g key={i}>
+                      {/* Wick */}
+                      <line
+                        x1={x + candleWidth / 2 - gap / 2}
+                        y1={highY}
+                        x2={x + candleWidth / 2 - gap / 2}
+                        y2={lowY}
+                        stroke={color}
+                        strokeWidth="0.4"
+                      />
+                      {/* Body */}
+                      <rect
+                        x={x}
+                        y={bodyTop}
+                        width={candleWidth - gap}
+                        height={bodyHeight}
+                        fill={color}
+                        stroke={color}
+                        strokeWidth="0.2"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+            {/* X-axis labels */}
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 px-1">
+              {xLabels.map((label, i) => (
+                <span key={i}>{label}</span>
+              ))}
+            </div>
+          </div>
+          {/* Y-axis labels (right side) */}
+          <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pl-3 py-1 min-w-[55px] text-left">
+            {yLabels.map((yPrice, i) => (
+              <span key={i}>{formatAxisPriceLocal(yPrice)}</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Line chart mode (default)
+    const points = data
+      .map((val, i) => {
+        const x = (i / (data.length - 1)) * 100;
+        const y = 100 - ((val - paddedMin) / paddedRange) * 100;
+        return `${x},${y}`;
+      })
+      .join(' ');
+
+    // Create gradient fill
+    const fillPoints = `0,100 ${points} 100,100`;
 
     return (
       <div className="flex h-full">
@@ -436,6 +532,18 @@ export default function StockDetailPage() {
               {tf}
             </button>
           ))}
+          {/* Chart mode toggle */}
+          <button
+            onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              chartMode === 'candle'
+                ? 'bg-orange-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+            title={chartMode === 'line' ? 'Switch to candlestick' : 'Switch to line chart'}
+          >
+            {chartMode === 'line' ? <BarChart2 className="w-4 h-4" /> : <LineChart className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Key Statistics */}
