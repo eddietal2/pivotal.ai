@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
+import { useFavorites } from '@/components/context/FavoritesContext';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -160,11 +161,25 @@ export default function StockPreviewModal({
 }: StockPreviewModalProps) {
   const router = useRouter();
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isClosing, setIsClosing] = React.useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' } | null>(null);
+
+  // Handle favorite toggle with toast notification
+  const handleToggleFavorite = () => {
+    const wasFavorite = isFavorite(symbol);
+    toggleFavorite({ symbol, name });
+    setToast({
+      message: wasFavorite ? `${name} removed from favorites` : `${name} added to favorites`,
+      type: wasFavorite ? 'info' : 'success',
+    });
+    // Auto-dismiss toast
+    setTimeout(() => setToast(null), 2500);
+  };
 
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
@@ -381,13 +396,22 @@ export default function StockPreviewModal({
             <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{symbol}</p>
             <h2 id="stock-preview-title" className="text-xl font-bold text-gray-900 dark:text-white">{name}</h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-            aria-label="Close preview"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleToggleFavorite}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              aria-label={isFavorite(symbol) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'fill-pink-500 text-pink-500' : 'text-gray-400 hover:text-pink-400'}`} />
+            </button>
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              aria-label="Close preview"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -529,7 +553,34 @@ export default function StockPreviewModal({
         .animate-fade-out {
           animation: fade-out 0.25s ease-in forwards;
         }
+        @keyframes toast-slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-toast-slide-up {
+          animation: toast-slide-up 0.25s ease-out forwards;
+        }
       `}</style>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[102] animate-toast-slide-up">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm ${
+            toast.type === 'success' 
+              ? 'bg-pink-500/90 text-white' 
+              : 'bg-gray-800/90 text-white dark:bg-gray-700/90'
+          }`}>
+            <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
+            <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </>
   );
 }

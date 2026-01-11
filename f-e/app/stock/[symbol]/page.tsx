@@ -316,7 +316,7 @@ export default function StockDetailPage() {
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               title={isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
             >
-              <Heart className={`w-6 h-6 ${isWatchlisted ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+              <Heart className={`w-6 h-6 transition-colors ${isWatchlisted ? 'fill-pink-500 text-pink-500' : 'text-gray-400 hover:text-pink-400'}`} />
             </button>
             <button 
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
