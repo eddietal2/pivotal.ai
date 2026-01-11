@@ -71,8 +71,8 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 export default function WatchlistPage() {
   const { favorites } = useFavorites();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
-  // Track open state of sections
-  const [marketPulseOpen, setMarketPulseOpen] = useState(true);
+  // Track which section is open (accordion behavior - only one open at a time)
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'myWatchlist' | null>('marketPulse');
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -542,7 +542,7 @@ export default function WatchlistPage() {
                     type="button"
                     className="flex items-center gap-2 text-lg font-semibold hover:bg-gray-800 px-2 py-1 rounded transition-colors"
                     onClick={() => {
-                      setMarketPulseOpen(false);
+                      setActiveSection(activeSection === 'marketPulse' ? null : 'marketPulse');
                       // Scroll to top if not already at top
                       if (window.scrollY > 0) {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -550,7 +550,7 @@ export default function WatchlistPage() {
                     }}
                     aria-label="Collapse Market Pulse section"
                   >
-                    <span className={`transition-transform duration-200 ${marketPulseOpen ? '' : 'rotate-180'}`}>▼</span>
+                    <span className={`transition-transform duration-200 ${activeSection === 'marketPulse' ? '' : 'rotate-180'}`}>▼</span>
                     Market Pulse
                   </button>
                   <div className="flex items-center gap-2">
@@ -577,7 +577,7 @@ export default function WatchlistPage() {
                   Market Pulse
                 </span>
               }
-              infoButton={marketPulseOpen && !loading && !error ? (
+              infoButton={activeSection === 'marketPulse' && !loading && !error ? (
                 <div className="flex items-center gap-2">
                   {/* Overview info button */}
                   <button
@@ -591,8 +591,8 @@ export default function WatchlistPage() {
                 </div>
               ) : null}
                 openKey={pulseTimeframe}
-              open={marketPulseOpen}
-              onOpenChange={(isOpen) => setMarketPulseOpen(isOpen)}
+              open={activeSection === 'marketPulse'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'marketPulse' : null)}
             >
               {/* Toggle between slider and list view for Market Pulse items */}
               {error && loading && (
@@ -700,66 +700,7 @@ export default function WatchlistPage() {
                   </div>
                 ) : (
                   // Normal mode: show grouped data by asset class
-                  <>
-                    {/* Favorites Section - Always show at top */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                          Favorites
-                        </h3>
-                        {favorites.length > 0 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">({favorites.length})</span>
-                        )}
-                      </div>
-                      {favorites.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                          <Heart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
-                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            No favorites yet
-                          </p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                            Tap the ★ on any asset to add it here
-                          </p>
-                        </div>
-                      ) : (
-                        favorites.map((fav, index) => {
-                          const favData = marketData[fav.symbol];
-                          const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
-                          const tfData = favData?.timeframes?.[timeframeKey];
-                          
-                          return (
-                            <div key={`favorite-${fav.symbol}-${index}`} className="flex-shrink-0 w-full">
-                              <WatchListItem
-                                name={fav.name}
-                                symbol={fav.symbol}
-                                price={tfData?.latest?.close ?? favData?.price ?? '—'}
-                                change={tfData?.latest?.change ?? favData?.change ?? 0}
-                                valueChange={tfData?.latest?.value_change ?? favData?.valueChange ?? 0}
-                                sparkline={tfData?.closes ?? favData?.sparkline ?? []}
-                                timeframe={selectedTimeframe}
-                                afterHours={tfData?.latest?.is_after_hours}
-                                onClick={() => setSelectedStock({
-                                  symbol: fav.symbol,
-                                  name: fav.name,
-                                  price: typeof tfData?.latest?.close === 'string' 
-                                    ? parseFloat(tfData.latest.close.replace(/,/g, '')) 
-                                    : (favData?.price ?? 0),
-                                  change: tfData?.latest?.change ?? favData?.change ?? 0,
-                                  valueChange: tfData?.latest?.value_change ?? favData?.valueChange ?? 0,
-                                  sparkline: tfData?.closes ?? favData?.sparkline ?? [],
-                                  timeframe: selectedTimeframe,
-                                  timeframes: favData?.timeframes,
-                                })}
-                              />
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {/* Asset Classes */}
-                    {assetClassOrder.map((classKey) => {
+                  assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
                     const items = groupedPulse[classKey] || [];
 
@@ -804,12 +745,99 @@ export default function WatchlistPage() {
                         })}
                       </div>
                     );
-                  })}
-                  </>
+                  })
                 )}
               </div>
             </CollapsibleSection>
           </div>
+
+          {/* My Watchlist */}
+          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  My Watchlist
+                </span>
+              }
+              open={activeSection === 'myWatchlist'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'myWatchlist' : null)}
+            >
+              <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                  Your watchlist is empty
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                  Search for stocks and add them to your watchlist
+                </p>
+              </div>
+            </CollapsibleSection>
+          </div>
+
+          {/* Favorites */}
+          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
+                  Favorites
+                  {favorites.length > 0 && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length})</span>
+                  )}
+                </span>
+              }
+              open={activeSection === 'favorites'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'favorites' : null)}
+            >
+              {favorites.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                  <Heart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No favorites yet
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                    Tap the ♡ on any asset to add it here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {favorites.map((fav, index) => {
+                    const favData = marketData[fav.symbol];
+                    const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
+                    const tfData = favData?.timeframes?.[timeframeKey];
+                    
+                    return (
+                      <div key={`favorite-${fav.symbol}-${index}`} className="flex-shrink-0 w-full">
+                        <WatchListItem
+                          name={fav.name}
+                          symbol={fav.symbol}
+                          price={tfData?.latest?.close ?? favData?.price ?? '—'}
+                          change={tfData?.latest?.change ?? favData?.change ?? 0}
+                          valueChange={tfData?.latest?.value_change ?? favData?.valueChange ?? 0}
+                          sparkline={tfData?.closes ?? favData?.sparkline ?? []}
+                          timeframe={selectedTimeframe}
+                          afterHours={tfData?.latest?.is_after_hours}
+                          onClick={() => setSelectedStock({
+                            symbol: fav.symbol,
+                            name: fav.name,
+                            price: typeof tfData?.latest?.close === 'string' 
+                              ? parseFloat(tfData.latest.close.replace(/,/g, '')) 
+                              : (favData?.price ?? 0),
+                            change: tfData?.latest?.change ?? favData?.change ?? 0,
+                            valueChange: tfData?.latest?.value_change ?? favData?.valueChange ?? 0,
+                            sparkline: tfData?.closes ?? favData?.sparkline ?? [],
+                            timeframe: selectedTimeframe,
+                            timeframes: favData?.timeframes,
+                          })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CollapsibleSection>
+          </div>
+
         </div>
       </div>
 
