@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
+import { usePivyChat } from '@/components/context/PivyChatContext';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -158,11 +159,30 @@ export default function StockPreviewModal({
   timeframes,
 }: StockPreviewModalProps) {
   const router = useRouter();
+  const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const [isClosing, setIsClosing] = React.useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+  // Check if asset is already in today's chat
+  const isInChat = isAssetInTodaysChat(symbol);
+
+  // Handle adding/removing asset from today's Pivy Chat
+  const handleTogglePivyChat = () => {
+    if (isInChat) {
+      removeAssetFromTodaysChat(symbol);
+    } else {
+      const numericPrice = typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price;
+      addAssetToTodaysChat({
+        symbol,
+        name,
+        price: numericPrice,
+        change,
+      });
+    }
+  };
 
   // Handle timeframe change with transition
   const handleTimeframeChange = (tf: 'day' | 'week' | 'month' | 'year') => {
@@ -430,8 +450,28 @@ export default function StockPreviewModal({
         {/* Actions */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
           <button
+            onClick={handleTogglePivyChat}
+            className={`w-full py-3 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+              isInChat
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+            }`}
+          >
+            {isInChat ? (
+              <>
+                <Check className="w-5 h-5" />
+                Added to Today&apos;s Pivy Chat
+              </>
+            ) : (
+              <>
+                <MessageSquarePlus className="w-5 h-5" />
+                Add to Today&apos;s Pivy Chat
+              </>
+            )}
+          </button>
+          <button
             onClick={handleOpenFullView}
-            className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-2 border-blue-200 dark:border-blue-700 font-semibold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
           >
             <ExternalLink className="w-5 h-5" />
             Open Full View

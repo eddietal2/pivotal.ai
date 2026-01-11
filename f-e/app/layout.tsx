@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Raleway } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/context/ThemeContext";
 import { ToastProvider } from "@/components/context/ToastContext";
+import { PivyChatProvider } from "@/components/context/PivyChatContext";
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
 import { UIProvider } from "@/components/context/UIContext";
@@ -42,6 +43,7 @@ export default function RootLayout({
             <PostLoginToastHandler />
             {/* UIProvider for global modal state */}
             <UIProvider>
+              <PivyChatProvider>
               <div className="min-h-screen flex flex-col">
                 {/* Navigation wrapper conditionally renders TopNav and BottomNav */}
                 <NavigationWrapper />
@@ -50,6 +52,7 @@ export default function RootLayout({
                   {children}
                 </main>
               </div>
+              </PivyChatProvider>
             </UIProvider>
           </ToastProvider>
         </ThemeProvider>
