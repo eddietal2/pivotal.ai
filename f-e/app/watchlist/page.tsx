@@ -7,6 +7,7 @@ import CollapsibleSection from '../../components/ui/CollapsibleSection';
 const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
+import LiveScreen from '../../components/watchlist/LiveScreen';
 import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
 import { useFavorites } from '@/components/context/FavoritesContext';
 
@@ -965,15 +966,19 @@ export default function WatchlistPage() {
               open={activeSection === 'swingScreening'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'swingScreening' : null)}
             >
-              <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                <LineChart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  No swing setups found
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                  Swing trade opportunities will appear here
-                </p>
-              </div>
+              {favorites.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                  <LineChart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No swing setups found
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                    Add favorites to track technical indicators
+                  </p>
+                </div>
+              ) : (
+                <LiveScreen favorites={favorites} />
+              )}
             </CollapsibleSection>
           </div>
 
