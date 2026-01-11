@@ -1,6 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
+export const MAX_FAVORITES = 3;
+
 export interface FavoriteAsset {
   symbol: string;
   name: string;
@@ -9,10 +11,11 @@ export interface FavoriteAsset {
 
 interface FavoritesContextType {
   favorites: FavoriteAsset[];
-  addFavorite: (asset: Omit<FavoriteAsset, 'addedAt'>) => void;
+  addFavorite: (asset: Omit<FavoriteAsset, 'addedAt'>) => boolean; // returns false if at limit
   removeFavorite: (symbol: string) => void;
   isFavorite: (symbol: string) => boolean;
-  toggleFavorite: (asset: Omit<FavoriteAsset, 'addedAt'>) => void;
+  isFull: () => boolean;
+  toggleFavorite: (asset: Omit<FavoriteAsset, 'addedAt'>) => boolean; // returns false if at limit when adding
   clearFavorites: () => void;
 }
 
@@ -47,12 +50,18 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     }
   }, [favorites, isHydrated]);
 
-  const addFavorite = useCallback((asset: Omit<FavoriteAsset, 'addedAt'>) => {
+  const addFavorite = useCallback((asset: Omit<FavoriteAsset, 'addedAt'>): boolean => {
+    let added = false;
     setFavorites((prev) => {
       // Don't add if already exists
       if (prev.some((a) => a.symbol === asset.symbol)) {
         return prev;
       }
+      // Don't add if at limit
+      if (prev.length >= MAX_FAVORITES) {
+        return prev;
+      }
+      added = true;
       return [
         ...prev,
         {
@@ -61,6 +70,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         },
       ];
     });
+    return added;
   }, []);
 
   const removeFavorite = useCallback((symbol: string) => {
@@ -72,11 +82,22 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     [favorites]
   );
 
-  const toggleFavorite = useCallback((asset: Omit<FavoriteAsset, 'addedAt'>) => {
+  const isFull = useCallback(
+    () => favorites.length >= MAX_FAVORITES,
+    [favorites]
+  );
+
+  const toggleFavorite = useCallback((asset: Omit<FavoriteAsset, 'addedAt'>): boolean => {
+    let success = true;
     setFavorites((prev) => {
       const exists = prev.some((a) => a.symbol === asset.symbol);
       if (exists) {
         return prev.filter((a) => a.symbol !== asset.symbol);
+      }
+      // Don't add if at limit
+      if (prev.length >= MAX_FAVORITES) {
+        success = false;
+        return prev;
       }
       return [
         ...prev,
@@ -86,6 +107,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         },
       ];
     });
+    return success;
   }, []);
 
   const clearFavorites = useCallback(() => {
@@ -99,6 +121,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         addFavorite,
         removeFavorite,
         isFavorite,
+        isFull,
         toggleFavorite,
         clearFavorites,
       }}

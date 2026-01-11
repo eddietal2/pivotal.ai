@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart, Star } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Heart, Star, X } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
-import { useFavorites } from '@/components/context/FavoritesContext';
-import { useWatchlist } from '@/components/context/WatchlistContext';
+import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
+import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 
 interface StockData {
   symbol: string;
@@ -36,13 +36,46 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error' } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
+  const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
 
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
+
+  // Handle watchlist toggle with limit check
+  const handleToggleWatchlist = () => {
+    const wasInWatchlist = isInWatchlist(symbol);
+    if (!wasInWatchlist && isWatchlistFull()) {
+      setToast({ message: `Watchlist limit reached (${MAX_WATCHLIST} max)`, type: 'error' });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    toggleWatchlist({ symbol, name: stockData?.name || symbol });
+    setToast({
+      message: wasInWatchlist ? 'Removed from watchlist' : 'Added to watchlist',
+      type: 'watchlist',
+    });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  // Handle favorite toggle with limit check
+  const handleToggleFavorite = () => {
+    const wasFavorite = isFavorite(symbol);
+    if (!wasFavorite && isFavoritesFull()) {
+      setToast({ message: `Favorites limit reached (${MAX_FAVORITES} max)`, type: 'error' });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    toggleFavorite({ symbol, name: stockData?.name || symbol });
+    setToast({
+      message: wasFavorite ? 'Removed from favorites' : 'Added to favorites',
+      type: wasFavorite ? 'info' : 'success',
+    });
+    setTimeout(() => setToast(null), 2500);
+  };
 
   // Handle adding/removing asset from today's Pivy Chat
   const handleTogglePivyChat = () => {
@@ -315,14 +348,14 @@ export default function StockDetailPage() {
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toggleWatchlist({ symbol, name: stockData?.name || symbol })}
+              onClick={handleToggleWatchlist}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               title={isInWatchlist(symbol) ? 'Remove from watchlist' : 'Add to watchlist'}
             >
               <Star className={`w-6 h-6 transition-colors ${isInWatchlist(symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
             </button>
             <button
-              onClick={() => toggleFavorite({ symbol, name: stockData?.name || symbol })}
+              onClick={handleToggleFavorite}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               title={isFavorite(symbol) ? 'Remove from favorites' : 'Add to favorites'}
             >
@@ -461,7 +494,44 @@ export default function StockDetailPage() {
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
+        @keyframes toast-slide-up {
+          from {
+            transform: translate(-50%, 100%);
+            opacity: 0;
+          }
+          to {
+            transform: translate(-50%, 0);
+            opacity: 1;
+          }
+        }
+        .animate-toast-slide-up {
+          animation: toast-slide-up 0.25s ease-out forwards;
+        }
       `}</style>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] animate-toast-slide-up">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg backdrop-blur-sm ${
+            toast.type === 'success' 
+              ? 'bg-pink-500/90 text-white' 
+              : toast.type === 'watchlist'
+              ? 'bg-yellow-500/90 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-500/90 text-white'
+              : 'bg-gray-800/90 text-white dark:bg-gray-700/90'
+          }`}>
+            {toast.type === 'watchlist' ? (
+              <Star className="w-4 h-4 fill-white" />
+            ) : toast.type === 'error' ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
+            )}
+            <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* Fixed floating close button */}
       <button

@@ -9,8 +9,8 @@ import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X } from 'lucide-react';
-import { useFavorites } from '@/components/context/FavoritesContext';
-import { useWatchlist } from '@/components/context/WatchlistContext';
+import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
+import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 
 // Ticker to name mapping for Market Pulse
@@ -700,18 +700,14 @@ export default function WatchlistPage() {
                       <span className="flex items-center gap-2">
                         <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                         My Watchlist
-                        {watchlist.length > 0 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length})</span>
-                        )}
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                       </span>
                     )}
                     {activeSection === 'favorites' && (
                       <span className="flex items-center gap-2">
                         <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
                         Favorites
-                        {favorites.length > 0 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length})</span>
-                        )}
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
                       </span>
                     )}
                     {activeSection === 'swingScreening' && (
@@ -940,14 +936,16 @@ export default function WatchlistPage() {
                 <span className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                   My Watchlist
-                  {watchlist.length > 0 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length})</span>
-                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                 </span>
               }
               open={activeSection === 'myWatchlist'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'myWatchlist' : null)}
             >
+              {/* Caption explaining limit */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Track up to {MAX_WATCHLIST} assets you&apos;re interested in
+              </p>
               {watchlist.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
@@ -955,7 +953,7 @@ export default function WatchlistPage() {
                     Your watchlist is empty
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Search for stocks and add them to your watchlist
+                    Search for stocks and tap ⭐ to add them
                   </p>
                 </div>
               ) : (
@@ -1004,14 +1002,16 @@ export default function WatchlistPage() {
                 <span className="flex items-center gap-2">
                   <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
                   Favorites
-                  {favorites.length > 0 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length})</span>
-                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
                 </span>
               }
               open={activeSection === 'favorites'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'favorites' : null)}
             >
+              {/* Caption explaining limit */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Your top {MAX_FAVORITES} most important assets for quick access
+              </p>
               {favorites.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <Heart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
@@ -1019,7 +1019,7 @@ export default function WatchlistPage() {
                     No favorites yet
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Tap the ♡ on any asset to add it here
+                    Tap ♡ on any asset to add it here
                   </p>
                 </div>
               ) : (

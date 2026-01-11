@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart, Star } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
-import { useFavorites } from '@/components/context/FavoritesContext';
-import { useWatchlist } from '@/components/context/WatchlistContext';
+import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
+import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -162,18 +162,26 @@ export default function StockPreviewModal({
 }: StockPreviewModalProps) {
   const router = useRouter();
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
+  const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
   const [isClosing, setIsClosing] = React.useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' } | null>(null);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error' } | null>(null);
 
   // Handle favorite toggle with toast notification
   const handleToggleFavorite = () => {
     const wasFavorite = isFavorite(symbol);
+    if (!wasFavorite && isFavoritesFull()) {
+      setToast({
+        message: `Favorites limit reached (${MAX_FAVORITES} max)`,
+        type: 'error',
+      });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
     toggleFavorite({ symbol, name });
     setToast({
       message: wasFavorite ? `${name} removed from favorites` : `${name} added to favorites`,
@@ -186,6 +194,14 @@ export default function StockPreviewModal({
   // Handle watchlist toggle with toast notification
   const handleToggleWatchlist = () => {
     const wasInWatchlist = isInWatchlist(symbol);
+    if (!wasInWatchlist && isWatchlistFull()) {
+      setToast({
+        message: `Watchlist limit reached (${MAX_WATCHLIST} max)`,
+        type: 'error',
+      });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
     toggleWatchlist({ symbol, name });
     setToast({
       message: wasInWatchlist ? `${name} removed from watchlist` : `${name} added to watchlist`,
@@ -597,10 +613,14 @@ export default function StockPreviewModal({
               ? 'bg-pink-500/90 text-white' 
               : toast.type === 'watchlist'
               ? 'bg-yellow-500/90 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-500/90 text-white'
               : 'bg-gray-800/90 text-white dark:bg-gray-700/90'
           }`}>
             {toast.type === 'watchlist' ? (
               <Star className="w-4 h-4 fill-white" />
+            ) : toast.type === 'error' ? (
+              <X className="w-4 h-4" />
             ) : (
               <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
             )}

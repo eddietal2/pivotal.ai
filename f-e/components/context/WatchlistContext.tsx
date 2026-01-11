@@ -1,6 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
+export const MAX_WATCHLIST = 10;
+
 export interface WatchlistAsset {
   symbol: string;
   name: string;
@@ -9,10 +11,11 @@ export interface WatchlistAsset {
 
 interface WatchlistContextType {
   watchlist: WatchlistAsset[];
-  addToWatchlist: (asset: Omit<WatchlistAsset, 'addedAt'>) => void;
+  addToWatchlist: (asset: Omit<WatchlistAsset, 'addedAt'>) => boolean; // returns false if at limit
   removeFromWatchlist: (symbol: string) => void;
   isInWatchlist: (symbol: string) => boolean;
-  toggleWatchlist: (asset: Omit<WatchlistAsset, 'addedAt'>) => void;
+  isFull: () => boolean;
+  toggleWatchlist: (asset: Omit<WatchlistAsset, 'addedAt'>) => boolean; // returns false if at limit when adding
   clearWatchlist: () => void;
 }
 
@@ -47,12 +50,18 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
     }
   }, [watchlist, isHydrated]);
 
-  const addToWatchlist = useCallback((asset: Omit<WatchlistAsset, 'addedAt'>) => {
+  const addToWatchlist = useCallback((asset: Omit<WatchlistAsset, 'addedAt'>): boolean => {
+    let added = false;
     setWatchlist((prev) => {
       // Don't add if already exists
       if (prev.some((a) => a.symbol === asset.symbol)) {
         return prev;
       }
+      // Don't add if at limit
+      if (prev.length >= MAX_WATCHLIST) {
+        return prev;
+      }
+      added = true;
       return [
         ...prev,
         {
@@ -61,6 +70,7 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
         },
       ];
     });
+    return added;
   }, []);
 
   const removeFromWatchlist = useCallback((symbol: string) => {
@@ -72,11 +82,22 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
     [watchlist]
   );
 
-  const toggleWatchlist = useCallback((asset: Omit<WatchlistAsset, 'addedAt'>) => {
+  const isFull = useCallback(
+    () => watchlist.length >= MAX_WATCHLIST,
+    [watchlist]
+  );
+
+  const toggleWatchlist = useCallback((asset: Omit<WatchlistAsset, 'addedAt'>): boolean => {
+    let success = true;
     setWatchlist((prev) => {
       const exists = prev.some((a) => a.symbol === asset.symbol);
       if (exists) {
         return prev.filter((a) => a.symbol !== asset.symbol);
+      }
+      // Don't add if at limit
+      if (prev.length >= MAX_WATCHLIST) {
+        success = false;
+        return prev;
       }
       return [
         ...prev,
@@ -86,6 +107,7 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
         },
       ];
     });
+    return success;
   }, []);
 
   const clearWatchlist = useCallback(() => {
@@ -99,6 +121,7 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
         addToWatchlist,
         removeFromWatchlist,
         isInWatchlist,
+        isFull,
         toggleWatchlist,
         clearWatchlist,
       }}
