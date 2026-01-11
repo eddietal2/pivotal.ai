@@ -392,7 +392,7 @@ export default function StockPreviewModal({
           </div>
           
           {/* Timeframe buttons */}
-          <div className="flex gap-2 mb-20 px-4">
+          <div className="flex gap-2">
             {(['day', 'week', 'month', 'year'] as const).map((tf) => (
               <button
                 key={tf}
