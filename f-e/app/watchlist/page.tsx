@@ -72,7 +72,7 @@ export default function WatchlistPage() {
   const { favorites } = useFavorites();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'myWatchlist' | null>('marketPulse');
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -835,6 +835,29 @@ export default function WatchlistPage() {
                   })}
                 </div>
               )}
+            </CollapsibleSection>
+          </div>
+
+          {/* Swing Screening */}
+          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  Swing Screening
+                </span>
+              }
+              open={activeSection === 'swingScreening'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'swingScreening' : null)}
+            >
+              <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                <LineChart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                  No swing setups found
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+                  Swing trade opportunities will appear here
+                </p>
+              </div>
             </CollapsibleSection>
           </div>
 
