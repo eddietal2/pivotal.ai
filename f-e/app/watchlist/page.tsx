@@ -1007,20 +1007,20 @@ export default function WatchlistPage() {
                                 if (!isInWatchlist(pulseSymbol)) {
                                   const added = addToWatchlist({ symbol: pulseSymbol, name: pulseName });
                                   if (added) {
-                                    showToast(`${pulseSymbol} added to Watchlist`, 'success', 2000);
+                                    showToast(`${pulseSymbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist' });
                                   } else {
-                                    showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
+                                    showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 3000, { link: '/watchlist?section=my-watchlist' });
                                   }
                                 } else {
                                   // Already in watchlist, toggle My Screens
                                   const wasInScreens = isFavorite(pulseSymbol);
                                   toggleFavorite({ symbol: pulseSymbol, name: pulseName });
                                   if (wasInScreens) {
-                                    showToast(`${pulseSymbol} removed from My Screens`, 'info', 2000);
+                                    showToast(`${pulseSymbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
                                   } else if (favorites.length < MAX_FAVORITES) {
-                                    showToast(`${pulseSymbol} added to My Screens`, 'success', 2000);
+                                    showToast(`${pulseSymbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
                                   } else {
-                                    showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                    showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 3000, { link: '/watchlist?section=my-screens' });
                                   }
                                 }
                               }}
@@ -1104,11 +1104,11 @@ export default function WatchlistPage() {
                             const wasInScreens = isFavorite(item.symbol);
                             toggleFavorite({ symbol: item.symbol, name: item.name });
                             if (wasInScreens) {
-                              showToast(`${item.symbol} removed from My Screens`, 'info', 2000);
+                              showToast(`${item.symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
                             } else if (favorites.length < MAX_FAVORITES) {
-                              showToast(`${item.symbol} added to My Screens`, 'success', 2000);
+                              showToast(`${item.symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
                             } else {
-                              showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                              showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 3000, { link: '/watchlist?section=my-screens' });
                             }
                           }}
                           onClick={() => setSelectedStock({
@@ -1395,13 +1395,25 @@ export default function WatchlistPage() {
                             e.stopPropagation();
                             if (isResultInWatchlist) {
                               removeFromWatchlist(result.symbol);
-                              showToast(`${result.symbol} removed from Watchlist`, 'info', 2000);
+                              showToast(`${result.symbol} removed from Watchlist`, 'info', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
+                                setIsSearchOpen(false);
+                                setActiveSection('myWatchlist');
+                                setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                              } });
                             } else {
                               const added = addToWatchlist({ symbol: result.symbol, name: result.name });
                               if (added) {
-                                showToast(`${result.symbol} added to Watchlist`, 'success', 2000);
+                                showToast(`${result.symbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('myWatchlist');
+                                  setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                } });
                               } else {
-                                showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
+                                showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 3000, { link: '/watchlist?section=my-watchlist', onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('myWatchlist');
+                                  setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                } });
                               }
                             }
                           }}
@@ -1427,15 +1439,31 @@ export default function WatchlistPage() {
                             e.stopPropagation();
                             if (isResultFavorite) {
                               removeFavorite(result.symbol);
-                              showToast(`${result.symbol} removed from My Screens`, 'info', 2000);
+                              showToast(`${result.symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens', onClick: () => {
+                                setIsSearchOpen(false);
+                                setActiveSection('swingScreening');
+                                setTimeout(() => document.getElementById('my-screens')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                              } });
                             } else if (!isResultInWatchlist) {
-                              showToast(`Add ${result.symbol} to Watchlist first`, 'warning', 2000);
+                              showToast(`Add ${result.symbol} to Watchlist first`, 'warning', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
+                                setIsSearchOpen(false);
+                                setActiveSection('myWatchlist');
+                                setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                              } });
                             } else {
                               const added = addFavorite({ symbol: result.symbol, name: result.name });
                               if (added) {
-                                showToast(`${result.symbol} added to My Screens`, 'success', 2000);
+                                showToast(`${result.symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens', onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('swingScreening');
+                                  setTimeout(() => document.getElementById('my-screens')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                } });
                               } else {
-                                showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 3000, { link: '/watchlist?section=my-screens', onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('swingScreening');
+                                  setTimeout(() => document.getElementById('my-screens')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                } });
                               }
                             }
                           }}
@@ -1534,19 +1562,20 @@ export default function WatchlistPage() {
           onActionComplete={(action, added, symbol) => {
             if (action === 'favorite') {
               if (added) {
-                showToast(`${symbol} added to My Screens`, 'success', 2000);
+                showToast(`${symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
               } else if (isFavorite(symbol)) {
                 // It was in My Screens and got removed
-                showToast(`${symbol} removed from My Screens`, 'info', 2000);
+                showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
               } else if (!isInWatchlist(symbol)) {
                 // Tried to add but not in watchlist (tiered requirement)
-                showToast(`Add ${symbol} to Watchlist first`, 'warning', 2000);
+                showToast(`Add ${symbol} to Watchlist first`, 'warning', 2000, { link: '/watchlist?section=my-watchlist' });
               }
             } else {
               showToast(
                 added ? `${symbol} added to Watchlist` : `${symbol} removed from Watchlist`,
                 added ? 'success' : 'info',
-                2000
+                2000,
+                { link: '/watchlist?section=my-watchlist' }
               );
             }
           }}

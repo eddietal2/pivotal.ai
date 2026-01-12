@@ -7,6 +7,8 @@ export interface ToastProps {
   duration?: number;
   onClose: (id: string) => void;
   position?: 'top' | 'bottom';
+  isClickable?: boolean;
+  onClick?: () => void;
 }
 
 export const Toast: React.FC<ToastProps> = ({ 
@@ -16,6 +18,8 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 5000,
   onClose,
   position = 'top',
+  isClickable = false,
+  onClick,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -71,15 +75,24 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   const hiddenClass = position === 'bottom' ? 'translate-y-2 opacity-0' : '-translate-y-2 opacity-0';
+  
+  const handleToastClick = () => {
+    if (isClickable && onClick) {
+      onClick();
+    }
+  };
+
   return (
     <div
       role="alert"
       data-testid={`toast-${type}`}
+      onClick={handleToastClick}
       className={`
         flex items-start gap-3 p-4 rounded-lg border shadow-lg min-w-[320px] max-w-md
         ${typeStyles[type]}
         transition-all duration-300 ease-out
         ${isVisible && !isExiting ? 'translate-y-0 opacity-100' : hiddenClass}
+        ${isClickable ? 'cursor-pointer hover:brightness-95 active:scale-[0.98]' : ''}
       `}
     >
       <div className="flex-shrink-0 mt-0.5">
@@ -88,10 +101,16 @@ export const Toast: React.FC<ToastProps> = ({
       
       <div className="flex-1 text-sm font-medium">
         {message}
+        {isClickable && (
+          <span className="block text-xs opacity-70 mt-0.5">Tap to manage →</span>
+        )}
       </div>
       
       <button
-        onClick={handleClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClose();
+        }}
         className="flex-shrink-0 ml-2 hover:opacity-70 transition-opacity"
         aria-label="Close notification"
       >

@@ -2,9 +2,15 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Toast, ToastProps } from '../ui/toast';
+import { useRouter } from 'next/navigation';
+
+interface ToastOptions {
+  link?: string;  // Optional link to navigate to when clicked
+  onClick?: () => void;  // Optional custom click handler
+}
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastProps['type'], duration?: number) => void;
+  showToast: (message: string, type?: ToastProps['type'], duration?: number, options?: ToastOptions) => void;
   hideToast: (id: string) => void;
 }
 
@@ -13,6 +19,8 @@ interface ToastItem {
   message: string;
   type: ToastProps['type'];
   duration: number;
+  link?: string;
+  onClick?: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -32,6 +40,7 @@ interface ToastProviderProps {
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isMobilePosition, setIsMobilePosition] = useState(false);
+  const router = useRouter();
 
   React.useEffect(() => {
     const check = () => setIsMobilePosition(window.innerWidth < 768);
@@ -43,10 +52,18 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const showToast = useCallback((
     message: string, 
     type: ToastProps['type'] = 'info', 
-    duration: number = 5000
+    duration: number = 5000,
+    options?: ToastOptions
   ) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newToast: ToastItem = { id, message, type, duration };
+    const newToast: ToastItem = { 
+      id, 
+      message, 
+      type, 
+      duration,
+      link: options?.link,
+      onClick: options?.onClick,
+    };
     
     setToasts(prev => [...prev, newToast]);
   }, []);
@@ -54,6 +71,15 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const hideToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
+
+  const handleToastClick = useCallback((toast: ToastItem) => {
+    if (toast.onClick) {
+      toast.onClick();
+    } else if (toast.link) {
+      router.push(toast.link);
+    }
+    hideToast(toast.id);
+  }, [router, hideToast]);
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>
@@ -76,6 +102,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
               duration={toast.duration}
               position={isMobilePosition ? 'bottom' : 'top'}
               onClose={hideToast}
+              isClickable={!!(toast.link || toast.onClick)}
+              onClick={() => handleToastClick(toast)}
             />
           ))}
         </div>
