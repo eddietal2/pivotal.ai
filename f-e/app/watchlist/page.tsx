@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 
@@ -84,6 +84,9 @@ export default function WatchlistPage() {
   // Drag-to-reorder state for watchlist items
   const [watchlistDragIndex, setWatchlistDragIndex] = useState<number | null>(null);
   const [watchlistDragOverIndex, setWatchlistDragOverIndex] = useState<number | null>(null);
+  // Refs to track current drag state (avoids closure issues)
+  const watchlistDragIndexRef = useRef<number | null>(null);
+  const watchlistDragOverIndexRef = useRef<number | null>(null);
   
   // Quick action menu state
   const [quickActionMenu, setQuickActionMenu] = useState<{
@@ -129,6 +132,12 @@ export default function WatchlistPage() {
   // Market Pulse item ordering within each asset class
   const [pulseItemOrder, setPulseItemOrder] = useState<Record<string, string[]>>({});
   const [pulseDragState, setPulseDragState] = useState<{
+    classKey: string;
+    fromIndex: number;
+    overIndex: number | null;
+  } | null>(null);
+  // Ref to track current pulse drag state (avoids closure issues)
+  const pulseDragStateRef = useRef<{
     classKey: string;
     fromIndex: number;
     overIndex: number | null;
@@ -433,13 +442,14 @@ export default function WatchlistPage() {
       const dragIndex = el.getAttribute?.('data-drag-index');
       if (dragIndex !== null && dragIndex !== undefined) {
         const index = parseInt(dragIndex, 10);
-        if (!isNaN(index) && index !== watchlistDragOverIndex) {
+        if (!isNaN(index) && index !== watchlistDragOverIndexRef.current) {
           setWatchlistDragOverIndex(index);
+          watchlistDragOverIndexRef.current = index;
         }
         break;
       }
     }
-  }, [watchlistDragOverIndex]);
+  }, []);
 
   // Touch drag handler for Market Pulse items
   const handlePulseTouchDrag = useCallback((classKey: string, touchY: number) => {
@@ -448,13 +458,15 @@ export default function WatchlistPage() {
       const dragIndex = el.getAttribute?.('data-drag-index');
       if (dragIndex !== null && dragIndex !== undefined) {
         const index = parseInt(dragIndex, 10);
-        if (!isNaN(index) && pulseDragState?.overIndex !== index) {
-          setPulseDragState(prev => prev ? { ...prev, overIndex: index } : null);
+        if (!isNaN(index) && pulseDragStateRef.current?.overIndex !== index) {
+          const newState = pulseDragStateRef.current ? { ...pulseDragStateRef.current, overIndex: index } : null;
+          setPulseDragState(newState);
+          pulseDragStateRef.current = newState;
         }
         break;
       }
     }
-  }, [pulseDragState?.overIndex]);
+  }, []);
 
   // Loading skeleton component for Market Pulse items
   const PulseSkeleton = () => (
@@ -1090,23 +1102,33 @@ export default function WatchlistPage() {
                               dragIndex={index}
                               isDragging={isPulseDragging}
                               isDragOver={isPulseDragOver}
-                              onDragStart={() => setPulseDragState({ classKey, fromIndex: index, overIndex: null })}
+                              onDragStart={() => {
+                                const newState = { classKey, fromIndex: index, overIndex: null };
+                                setPulseDragState(newState);
+                                pulseDragStateRef.current = newState;
+                              }}
                               onDragEnd={() => {
-                                if (pulseDragState && pulseDragState.overIndex !== null && pulseDragState.fromIndex !== pulseDragState.overIndex) {
-                                  reorderPulseItems(classKey, pulseDragState.fromIndex, pulseDragState.overIndex);
+                                const state = pulseDragStateRef.current;
+                                if (state && state.overIndex !== null && state.fromIndex !== state.overIndex) {
+                                  reorderPulseItems(state.classKey, state.fromIndex, state.overIndex);
                                 }
                                 setPulseDragState(null);
+                                pulseDragStateRef.current = null;
                               }}
                               onDragOver={() => {
-                                if (pulseDragState && pulseDragState.classKey === classKey) {
-                                  setPulseDragState({ ...pulseDragState, overIndex: index });
+                                if (pulseDragStateRef.current && pulseDragStateRef.current.classKey === classKey) {
+                                  const newState = { ...pulseDragStateRef.current, overIndex: index };
+                                  setPulseDragState(newState);
+                                  pulseDragStateRef.current = newState;
                                 }
                               }}
                               onDrop={() => {
-                                if (pulseDragState && pulseDragState.classKey === classKey && pulseDragState.fromIndex !== index) {
-                                  reorderPulseItems(classKey, pulseDragState.fromIndex, index);
+                                const state = pulseDragStateRef.current;
+                                if (state && state.classKey === classKey && state.fromIndex !== index) {
+                                  reorderPulseItems(state.classKey, state.fromIndex, index);
                                 }
                                 setPulseDragState(null);
+                                pulseDragStateRef.current = null;
                               }}
                               onTouchDrag={(touchY) => handlePulseTouchDrag(classKey, touchY)}
                               onLongPress={(position) => setQuickActionMenu({
@@ -1240,13 +1262,23 @@ export default function WatchlistPage() {
                           dragIndex={index}
                           isDragging={watchlistDragIndex === index}
                           isDragOver={watchlistDragOverIndex === index && watchlistDragIndex !== index}
-                          onDragStart={() => setWatchlistDragIndex(index)}
+                          onDragStart={() => {
+                            console.log('[PAGE] onDragStart, setting dragIndex to:', index);
+                            setWatchlistDragIndex(index);
+                            watchlistDragIndexRef.current = index;
+                          }}
                           onDragEnd={() => {
-                            if (watchlistDragIndex !== null && watchlistDragOverIndex !== null && watchlistDragIndex !== watchlistDragOverIndex) {
-                              reorderWatchlist(watchlistDragIndex, watchlistDragOverIndex);
+                            const fromIdx = watchlistDragIndexRef.current;
+                            const toIdx = watchlistDragOverIndexRef.current;
+                            console.log('[PAGE] onDragEnd, dragIndex:', fromIdx, 'overIndex:', toIdx);
+                            if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
+                              console.log('[PAGE] Calling reorderWatchlist');
+                              reorderWatchlist(fromIdx, toIdx);
                             }
                             setWatchlistDragIndex(null);
                             setWatchlistDragOverIndex(null);
+                            watchlistDragIndexRef.current = null;
+                            watchlistDragOverIndexRef.current = null;
                           }}
                           onDragOver={() => setWatchlistDragOverIndex(index)}
                           onDrop={() => {

@@ -67,6 +67,54 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
   const [isTouchDragging, setIsTouchDragging] = useState(false);
   const touchDragStartRef = useRef<{ x: number; y: number; scrollY: number } | null>(null);
   const dragHandleRef = useRef<HTMLDivElement>(null);
+  const dragActiveRef = useRef(false);
+
+  // Handle drag via pointer events on the handle
+  const handleDragPointerDown = useCallback((e: React.PointerEvent) => {
+    console.log('[DRAG] handleDragPointerDown called!', e.pointerType);
+    if (!enableDrag || dragActiveRef.current) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    dragActiveRef.current = true;
+    touchDragStartRef.current = { x: e.clientX, y: e.clientY, scrollY: window.scrollY };
+    setIsTouchDragging(true);
+    console.log('[DRAG] calling onDragStart, exists:', !!onDragStart);
+    try {
+      onDragStart?.();
+      console.log('[DRAG] onDragStart completed');
+    } catch (err) {
+      console.error('[DRAG] onDragStart error:', err);
+    }
+    
+    const handleMove = (ev: PointerEvent) => {
+      if (!dragActiveRef.current) return;
+      ev.preventDefault();
+      console.log('[DRAG] move Y:', ev.clientY);
+      onTouchDrag?.(ev.clientY);
+    };
+    
+    const handleUp = () => {
+      console.log('[DRAG] pointerup/cancel, calling onDragEnd, exists:', !!onDragEnd);
+      dragActiveRef.current = false;
+      setIsTouchDragging(false);
+      try {
+        onDragEnd?.();
+        console.log('[DRAG] onDragEnd completed');
+      } catch (err) {
+        console.error('[DRAG] onDragEnd error:', err);
+      }
+      touchDragStartRef.current = null;
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleUp);
+      document.removeEventListener('pointercancel', handleUp);
+    };
+    
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleUp);
+    document.addEventListener('pointercancel', handleUp);
+  }, [enableDrag, onDragStart, onDragEnd, onTouchDrag]);
 
   // Reset swipe when clicking outside
   useEffect(() => {
@@ -113,53 +161,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     };
   }, [isTouchDragging]);
 
-  // Attach non-passive touch listeners to drag handle
-  useEffect(() => {
-    const handle = dragHandleRef.current;
-    if (!handle || !enableDrag) return;
 
-    let isDragging = false;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      e.stopPropagation();
-      const touch = e.touches[0];
-      touchDragStartRef.current = { x: touch.clientX, y: touch.clientY, scrollY: window.scrollY };
-      isDragging = true;
-      setIsTouchDragging(true);
-      onDragStart?.();
-      if ('vibrate' in navigator) {
-        (navigator as any).vibrate(50);
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (isDragging) {
-        e.stopPropagation();
-        const touch = e.touches[0];
-        onTouchDrag?.(touch.clientY);
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      e.stopPropagation();
-      if (isDragging) {
-        isDragging = false;
-        setIsTouchDragging(false);
-        onDragEnd?.();
-      }
-      touchDragStartRef.current = null;
-    };
-
-    handle.addEventListener('touchstart', handleTouchStart, { passive: true });
-    handle.addEventListener('touchmove', handleTouchMove, { passive: true });
-    handle.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-    return () => {
-      handle.removeEventListener('touchstart', handleTouchStart);
-      handle.removeEventListener('touchmove', handleTouchMove);
-      handle.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [enableDrag, onDragStart, onDragEnd, onTouchDrag]);
 
   // Touch handlers for swipe (drag is handled separately on the drag handle)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -399,10 +401,13 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         {enableDrag && (
           <div
             ref={dragHandleRef}
-            className={`flex items-center justify-center w-10 flex-shrink-0 bg-gray-100 dark:bg-gray-700/70 rounded-l-xl border-r border-gray-200 dark:border-gray-700 select-none ${isTouchDragging ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
+            draggable={false}
+            className={`flex items-center justify-center w-10 flex-shrink-0 bg-gray-100 dark:bg-gray-700/70 rounded-l-xl border-r border-gray-200 dark:border-gray-700 select-none cursor-grab active:cursor-grabbing ${isTouchDragging ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
             style={{ touchAction: 'none' }}
+            onDragStart={(e) => e.preventDefault()}
+            onPointerDown={handleDragPointerDown}
           >
-            <GripVertical className="w-5 h-5 text-gray-400" />
+            <GripVertical className="w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
         )}
         
