@@ -1083,6 +1083,23 @@ export default function WatchlistPage() {
                           sparkline={tfData?.closes ?? itemData?.sparkline ?? []}
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
+                          showQuickActions
+                          onLongPress={(position) => setQuickActionMenu({
+                            isOpen: true,
+                            symbol: item.symbol,
+                            name: item.name,
+                            position,
+                          })}
+                          onDoubleTap={() => {
+                            const added = toggleFavorite({ symbol: item.symbol, name: item.name });
+                            if (isFavorite(item.symbol)) {
+                              showToast(`${item.symbol} removed from Favorites`, 'info', 2000);
+                            } else if (added) {
+                              showToast(`${item.symbol} added to Favorites`, 'success', 2000);
+                            } else {
+                              showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                            }
+                          }}
                           onClick={() => setSelectedStock({
                             symbol: item.symbol,
                             name: item.name,
@@ -1152,6 +1169,23 @@ export default function WatchlistPage() {
                           sparkline={tfData?.closes ?? favData?.sparkline ?? []}
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
+                          showQuickActions
+                          onLongPress={(position) => setQuickActionMenu({
+                            isOpen: true,
+                            symbol: fav.symbol,
+                            name: fav.name,
+                            position,
+                          })}
+                          onDoubleTap={() => {
+                            const added = toggleWatchlist({ symbol: fav.symbol, name: fav.name });
+                            if (isInWatchlist(fav.symbol)) {
+                              showToast(`${fav.symbol} removed from Watchlist`, 'info', 2000);
+                            } else if (added) {
+                              showToast(`${fav.symbol} added to Watchlist`, 'success', 2000);
+                            } else {
+                              showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
+                            }
+                          }}
                           onClick={() => setSelectedStock({
                             symbol: fav.symbol,
                             name: fav.name,
