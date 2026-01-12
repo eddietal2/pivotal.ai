@@ -17,6 +17,7 @@ interface WatchlistContextType {
   isFull: () => boolean;
   toggleWatchlist: (asset: Omit<WatchlistAsset, 'addedAt'>) => boolean; // returns false if at limit when adding
   clearWatchlist: () => void;
+  reorderWatchlist: (fromIndex: number, toIndex: number) => void;
 }
 
 const WatchlistContext = createContext<WatchlistContextType | undefined>(undefined);
@@ -110,6 +111,18 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
     return success;
   }, []);
 
+  const reorderWatchlist = useCallback((fromIndex: number, toIndex: number) => {
+    setWatchlist((prev) => {
+      if (fromIndex < 0 || fromIndex >= prev.length || toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+      const newList = [...prev];
+      const [removed] = newList.splice(fromIndex, 1);
+      newList.splice(toIndex, 0, removed);
+      return newList;
+    });
+  }, []);
+
   const clearWatchlist = useCallback(() => {
     setWatchlist([]);
   }, []);
@@ -124,6 +137,7 @@ export const WatchlistProvider = ({ children }: { children: React.ReactNode }) =
         isFull,
         toggleWatchlist,
         clearWatchlist,
+        reorderWatchlist,
       }}
     >
       {children}

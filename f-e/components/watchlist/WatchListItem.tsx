@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Sparkline from '@/components/ui/Sparkline';
-import { ArrowUpRight, ArrowDownRight, Star, TrendingUp, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Star, TrendingUp, Trash2, GripVertical } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
 type Props = {
@@ -26,9 +26,19 @@ type Props = {
   // Swipe-to-remove
   onSwipeRemove?: () => void;
   enableSwipe?: boolean;
+  // Drag-to-reorder
+  enableDrag?: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  dragIndex?: number; // Index for touch drag detection
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragOver?: () => void;
+  onDrop?: () => void;
+  onTouchDrag?: (touchY: number) => void; // Reports touch Y position during drag
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, onSwipeRemove, enableSwipe = false }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, onSwipeRemove, enableSwipe = false, enableDrag = false, isDragging = false, isDragOver = false, dragIndex, onDragStart, onDragEnd, onDragOver, onDrop, onTouchDrag }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -53,6 +63,11 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
   const SWIPE_THRESHOLD = 80; // pixels to trigger remove button reveal
   const REMOVE_BUTTON_WIDTH = 80;
 
+  // Touch drag state
+  const [isTouchDragging, setIsTouchDragging] = useState(false);
+  const touchDragStartRef = useRef<{ x: number; y: number; scrollY: number } | null>(null);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+
   // Reset swipe when clicking outside
   useEffect(() => {
     if (!showRemoveButton) return;
@@ -73,7 +88,80 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     };
   }, [showRemoveButton]);
 
-  // Touch handlers for swipe
+  // Prevent page scroll during drag - use CSS only approach to avoid passive listener issues
+  useEffect(() => {
+    if (!isTouchDragging) return;
+    
+    // Lock body scroll using CSS
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const originalWidth = document.body.style.width;
+    const scrollY = window.scrollY;
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.width = originalWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isTouchDragging]);
+
+  // Attach non-passive touch listeners to drag handle
+  useEffect(() => {
+    const handle = dragHandleRef.current;
+    if (!handle || !enableDrag) return;
+
+    let isDragging = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      e.stopPropagation();
+      const touch = e.touches[0];
+      touchDragStartRef.current = { x: touch.clientX, y: touch.clientY, scrollY: window.scrollY };
+      isDragging = true;
+      setIsTouchDragging(true);
+      onDragStart?.();
+      if ('vibrate' in navigator) {
+        (navigator as any).vibrate(50);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDragging) {
+        e.stopPropagation();
+        const touch = e.touches[0];
+        onTouchDrag?.(touch.clientY);
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.stopPropagation();
+      if (isDragging) {
+        isDragging = false;
+        setIsTouchDragging(false);
+        onDragEnd?.();
+      }
+      touchDragStartRef.current = null;
+    };
+
+    handle.addEventListener('touchstart', handleTouchStart, { passive: true });
+    handle.addEventListener('touchmove', handleTouchMove, { passive: true });
+    handle.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      handle.removeEventListener('touchstart', handleTouchStart);
+      handle.removeEventListener('touchmove', handleTouchMove);
+      handle.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [enableDrag, onDragStart, onDragEnd, onTouchDrag]);
+
+  // Touch handlers for swipe (drag is handled separately on the drag handle)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (!enableSwipe) return;
     
@@ -126,7 +214,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     
     swipeStartRef.current = null;
     setIsSwiping(false);
-  }, [enableSwipe, swipeX]);
+  }, [enableSwipe, enableDrag, swipeX, isTouchDragging, onDragEnd]);
 
   const handleRemoveClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
@@ -151,35 +239,53 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     setIsPressed(true);
     pressStartPosRef.current = { x: e.clientX, y: e.clientY };
     
+    // Long press starts drag mode (if drag is enabled)
     longPressRef.current = setTimeout(() => {
-      if (onLongPress && pressStartPosRef.current) {
+      if (enableDrag && pressStartPosRef.current) {
         // Haptic feedback if available
         if ('vibrate' in navigator) {
           navigator.vibrate(50);
         }
-        onLongPress(pressStartPosRef.current);
+        setIsTouchDragging(true);
+        onDragStart?.();
       }
       setIsPressed(false);
     }, 500);
-  }, [showQuickActions, onLongPress]);
+  }, [showQuickActions, enableDrag, onDragStart]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (longPressRef.current) {
       clearTimeout(longPressRef.current);
       longPressRef.current = null;
     }
+    // End drag if we were dragging
+    if (isTouchDragging) {
+      setIsTouchDragging(false);
+      onDragEnd?.();
+    }
     setIsPressed(false);
-  }, []);
+  }, [isTouchDragging, onDragEnd]);
 
   const handlePointerLeave = useCallback(() => {
     if (longPressRef.current) {
       clearTimeout(longPressRef.current);
       longPressRef.current = null;
     }
+    // End drag if we were dragging
+    if (isTouchDragging) {
+      setIsTouchDragging(false);
+      onDragEnd?.();
+    }
     setIsPressed(false);
-  }, []);
+  }, [isTouchDragging, onDragEnd]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // If dragging, report position
+    if (isTouchDragging) {
+      onTouchDrag?.(e.clientY);
+      return;
+    }
+    
     // Cancel long-press if moved more than 10px
     if (pressStartPosRef.current && longPressRef.current) {
       const dx = Math.abs(e.clientX - pressStartPosRef.current.x);
@@ -190,7 +296,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         setIsPressed(false);
       }
     }
-  }, []);
+  }, [isTouchDragging, onTouchDrag]);
 
   // Context menu for right-click
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -210,14 +316,17 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     const timeSinceLastTap = now - lastTapRef.current;
     
     if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      // Double-tap detected
+      // Double-tap detected - show QuickMenu
       e.preventDefault();
       e.stopPropagation();
       if (tapTimeoutRef.current) {
         clearTimeout(tapTimeoutRef.current);
         tapTimeoutRef.current = null;
       }
-      onDoubleTap?.();
+      // Show menu at tap position
+      if (onLongPress) {
+        onLongPress({ x: e.clientX, y: e.clientY });
+      }
       lastTapRef.current = 0;
     } else {
       // Single tap - wait to see if it's a double tap
@@ -227,12 +336,44 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         lastTapRef.current = 0;
       }, 300);
     }
-  }, [showQuickActions, onClick, onDoubleTap]);
+  }, [showQuickActions, onClick, onLongPress]);
+
+  // Drag start handler for the whole item
+  const handleItemDragStart = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', symbol);
+    onDragStart?.();
+  }, [symbol, onDragStart]);
 
   return (
     <div 
       ref={containerRef}
-      className="relative overflow-hidden rounded-xl"
+      data-drag-index={enableDrag ? dragIndex : undefined}
+      draggable={enableDrag}
+      className={`relative overflow-hidden rounded-xl transition-all duration-200 ${
+        isDragging || isTouchDragging ? 'opacity-50 scale-95 z-50' : ''
+      } ${
+        isDragOver ? 'ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-gray-900' : ''
+      } ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      onDragStart={enableDrag ? handleItemDragStart : undefined}
+      onDragEnd={enableDrag ? () => onDragEnd?.() : undefined}
+      onDragEnter={(e) => {
+        if (enableDrag) {
+          e.preventDefault();
+          onDragOver?.();
+        }
+      }}
+      onDragOver={(e) => {
+        if (enableDrag) {
+          e.preventDefault();
+        }
+      }}
+      onDrop={(e) => {
+        if (enableDrag) {
+          e.preventDefault();
+          onDrop?.();
+        }
+      }}
     >
       {/* Remove button (revealed on swipe) */}
       {enableSwipe && (
@@ -247,25 +388,39 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
       )}
       
       {/* Main content (slides on swipe) */}
-      <button
-        data-testid={`watchlist-item-${symbol}`}
-        type="button"
-        onClick={handleClick}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
-        onPointerMove={handlePointerMove}
-        onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+      <div
+        className={`flex items-stretch bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 ${isPressed ? 'scale-[0.98] opacity-90' : ''} relative z-20`}
         style={{
           transform: `translateX(${swipeX}px)`,
           transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
         }}
-        className={`bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${isPressed ? 'scale-[0.98] opacity-90' : ''} relative z-20`}
-        aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Long-press or right-click for quick actions. Double-tap to favorite.' : ''}${enableSwipe ? ' Swipe left to remove.' : ''}`}
       >
+        {/* Drag handle - touch here and drag to reorder (mobile) */}
+        {enableDrag && (
+          <div
+            ref={dragHandleRef}
+            className={`flex items-center justify-center w-10 flex-shrink-0 bg-gray-100 dark:bg-gray-700/70 rounded-l-xl border-r border-gray-200 dark:border-gray-700 select-none ${isTouchDragging ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
+            style={{ touchAction: 'none' }}
+          >
+            <GripVertical className="w-5 h-5 text-gray-400" />
+          </div>
+        )}
+        
+        <button
+          data-testid={`watchlist-item-${symbol}`}
+          type="button"
+          onClick={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
+          onPointerMove={handlePointerMove}
+          onContextMenu={handleContextMenu}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`flex-1 p-2 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${enableDrag ? 'rounded-r-xl' : 'rounded-xl'}`}
+          aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Double-tap for quick actions menu.' : ''}${enableSwipe ? ' Swipe left to remove.' : ''}${enableDrag ? ' Long-press and drag to reorder.' : ''}`}
+        >
       <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -320,6 +475,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         </div>
       </div>
     </button>
+    </div>
     </div>
   );
 }

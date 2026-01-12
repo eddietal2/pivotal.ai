@@ -76,10 +76,14 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 
 export default function WatchlistPage() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
-  const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
+  
+  // Drag-to-reorder state for watchlist items
+  const [watchlistDragIndex, setWatchlistDragIndex] = useState<number | null>(null);
+  const [watchlistDragOverIndex, setWatchlistDragOverIndex] = useState<number | null>(null);
   
   // Quick action menu state
   const [quickActionMenu, setQuickActionMenu] = useState<{
@@ -121,6 +125,14 @@ export default function WatchlistPage() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
   const [showReorderSkeleton, setShowReorderSkeleton] = useState(false);
+
+  // Market Pulse item ordering within each asset class
+  const [pulseItemOrder, setPulseItemOrder] = useState<Record<string, string[]>>({});
+  const [pulseDragState, setPulseDragState] = useState<{
+    classKey: string;
+    fromIndex: number;
+    overIndex: number | null;
+  } | null>(null);
 
   // Selected stock for preview modal
   const [selectedStock, setSelectedStock] = useState<{
@@ -370,6 +382,22 @@ export default function WatchlistPage() {
         }
       });
 
+      // Apply custom order for each asset class if saved
+      Object.keys(grouped).forEach(classKey => {
+        const savedOrder = pulseItemOrder[classKey];
+        if (savedOrder && savedOrder.length > 0) {
+          grouped[classKey].sort((a, b) => {
+            const aIndex = savedOrder.indexOf(a.symbol);
+            const bIndex = savedOrder.indexOf(b.symbol);
+            // Items not in saved order go to the end
+            if (aIndex === -1 && bIndex === -1) return 0;
+            if (aIndex === -1) return 1;
+            if (bIndex === -1) return -1;
+            return aIndex - bIndex;
+          });
+        }
+      });
+
       return grouped;
     }
 
@@ -379,7 +407,54 @@ export default function WatchlistPage() {
       emptyGrouped[classKey] = [];
     });
     return emptyGrouped;
-  }, [marketData, selectedTimeframe]);
+  }, [marketData, selectedTimeframe, pulseItemOrder]);
+
+  // Reorder pulse items within an asset class
+  const reorderPulseItems = useCallback((classKey: string, fromIndex: number, toIndex: number) => {
+    const items = groupedPulse[classKey] || [];
+    if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) return;
+    
+    // Get the current order (or create from current items)
+    const currentOrder = pulseItemOrder[classKey] || items.map(item => item.symbol);
+    const newOrder = [...currentOrder];
+    const [removed] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, removed);
+    
+    const newPulseOrder = { ...pulseItemOrder, [classKey]: newOrder };
+    setPulseItemOrder(newPulseOrder);
+    localStorage.setItem('pulseItemOrder', JSON.stringify(newPulseOrder));
+  }, [groupedPulse, pulseItemOrder]);
+
+  // Touch drag handler - finds element at touch position and updates drag-over state
+  const handleWatchlistTouchDrag = useCallback((touchY: number) => {
+    // Find the element at the touch point
+    const elements = document.elementsFromPoint(window.innerWidth / 2, touchY);
+    for (const el of elements) {
+      const dragIndex = el.getAttribute?.('data-drag-index');
+      if (dragIndex !== null && dragIndex !== undefined) {
+        const index = parseInt(dragIndex, 10);
+        if (!isNaN(index) && index !== watchlistDragOverIndex) {
+          setWatchlistDragOverIndex(index);
+        }
+        break;
+      }
+    }
+  }, [watchlistDragOverIndex]);
+
+  // Touch drag handler for Market Pulse items
+  const handlePulseTouchDrag = useCallback((classKey: string, touchY: number) => {
+    const elements = document.elementsFromPoint(window.innerWidth / 2, touchY);
+    for (const el of elements) {
+      const dragIndex = el.getAttribute?.('data-drag-index');
+      if (dragIndex !== null && dragIndex !== undefined) {
+        const index = parseInt(dragIndex, 10);
+        if (!isNaN(index) && pulseDragState?.overIndex !== index) {
+          setPulseDragState(prev => prev ? { ...prev, overIndex: index } : null);
+        }
+        break;
+      }
+    }
+  }, [pulseDragState?.overIndex]);
 
   // Loading skeleton component for Market Pulse items
   const PulseSkeleton = () => (
@@ -463,6 +538,16 @@ export default function WatchlistPage() {
         setAssetClassOrder([...validKeys, ...missingKeys]);
       } catch (e) {
         console.warn('Failed to parse saved asset class order:', e);
+      }
+    }
+    
+    // Load saved pulse item order from localStorage
+    const savedPulseOrder = localStorage.getItem('pulseItemOrder');
+    if (savedPulseOrder) {
+      try {
+        setPulseItemOrder(JSON.parse(savedPulseOrder));
+      } catch (e) {
+        console.warn('Failed to parse saved pulse item order:', e);
       }
     }
   }, []);
@@ -977,12 +1062,17 @@ export default function WatchlistPage() {
                           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                             {classData.name}
                           </h3>
+                          {items.length > 1 && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">Long-press to drag</span>
+                          )}
                         </div>
                         {items.map((pulse, index) => {
                           const pulseSymbol = (pulse as any).symbol ?? (pulse as any).ticker ?? '—';
                           const pulseName = (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—';
+                          const isPulseDragging = pulseDragState?.classKey === classKey && pulseDragState?.fromIndex === index;
+                          const isPulseDragOver = pulseDragState?.classKey === classKey && pulseDragState?.overIndex === index && pulseDragState?.fromIndex !== index;
                           return (
-                          <div key={`${classKey}-${index}`} className="flex-shrink-0 w-full">
+                          <div key={`${classKey}-${pulseSymbol}`} className="flex-shrink-0 w-full">
                             <WatchListItem
                               name={pulseName}
                               symbol={pulseSymbol}
@@ -996,6 +1086,29 @@ export default function WatchlistPage() {
                               isInWatchlist={isInWatchlist(pulseSymbol)}
                               isInSwingScreens={isFavorite(pulseSymbol)}
                               showQuickActions
+                              enableDrag={items.length > 1}
+                              dragIndex={index}
+                              isDragging={isPulseDragging}
+                              isDragOver={isPulseDragOver}
+                              onDragStart={() => setPulseDragState({ classKey, fromIndex: index, overIndex: null })}
+                              onDragEnd={() => {
+                                if (pulseDragState && pulseDragState.overIndex !== null && pulseDragState.fromIndex !== pulseDragState.overIndex) {
+                                  reorderPulseItems(classKey, pulseDragState.fromIndex, pulseDragState.overIndex);
+                                }
+                                setPulseDragState(null);
+                              }}
+                              onDragOver={() => {
+                                if (pulseDragState && pulseDragState.classKey === classKey) {
+                                  setPulseDragState({ ...pulseDragState, overIndex: index });
+                                }
+                              }}
+                              onDrop={() => {
+                                if (pulseDragState && pulseDragState.classKey === classKey && pulseDragState.fromIndex !== index) {
+                                  reorderPulseItems(classKey, pulseDragState.fromIndex, index);
+                                }
+                                setPulseDragState(null);
+                              }}
+                              onTouchDrag={(touchY) => handlePulseTouchDrag(classKey, touchY)}
                               onLongPress={(position) => setQuickActionMenu({
                                 isOpen: true,
                                 symbol: pulseSymbol,
@@ -1098,6 +1211,12 @@ export default function WatchlistPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {/* Interaction hints */}
+                  {watchlist.length > 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                      Double-tap for menu{watchlist.length > 1 ? ' • Long-press to drag' : ''}
+                    </p>
+                  )}
                   {watchlist.map((item, index) => {
                     const itemData = marketData[item.symbol];
                     const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
@@ -1117,6 +1236,27 @@ export default function WatchlistPage() {
                           isInSwingScreens={isFavorite(item.symbol)}
                           showQuickActions
                           enableSwipe
+                          enableDrag={watchlist.length > 1}
+                          dragIndex={index}
+                          isDragging={watchlistDragIndex === index}
+                          isDragOver={watchlistDragOverIndex === index && watchlistDragIndex !== index}
+                          onDragStart={() => setWatchlistDragIndex(index)}
+                          onDragEnd={() => {
+                            if (watchlistDragIndex !== null && watchlistDragOverIndex !== null && watchlistDragIndex !== watchlistDragOverIndex) {
+                              reorderWatchlist(watchlistDragIndex, watchlistDragOverIndex);
+                            }
+                            setWatchlistDragIndex(null);
+                            setWatchlistDragOverIndex(null);
+                          }}
+                          onDragOver={() => setWatchlistDragOverIndex(index)}
+                          onDrop={() => {
+                            if (watchlistDragIndex !== null && watchlistDragIndex !== index) {
+                              reorderWatchlist(watchlistDragIndex, index);
+                            }
+                            setWatchlistDragIndex(null);
+                            setWatchlistDragOverIndex(null);
+                          }}
+                          onTouchDrag={handleWatchlistTouchDrag}
                           onSwipeRemove={() => {
                             // Also remove from My Screens if applicable
                             const wasInScreens = isFavorite(item.symbol);
