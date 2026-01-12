@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 interface ToastOptions {
   link?: string;  // Optional link to navigate to when clicked
   onClick?: () => void;  // Optional custom click handler
+  onUndo?: () => void;  // Optional undo callback for reversible actions
 }
 
 interface ToastContextType {
@@ -21,6 +22,7 @@ interface ToastItem {
   duration: number;
   link?: string;
   onClick?: () => void;
+  onUndo?: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -63,6 +65,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       duration,
       link: options?.link,
       onClick: options?.onClick,
+      onUndo: options?.onUndo,
     };
     
     setToasts(prev => [...prev, newToast]);
@@ -104,6 +107,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
               onClose={hideToast}
               isClickable={!!(toast.link || toast.onClick)}
               onClick={() => handleToastClick(toast)}
+              onUndo={toast.onUndo ? () => {
+                toast.onUndo?.();
+                hideToast(toast.id);
+              } : undefined}
             />
           ))}
         </div>

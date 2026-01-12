@@ -9,6 +9,7 @@ export interface ToastProps {
   position?: 'top' | 'bottom';
   isClickable?: boolean;
   onClick?: () => void;
+  onUndo?: () => void;
 }
 
 export const Toast: React.FC<ToastProps> = ({ 
@@ -20,6 +21,7 @@ export const Toast: React.FC<ToastProps> = ({
   position = 'top',
   isClickable = false,
   onClick,
+  onUndo,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -100,8 +102,22 @@ export const Toast: React.FC<ToastProps> = ({
       </div>
       
       <div className="flex-1 text-sm font-medium">
-        {message}
-        {isClickable && (
+        <div className="flex items-center justify-between gap-2">
+          <span>{message}</span>
+          {onUndo && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUndo();
+              }}
+              className="flex-shrink-0 px-2 py-1 text-xs font-semibold bg-white/30 dark:bg-black/20 hover:bg-white/50 dark:hover:bg-black/40 rounded transition-colors"
+              aria-label="Undo action"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+        {isClickable && !onUndo && (
           <span className="block text-xs opacity-70 mt-0.5">Tap to manage →</span>
         )}
       </div>

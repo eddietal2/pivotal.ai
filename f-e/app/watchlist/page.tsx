@@ -1016,7 +1016,10 @@ export default function WatchlistPage() {
                                   const wasInScreens = isFavorite(pulseSymbol);
                                   toggleFavorite({ symbol: pulseSymbol, name: pulseName });
                                   if (wasInScreens) {
-                                    showToast(`${pulseSymbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                                    showToast(`${pulseSymbol} removed from My Screens`, 'info', 5000, { 
+                                      link: '/watchlist?section=my-screens',
+                                      onUndo: () => addFavorite({ symbol: pulseSymbol, name: pulseName })
+                                    });
                                   } else if (favorites.length < MAX_FAVORITES) {
                                     showToast(`${pulseSymbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
                                   } else {
@@ -1097,11 +1100,18 @@ export default function WatchlistPage() {
                           enableSwipe
                           onSwipeRemove={() => {
                             // Also remove from My Screens if applicable
-                            if (isFavorite(item.symbol)) {
+                            const wasInScreens = isFavorite(item.symbol);
+                            if (wasInScreens) {
                               toggleFavorite({ symbol: item.symbol, name: item.name });
                             }
                             removeFromWatchlist(item.symbol);
-                            showToast(`${item.symbol} removed from Watchlist`, 'info', 2000, { link: '/watchlist?section=my-watchlist' });
+                            showToast(`${item.symbol} removed from Watchlist`, 'info', 5000, { 
+                              link: '/watchlist?section=my-watchlist',
+                              onUndo: () => {
+                                addToWatchlist({ symbol: item.symbol, name: item.name });
+                                if (wasInScreens) addFavorite({ symbol: item.symbol, name: item.name });
+                              }
+                            });
                           }}
                           onLongPress={(position) => setQuickActionMenu({
                             isOpen: true,
@@ -1113,7 +1123,10 @@ export default function WatchlistPage() {
                             const wasInScreens = isFavorite(item.symbol);
                             toggleFavorite({ symbol: item.symbol, name: item.name });
                             if (wasInScreens) {
-                              showToast(`${item.symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                              showToast(`${item.symbol} removed from My Screens`, 'info', 5000, { 
+                                link: '/watchlist?section=my-screens',
+                                onUndo: () => addFavorite({ symbol: item.symbol, name: item.name })
+                              });
                             } else if (favorites.length < MAX_FAVORITES) {
                               showToast(`${item.symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
                             } else {
@@ -1179,7 +1192,10 @@ export default function WatchlistPage() {
                   enableSwipe
                   onSwipeRemove={(symbol, name) => {
                     removeFavorite(symbol);
-                    showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                    showToast(`${symbol} removed from My Screens`, 'info', 5000, { 
+                      link: '/watchlist?section=my-screens',
+                      onUndo: () => addFavorite({ symbol, name })
+                    });
                   }}
                   onLongPress={(symbol, name, position) => setQuickActionMenu({
                     isOpen: true,
@@ -1190,7 +1206,10 @@ export default function WatchlistPage() {
                   onDoubleTap={(symbol, name) => {
                     // Double-tap removes from My Screens
                     removeFavorite(symbol);
-                    showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                    showToast(`${symbol} removed from My Screens`, 'info', 5000, { 
+                      link: '/watchlist?section=my-screens',
+                      onUndo: () => addFavorite({ symbol, name })
+                    });
                   }}
                 />
               )}
@@ -1422,12 +1441,22 @@ export default function WatchlistPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (isResultInWatchlist) {
+                              // Store if was in My Screens before removal
+                              const wasInScreens = isFavorite(result.symbol);
+                              if (wasInScreens) removeFavorite(result.symbol);
                               removeFromWatchlist(result.symbol);
-                              showToast(`${result.symbol} removed from Watchlist`, 'info', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
-                                setIsSearchOpen(false);
-                                setActiveSection('myWatchlist');
-                                setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                              } });
+                              showToast(`${result.symbol} removed from Watchlist`, 'info', 5000, { 
+                                link: '/watchlist?section=my-watchlist', 
+                                onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('myWatchlist');
+                                  setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                },
+                                onUndo: () => {
+                                  addToWatchlist({ symbol: result.symbol, name: result.name });
+                                  if (wasInScreens) addFavorite({ symbol: result.symbol, name: result.name });
+                                }
+                              });
                             } else {
                               const added = addToWatchlist({ symbol: result.symbol, name: result.name });
                               if (added) {
@@ -1467,11 +1496,15 @@ export default function WatchlistPage() {
                             e.stopPropagation();
                             if (isResultFavorite) {
                               removeFavorite(result.symbol);
-                              showToast(`${result.symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens', onClick: () => {
-                                setIsSearchOpen(false);
-                                setActiveSection('swingScreening');
-                                setTimeout(() => document.getElementById('my-screens')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                              } });
+                              showToast(`${result.symbol} removed from My Screens`, 'info', 5000, { 
+                                link: '/watchlist?section=my-screens', 
+                                onClick: () => {
+                                  setIsSearchOpen(false);
+                                  setActiveSection('swingScreening');
+                                  setTimeout(() => document.getElementById('my-screens')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                                },
+                                onUndo: () => addFavorite({ symbol: result.symbol, name: result.name })
+                              });
                             } else if (!isResultInWatchlist) {
                               showToast(`Add ${result.symbol} to Watchlist first`, 'warning', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
                                 setIsSearchOpen(false);
@@ -1588,23 +1621,39 @@ export default function WatchlistPage() {
           onClose={() => setQuickActionMenu(null)}
           position={quickActionMenu.position}
           onActionComplete={(action, added, symbol) => {
+            const menuName = quickActionMenu.name;
             if (action === 'favorite') {
               if (added) {
                 showToast(`${symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
-              } else if (isFavorite(symbol)) {
-                // It was in My Screens and got removed
-                showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
-              } else if (!isInWatchlist(symbol)) {
+              } else if (!isFavorite(symbol) && !isInWatchlist(symbol)) {
                 // Tried to add but not in watchlist (tiered requirement)
                 showToast(`Add ${symbol} to Watchlist first`, 'warning', 2000, { link: '/watchlist?section=my-watchlist' });
+              } else if (!added && !isFavorite(symbol)) {
+                // It was in My Screens and got removed
+                showToast(`${symbol} removed from My Screens`, 'info', 5000, { 
+                  link: '/watchlist?section=my-screens',
+                  onUndo: () => addFavorite({ symbol, name: menuName })
+                });
               }
             } else {
-              showToast(
-                added ? `${symbol} added to Watchlist` : `${symbol} removed from Watchlist`,
-                added ? 'success' : 'info',
-                2000,
-                { link: '/watchlist?section=my-watchlist' }
-              );
+              if (!added) {
+                // Removed from watchlist - also may have been removed from My Screens
+                const wasInScreens = isFavorite(symbol);
+                showToast(
+                  `${symbol} removed from Watchlist`,
+                  'info',
+                  5000,
+                  { 
+                    link: '/watchlist?section=my-watchlist',
+                    onUndo: () => {
+                      addToWatchlist({ symbol, name: menuName });
+                      // Note: if it was in My Screens, it would have been auto-removed
+                    }
+                  }
+                );
+              } else {
+                showToast(`${symbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist' });
+              }
             }
           }}
         />
