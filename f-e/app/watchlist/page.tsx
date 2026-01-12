@@ -1164,7 +1164,21 @@ export default function WatchlistPage() {
                   </p>
                 </div>
               ) : (
-                <LiveScreen favorites={favorites} />
+                <LiveScreen 
+                  favorites={favorites}
+                  isInWatchlist={isInWatchlist}
+                  onLongPress={(symbol, name, position) => setQuickActionMenu({
+                    isOpen: true,
+                    symbol,
+                    name,
+                    position,
+                  })}
+                  onDoubleTap={(symbol, name) => {
+                    // Double-tap removes from My Screens
+                    removeFavorite(symbol);
+                    showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                  }}
+                />
               )}
             </CollapsibleSection>
           </div>

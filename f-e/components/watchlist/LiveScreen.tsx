@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ChevronRight } from 'lucide-react';
+import { Activity, ChevronRight, Star, TrendingUp } from 'lucide-react';
 
 interface Favorite {
   symbol: string;
@@ -11,14 +11,26 @@ interface Favorite {
 
 interface LiveScreenProps {
   favorites: Favorite[];
+  onLongPress?: (symbol: string, name: string, position: { x: number; y: number }) => void;
+  onDoubleTap?: (symbol: string, name: string) => void;
+  isInWatchlist?: (symbol: string) => boolean;
 }
 
-export default function LiveScreen({ favorites }: LiveScreenProps) {
+export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist }: LiveScreenProps) {
   const router = useRouter();
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1m' | '5m' | '15m' | '1h' | '1d'>('5m');
   
   // Placeholder for MACD histogram animation data
   const [macdHistory, setMacdHistory] = useState<Record<string, number[]>>({});
+
+  // Long-press detection refs
+  const longPressRefs = useRef<Record<string, NodeJS.Timeout | null>>({});
+  const pressStartPosRefs = useRef<Record<string, { x: number; y: number } | null>>({});
+  const [pressedSymbol, setPressedSymbol] = useState<string | null>(null);
+  
+  // Double-tap detection refs
+  const lastTapRefs = useRef<Record<string, number>>({});
+  const tapTimeoutRefs = useRef<Record<string, NodeJS.Timeout | null>>({});
 
   // Initialize with demo data for each favorite
   useEffect(() => {
@@ -29,12 +41,82 @@ export default function LiveScreen({ favorites }: LiveScreenProps) {
     setMacdHistory(history);
   }, [favorites]);
 
-  // TODO: Connect to real technical indicators API
-  // TODO: Add real-time updates via WebSocket or polling
+  const handlePointerDown = useCallback((e: React.PointerEvent, symbol: string, name: string) => {
+    if (!onLongPress) return;
+    
+    setPressedSymbol(symbol);
+    pressStartPosRefs.current[symbol] = { x: e.clientX, y: e.clientY };
+    
+    longPressRefs.current[symbol] = setTimeout(() => {
+      if (pressStartPosRefs.current[symbol]) {
+        // Haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+        onLongPress(symbol, name, pressStartPosRefs.current[symbol]!);
+      }
+      setPressedSymbol(null);
+    }, 500);
+  }, [onLongPress]);
 
-  const handleCardClick = (symbol: string) => {
-    router.push(`/watchlist/live-screen/${encodeURIComponent(symbol)}`);
-  };
+  const handlePointerUp = useCallback((symbol: string) => {
+    if (longPressRefs.current[symbol]) {
+      clearTimeout(longPressRefs.current[symbol]!);
+      longPressRefs.current[symbol] = null;
+    }
+    setPressedSymbol(null);
+  }, []);
+
+  const handlePointerLeave = useCallback((symbol: string) => {
+    if (longPressRefs.current[symbol]) {
+      clearTimeout(longPressRefs.current[symbol]!);
+      longPressRefs.current[symbol] = null;
+    }
+    setPressedSymbol(null);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent, symbol: string) => {
+    // Cancel long-press if moved more than 10px
+    if (pressStartPosRefs.current[symbol] && longPressRefs.current[symbol]) {
+      const dx = Math.abs(e.clientX - pressStartPosRefs.current[symbol]!.x);
+      const dy = Math.abs(e.clientY - pressStartPosRefs.current[symbol]!.y);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(longPressRefs.current[symbol]!);
+        longPressRefs.current[symbol] = null;
+        setPressedSymbol(null);
+      }
+    }
+  }, []);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, symbol: string, name: string) => {
+    if (!onLongPress) return;
+    e.preventDefault();
+    onLongPress(symbol, name, { x: e.clientX, y: e.clientY });
+  }, [onLongPress]);
+
+  const handleClick = useCallback((e: React.MouseEvent, symbol: string, name: string) => {
+    const now = Date.now();
+    const timeSinceLastTap = now - (lastTapRefs.current[symbol] || 0);
+    
+    if (timeSinceLastTap < 300 && timeSinceLastTap > 0 && onDoubleTap) {
+      // Double-tap detected
+      e.preventDefault();
+      e.stopPropagation();
+      if (tapTimeoutRefs.current[symbol]) {
+        clearTimeout(tapTimeoutRefs.current[symbol]!);
+        tapTimeoutRefs.current[symbol] = null;
+      }
+      onDoubleTap(symbol, name);
+      lastTapRefs.current[symbol] = 0;
+    } else {
+      // Single tap - wait to see if it's a double tap
+      lastTapRefs.current[symbol] = now;
+      tapTimeoutRefs.current[symbol] = setTimeout(() => {
+        router.push(`/watchlist/live-screen/${encodeURIComponent(symbol)}`);
+        lastTapRefs.current[symbol] = 0;
+      }, 300);
+    }
+  }, [onDoubleTap, router]);
 
   return (
     <div className="space-y-3">
@@ -54,15 +136,28 @@ export default function LiveScreen({ favorites }: LiveScreenProps) {
         </select>
       </div>
 
+      {/* Hint for gestures */}
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+        Long-press for options • Double-tap to remove
+      </p>
+
       {/* List of favorited stocks with indicators */}
       {favorites.map((fav) => {
         const history = macdHistory[fav.symbol] || [];
+        const inWatchlist = isInWatchlist?.(fav.symbol) ?? false;
         
         return (
           <button
             key={fav.symbol}
-            onClick={() => handleCardClick(fav.symbol)}
-            className="w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left"
+            onClick={(e) => handleClick(e, fav.symbol, fav.name)}
+            onPointerDown={(e) => handlePointerDown(e, fav.symbol, fav.name)}
+            onPointerUp={() => handlePointerUp(fav.symbol)}
+            onPointerLeave={() => handlePointerLeave(fav.symbol)}
+            onPointerMove={(e) => handlePointerMove(e, fav.symbol)}
+            onContextMenu={(e) => handleContextMenu(e, fav.symbol, fav.name)}
+            className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left ${
+              pressedSymbol === fav.symbol ? 'scale-[0.98] opacity-90' : ''
+            }`}
           >
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
@@ -71,7 +166,20 @@ export default function LiveScreen({ favorites }: LiveScreenProps) {
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="font-medium text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
+                    {/* Status indicators */}
+                    <div className="flex items-center gap-0.5">
+                      {inWatchlist && (
+                        <span title="In Watchlist">
+                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                        </span>
+                      )}
+                      <span title="In My Screens">
+                        <TrendingUp className="w-3 h-3 text-purple-500" />
+                      </span>
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{fav.name}</span>
                 </div>
               </div>
