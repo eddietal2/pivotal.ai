@@ -10,7 +10,7 @@ import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
-import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X, Activity, TrendingUp } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -89,7 +89,7 @@ export default function WatchlistPage() {
     position: { x: number; y: number };
   } | null>(null);
   // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -421,10 +421,10 @@ export default function WatchlistPage() {
           element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
-    } else if (section === 'favorites') {
-      setActiveSection('favorites');
+    } else if (section === 'favorites' || section === 'my-screens' || section === 'screens') {
+      setActiveSection('swingScreening');
       setTimeout(() => {
-        const element = document.getElementById('favorites');
+        const element = document.getElementById('my-screens');
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -733,9 +733,9 @@ export default function WatchlistPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">3</span>
-                      <span><strong>Enable Swing Screens</strong> — Tap 
-                        <Heart className="w-3.5 h-3.5 mx-1 relative bottom-0.5 inline text-pink-500 fill-pink-500" />
-                        to favorite assets and automatically analyze them for swing trade setups</span>
+                      <span><strong>Add to My Screens</strong> — Double-tap watchlist items or tap 
+                        <TrendingUp className="w-3.5 h-3.5 mx-1 relative bottom-0.5 inline text-purple-500" />
+                        to add them to My Screens for swing trade analysis</span>
                     </li>
                   </ol>
                 </div>
@@ -792,17 +792,11 @@ export default function WatchlistPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                       </span>
                     )}
-                    {activeSection === 'favorites' && (
-                      <span className="flex items-center gap-2">
-                        <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
-                        Favorites
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
-                      </span>
-                    )}
                     {activeSection === 'swingScreening' && (
                       <span className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-blue-500" />
-                        Swing Screens
+                        <TrendingUp className="w-5 h-5 text-purple-500" />
+                        My Screens
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
                       </span>
                     )}
                   </button>
@@ -1000,7 +994,7 @@ export default function WatchlistPage() {
                               afterHours={(pulse as any).afterHours}
                               rv={(pulse as any).rv}
                               isInWatchlist={isInWatchlist(pulseSymbol)}
-                              isFavorite={isFavorite(pulseSymbol)}
+                              isInSwingScreens={isFavorite(pulseSymbol)}
                               showQuickActions
                               onLongPress={(position) => setQuickActionMenu({
                                 isOpen: true,
@@ -1009,13 +1003,25 @@ export default function WatchlistPage() {
                                 position,
                               })}
                               onDoubleTap={() => {
-                                const added = toggleFavorite({ symbol: pulseSymbol, name: pulseName });
-                                if (isFavorite(pulseSymbol)) {
-                                  showToast(`${pulseSymbol} removed from Favorites`, 'info', 2000);
-                                } else if (added) {
-                                  showToast(`${pulseSymbol} added to Favorites`, 'success', 2000);
+                                // Tiered system: first add to watchlist, then can add to My Screens
+                                if (!isInWatchlist(pulseSymbol)) {
+                                  const added = addToWatchlist({ symbol: pulseSymbol, name: pulseName });
+                                  if (added) {
+                                    showToast(`${pulseSymbol} added to Watchlist`, 'success', 2000);
+                                  } else {
+                                    showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
+                                  }
                                 } else {
-                                  showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                  // Already in watchlist, toggle My Screens
+                                  const wasInScreens = isFavorite(pulseSymbol);
+                                  toggleFavorite({ symbol: pulseSymbol, name: pulseName });
+                                  if (wasInScreens) {
+                                    showToast(`${pulseSymbol} removed from My Screens`, 'info', 2000);
+                                  } else if (favorites.length < MAX_FAVORITES) {
+                                    showToast(`${pulseSymbol} added to My Screens`, 'success', 2000);
+                                  } else {
+                                    showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                  }
                                 }
                               }}
                               onClick={() => setSelectedStock({
@@ -1055,7 +1061,8 @@ export default function WatchlistPage() {
             >
               {/* Caption explaining limit */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Track up to {MAX_WATCHLIST} assets you&apos;re interested in
+                Track up to {MAX_WATCHLIST} assets. Double-tap to add to My Screens
+                <TrendingUp className="w-3.5 h-3.5 ml-1 inline text-purple-500" />
               </p>
               {watchlist.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
@@ -1085,7 +1092,7 @@ export default function WatchlistPage() {
                           sparkline={tfData?.closes ?? itemData?.sparkline ?? []}
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
-                          isFavorite={isFavorite(item.symbol)}
+                          isInSwingScreens={isFavorite(item.symbol)}
                           showQuickActions
                           onLongPress={(position) => setQuickActionMenu({
                             isOpen: true,
@@ -1094,13 +1101,14 @@ export default function WatchlistPage() {
                             position,
                           })}
                           onDoubleTap={() => {
-                            const added = toggleFavorite({ symbol: item.symbol, name: item.name });
-                            if (isFavorite(item.symbol)) {
-                              showToast(`${item.symbol} removed from Favorites`, 'info', 2000);
-                            } else if (added) {
-                              showToast(`${item.symbol} added to Favorites`, 'success', 2000);
+                            const wasInScreens = isFavorite(item.symbol);
+                            toggleFavorite({ symbol: item.symbol, name: item.name });
+                            if (wasInScreens) {
+                              showToast(`${item.symbol} removed from My Screens`, 'info', 2000);
+                            } else if (favorites.length < MAX_FAVORITES) {
+                              showToast(`${item.symbol} added to My Screens`, 'success', 2000);
                             } else {
-                              showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                              showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
                             }
                           }}
                           onClick={() => setSelectedStock({
@@ -1124,113 +1132,35 @@ export default function WatchlistPage() {
             </CollapsibleSection>
           </div>
 
-          {/* Favorites */}
-          <div id="favorites" className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 scroll-mt-20">
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
-                  Favorites
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
-                </span>
-              }
-              open={activeSection === 'favorites'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'favorites' : null)}
-            >
-              {/* Caption explaining limit */}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Your top {MAX_FAVORITES} most important assets for quick access.
-                Most importanty, these are the assets that will be tracked
-                in the Swing Screening section.
-                <TrendingUp className="w-5 h-5 text-purple-500 ml-1 inline" />
-              </p>
-              {favorites.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                  <Heart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    No favorites yet
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Tap ♡ on any asset to add it here
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {favorites.map((fav, index) => {
-                    const favData = marketData[fav.symbol];
-                    const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
-                    const tfData = favData?.timeframes?.[timeframeKey];
-                    
-                    return (
-                      <div key={`favorite-${fav.symbol}-${index}`} className="flex-shrink-0 w-full">
-                        <WatchListItem
-                          name={fav.name}
-                          symbol={fav.symbol}
-                          price={tfData?.latest?.close ?? favData?.price ?? '—'}
-                          change={tfData?.latest?.change ?? favData?.change ?? 0}
-                          valueChange={tfData?.latest?.value_change ?? favData?.valueChange ?? 0}
-                          sparkline={tfData?.closes ?? favData?.sparkline ?? []}
-                          timeframe={selectedTimeframe}
-                          afterHours={tfData?.latest?.is_after_hours}
-                          isInWatchlist={isInWatchlist(fav.symbol)}
-                          showQuickActions
-                          onLongPress={(position) => setQuickActionMenu({
-                            isOpen: true,
-                            symbol: fav.symbol,
-                            name: fav.name,
-                            position,
-                          })}
-                          onDoubleTap={() => {
-                            const added = toggleWatchlist({ symbol: fav.symbol, name: fav.name });
-                            if (isInWatchlist(fav.symbol)) {
-                              showToast(`${fav.symbol} removed from Watchlist`, 'info', 2000);
-                            } else if (added) {
-                              showToast(`${fav.symbol} added to Watchlist`, 'success', 2000);
-                            } else {
-                              showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
-                            }
-                          }}
-                          onClick={() => setSelectedStock({
-                            symbol: fav.symbol,
-                            name: fav.name,
-                            price: typeof tfData?.latest?.close === 'string' 
-                              ? parseFloat(tfData.latest.close.replace(/,/g, '')) 
-                              : (favData?.price ?? 0),
-                            change: tfData?.latest?.change ?? favData?.change ?? 0,
-                            valueChange: tfData?.latest?.value_change ?? favData?.valueChange ?? 0,
-                            sparkline: tfData?.closes ?? favData?.sparkline ?? [],
-                            timeframe: selectedTimeframe,
-                            timeframes: favData?.timeframes,
-                          })}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CollapsibleSection>
-          </div>
-
-          {/* Swing Screening */}
-          <div className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+          {/* My Screens */}
+          <div id="my-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <CollapsibleSection
               title={
                 <span className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-purple-500" />
-                  Swing Screens
+                  <span>My Screens</span>
+                  {favorites.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
+                      {favorites.length}/{MAX_FAVORITES}
+                    </span>
+                  )}
                 </span>
               }
               open={activeSection === 'swingScreening'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'swingScreening' : null)}
             >
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
+              </p>
+              
               {favorites.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                  <LineChart className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                  <TrendingUp className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    No swing setups found
+                    No screens yet
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Add favorites to track technical indicators
+                    Double-tap watchlist items to add to My Screens
                   </p>
                 </div>
               ) : (
@@ -1491,34 +1421,40 @@ export default function WatchlistPage() {
                           />
                         </button>
 
-                        {/* Favorite toggle */}
+                        {/* My Screens toggle (tiered - must be in watchlist first) */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             if (isResultFavorite) {
                               removeFavorite(result.symbol);
-                              showToast(`${result.symbol} removed from Favorites`, 'info', 2000);
+                              showToast(`${result.symbol} removed from My Screens`, 'info', 2000);
+                            } else if (!isResultInWatchlist) {
+                              showToast(`Add ${result.symbol} to Watchlist first`, 'warning', 2000);
                             } else {
                               const added = addFavorite({ symbol: result.symbol, name: result.name });
                               if (added) {
-                                showToast(`${result.symbol} added to Favorites`, 'success', 2000);
+                                showToast(`${result.symbol} added to My Screens`, 'success', 2000);
                               } else {
-                                showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
                               }
                             }
                           }}
                           className={`p-2 rounded-full transition-all ${
                             isResultFavorite
-                              ? 'bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-800/40'
-                              : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-800/40'
+                              : !isResultInWatchlist
+                                ? 'opacity-40 cursor-not-allowed'
+                                : 'hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
-                          title={isResultFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                          title={isResultFavorite ? 'Remove from My Screens' : !isResultInWatchlist ? 'Add to Watchlist first' : 'Add to My Screens'}
                         >
-                          <Heart
+                          <TrendingUp
                             className={`w-4 h-4 transition-colors ${
                               isResultFavorite
-                                ? 'text-pink-500 fill-pink-500'
-                                : 'text-gray-400 hover:text-pink-500'
+                                ? 'text-purple-500'
+                                : !isResultInWatchlist
+                                  ? 'text-gray-300'
+                                  : 'text-gray-400 hover:text-purple-500'
                             }`}
                           />
                         </button>
@@ -1597,11 +1533,15 @@ export default function WatchlistPage() {
           position={quickActionMenu.position}
           onActionComplete={(action, added, symbol) => {
             if (action === 'favorite') {
-              showToast(
-                added ? `${symbol} added to Favorites` : `${symbol} removed from Favorites`,
-                added ? 'success' : 'info',
-                2000
-              );
+              if (added) {
+                showToast(`${symbol} added to My Screens`, 'success', 2000);
+              } else if (isFavorite(symbol)) {
+                // It was in My Screens and got removed
+                showToast(`${symbol} removed from My Screens`, 'info', 2000);
+              } else if (!isInWatchlist(symbol)) {
+                // Tried to add but not in watchlist (tiered requirement)
+                showToast(`Add ${symbol} to Watchlist first`, 'warning', 2000);
+              }
             } else {
               showToast(
                 added ? `${symbol} added to Watchlist` : `${symbol} removed from Watchlist`,

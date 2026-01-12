@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Heart, Star, BarChart2, LineChart } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
@@ -541,9 +541,9 @@ export default function StockPreviewModal({
             <button
               onClick={handleToggleFavorite}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-              aria-label={isFavorite(symbol) ? 'Remove from favorites' : 'Add to favorites'}
+              aria-label={isFavorite(symbol) ? 'Remove from My Screens' : 'Add to My Screens'}
             >
-              <Heart className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'fill-pink-500 text-pink-500' : 'text-gray-400 hover:text-pink-400'}`} />
+              <TrendingUp className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'text-purple-500' : 'text-gray-400 hover:text-purple-400'}`} />
             </button>
             <button
               onClick={handleClose}
@@ -744,7 +744,7 @@ export default function StockPreviewModal({
             ) : toast.type === 'error' ? (
               <ExternalLink className="w-4 h-4" />
             ) : (
-              <Heart className={`w-4 h-4 ${toast.type === 'success' ? 'fill-white' : ''}`} />
+              <TrendingUp className={`w-4 h-4 ${toast.type === 'success' ? 'text-white' : ''}`} />
             )}
             <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
           </div>

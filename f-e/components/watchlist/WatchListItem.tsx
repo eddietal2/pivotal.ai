@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import Sparkline from '@/components/ui/Sparkline';
-import { ArrowUpRight, ArrowDownRight, Star, Heart } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Star, TrendingUp } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
 type Props = {
@@ -22,10 +22,10 @@ type Props = {
   showQuickActions?: boolean;
   // Status indicators
   isInWatchlist?: boolean;
-  isFavorite?: boolean;
+  isInSwingScreens?: boolean;
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isFavorite = false }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -143,16 +143,16 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-gray-400">{name} ({symbol})</p>
           {/* Status indicators */}
-          {(isInWatchlist || isFavorite) && (
+          {(isInWatchlist || isInSwingScreens) && (
             <div className="flex items-center gap-0.5">
               {isInWatchlist && (
                 <span title="In Watchlist">
                   <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                 </span>
               )}
-              {isFavorite && (
-                <span title="Favorited">
-                  <Heart className="w-3 h-3 text-pink-500 fill-pink-500" />
+              {isInSwingScreens && (
+                <span title="In My Screens">
+                  <TrendingUp className="w-3 h-3 text-purple-500" />
                 </span>
               )}
             </div>
