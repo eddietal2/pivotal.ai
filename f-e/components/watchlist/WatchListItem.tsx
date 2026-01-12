@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import Sparkline from '@/components/ui/Sparkline';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Star, Heart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
 type Props = {
@@ -20,9 +20,12 @@ type Props = {
   onLongPress?: (position: { x: number; y: number }) => void;
   onDoubleTap?: () => void;
   showQuickActions?: boolean;
+  // Status indicators
+  isInWatchlist?: boolean;
+  isFavorite?: boolean;
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isFavorite = false }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -137,7 +140,24 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
     >
       <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-gray-400">{name} ({symbol})</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium text-gray-400">{name} ({symbol})</p>
+          {/* Status indicators */}
+          {(isInWatchlist || isFavorite) && (
+            <div className="flex items-center gap-0.5">
+              {isInWatchlist && (
+                <span title="In Watchlist">
+                  <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                </span>
+              )}
+              {isFavorite && (
+                <span title="Favorited">
+                  <Heart className="w-3 h-3 text-pink-500 fill-pink-500" />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         {/* timeframe chip */}
         {timeframe && (
           <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>

@@ -999,6 +999,8 @@ export default function WatchlistPage() {
                               timeframe={(pulse as any).timeframe}
                               afterHours={(pulse as any).afterHours}
                               rv={(pulse as any).rv}
+                              isInWatchlist={isInWatchlist(pulseSymbol)}
+                              isFavorite={isFavorite(pulseSymbol)}
                               showQuickActions
                               onLongPress={(position) => setQuickActionMenu({
                                 isOpen: true,
@@ -1083,6 +1085,7 @@ export default function WatchlistPage() {
                           sparkline={tfData?.closes ?? itemData?.sparkline ?? []}
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
+                          isFavorite={isFavorite(item.symbol)}
                           showQuickActions
                           onLongPress={(position) => setQuickActionMenu({
                             isOpen: true,
@@ -1169,6 +1172,7 @@ export default function WatchlistPage() {
                           sparkline={tfData?.closes ?? favData?.sparkline ?? []}
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
+                          isInWatchlist={isInWatchlist(fav.symbol)}
                           showQuickActions
                           onLongPress={(position) => setQuickActionMenu({
                             isOpen: true,
