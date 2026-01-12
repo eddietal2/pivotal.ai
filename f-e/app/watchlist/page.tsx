@@ -10,7 +10,7 @@ import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
-import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -429,6 +429,43 @@ export default function WatchlistPage() {
     });
     return emptyGrouped;
   }, [marketData, selectedTimeframe, pulseItemOrder]);
+
+  // Calculate top bullish and bearish indicators from market data
+  type TopIndicator = { ticker: string; symbol: string; change: number } | null;
+  const topIndicators = React.useMemo<{ bullish: TopIndicator; bearish: TopIndicator }>(() => {
+    const entries = Object.entries(marketData || {});
+    if (entries.length === 0) return { bullish: null, bearish: null };
+    
+    let maxChange = -Infinity;
+    let minChange = Infinity;
+    let bullishItem: TopIndicator = null;
+    let bearishItem: TopIndicator = null;
+
+    entries.forEach(([ticker, tickerData]: [string, any]) => {
+      const dayTimeframe = tickerData?.timeframes?.day;
+      const change = dayTimeframe?.latest?.change ?? tickerData?.change ?? 0;
+      
+      if (change > maxChange) {
+        maxChange = change;
+        bullishItem = {
+          ticker: tickerNames[ticker] || ticker,
+          symbol: ticker,
+          change: change,
+        };
+      }
+      
+      if (change < minChange) {
+        minChange = change;
+        bearishItem = {
+          ticker: tickerNames[ticker] || ticker,
+          symbol: ticker,
+          change: change,
+        };
+      }
+    });
+
+    return { bullish: bullishItem, bearish: bearishItem };
+  }, [marketData]);
 
   // Reorder pulse items within an asset class
   const reorderPulseItems = useCallback((classKey: string, fromIndex: number, toIndex: number) => {
@@ -915,10 +952,31 @@ export default function WatchlistPage() {
                   >
                     <span className="transition-transform duration-200">▼</span>
                     {activeSection === 'marketPulse' && (
-                      <span className="flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-green-500" />
-                        Market Pulse
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-green-500" />
+                          Market Pulse
+                        </span>
+                        {/* Top Market Indicators in fixed header */}
+                        {!loading && (topIndicators.bullish || topIndicators.bearish) && (
+                          <div className="flex items-center gap-3 text-xs font-normal">
+                            {topIndicators.bullish && (
+                              <span className="flex items-center gap-1 text-green-500">
+                                <TrendingUp className="w-3 h-3" />
+                                <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                                <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
+                              </span>
+                            )}
+                            {topIndicators.bearish && (
+                              <span className="flex items-center gap-1 text-red-500">
+                                <TrendingDown className="w-3 h-3" />
+                                <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                                <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                     {activeSection === 'myWatchlist' && (
                       <span className="flex items-center gap-2">
@@ -957,10 +1015,31 @@ export default function WatchlistPage() {
           <div ref={collapsibleSectionRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <CollapsibleSection
               title={
-                <span className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-green-500" />
-                  Market Pulse
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-green-500" />
+                    Market Pulse
+                  </span>
+                  {/* Top Market Indicators - shown when data is loaded */}
+                  {!loading && (topIndicators.bullish || topIndicators.bearish) && (
+                    <div className="flex items-center gap-3 text-xs font-normal">
+                      {topIndicators.bullish && (
+                        <span className="flex items-center gap-1 text-green-500">
+                          <TrendingUp className="w-3 h-3" />
+                          <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                          <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
+                        </span>
+                      )}
+                      {topIndicators.bearish && (
+                        <span className="flex items-center gap-1 text-red-500">
+                          <TrendingDown className="w-3 h-3" />
+                          <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                          <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               }
               infoButton={activeSection === 'marketPulse' && !loading && !error ? (
                 <div className="flex items-center gap-2">
