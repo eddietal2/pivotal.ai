@@ -1,3 +1,26 @@
+import React from 'react';
+import '@testing-library/jest-dom';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import App from '@/app/home/page';
+import { ThemeProvider } from '@/components/context/ThemeContext';
+import { ToastProvider } from '@/components/context/ToastContext';
+import { UIProvider } from '@/components/context/UIContext';
+import { PivyChatProvider } from '@/components/context/PivyChatContext';
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+  }),
+  usePathname: () => '/home',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 // Mock MarketOverview to render immediately without delay
 jest.mock('@/components/ui/MarketOverview', () => {
   return function MockMarketOverview() {
@@ -16,25 +39,6 @@ global.fetch = jest.fn(() =>
   })
 ) as unknown as jest.MockedFunction<typeof fetch>;
 
-// Mock the fetchMarketData function to prevent state updates
-jest.mock('@/app/home/page', () => {
-  const actual = jest.requireActual('@/app/home/page');
-  const MockedApp = () => {
-    // Mock the component without the useEffect that causes state updates
-    return actual.default();
-  };
-  // Prevent the useEffect from running
-  MockedApp.fetchMarketData = jest.fn();
-  return MockedApp;
-});
-
-import React from 'react';
-import '@testing-library/jest-dom';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import App from '@/app/home/page';
-import { ThemeProvider } from '@/components/context/ThemeContext';
-import { ToastProvider } from '@/components/context/ToastContext';
-import { UIProvider } from '@/components/context/UIContext';
 
 describe('Stop Loss modal flow', () => {
   test('clicking stop loss opens modal and shows content', async () => {
@@ -42,7 +46,9 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -74,7 +80,9 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -87,7 +95,9 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>

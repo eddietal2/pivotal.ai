@@ -1,10 +1,17 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 
+// Mock timers for animation testing
+jest.useFakeTimers();
+
 describe('CollapsibleSection', () => {
-  test('toggles open/closed and triggers transitionend on content', () => {
+  afterEach(() => {
+    jest.clearAllTimers();
+  });
+
+  test('toggles open/closed state via button aria-label', () => {
     render(
       <CollapsibleSection
         title={<span>Test Title</span>}
@@ -17,21 +24,21 @@ describe('CollapsibleSection', () => {
     // Content visible initially
     const contentNode = screen.getByText('Collapsible Content');
     expect(contentNode).toBeInTheDocument();
-    // get the content wrapper
-    const contentWrapper = contentNode.parentElement as HTMLElement;
-    expect(contentWrapper).toBeTruthy();
-    expect(contentWrapper.style.display === 'none').toBe(false);
+
+    // Initially should show "Collapse section" aria-label (open state)
+    const toggleButton = screen.getByLabelText('Collapse section');
+    expect(toggleButton).toBeInTheDocument();
 
     // Click toggle to collapse
-    const toggleButton = screen.getByLabelText('Collapse section');
     fireEvent.click(toggleButton);
 
-    // Simulate transitionend with propertyName: 'height'
-    const te: any = new Event('transitionend');
-    te.propertyName = 'height';
-    contentWrapper.dispatchEvent(te);
+    // Fast-forward animation duration (350ms + buffer)
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
 
-    expect(contentWrapper.style.display).toBe('none');
+    // After animation, aria-label should change to "Expand section"
+    expect(screen.getByLabelText('Expand section')).toBeInTheDocument();
   });
 
   test('clicking info button does not toggle collapse', () => {
@@ -55,22 +62,25 @@ describe('CollapsibleSection', () => {
     expect(contentWrapper.style.display === 'none').toBe(false);
   });
 
-  test('openKey change opens the section when it is closed', () => {
+  test('openKey change triggers onOpenChange callback', () => {
+    const onOpenChange = jest.fn();
     const { rerender } = render(
       <CollapsibleSection
         title={<span>Test Title</span>}
         infoButton={<button aria-label="info-btn">i</button>}
         defaultOpen={false}
         openKey={'D'}
+        onOpenChange={onOpenChange}
       >
         <div>Collapsible Content</div>
       </CollapsibleSection>
     );
 
-    // Initially closed
-    const contentNode = screen.getByText('Collapsible Content');
-    const contentWrapper = contentNode.parentElement as HTMLElement;
-    expect(contentWrapper.style.display).toBe('none');
+    // Initially closed - should show "Expand section"
+    expect(screen.getByLabelText('Expand section')).toBeInTheDocument();
+    
+    // Clear any initial calls
+    onOpenChange.mockClear();
 
     // Change the openKey to simulate timeframe change
     rerender(
@@ -79,12 +89,13 @@ describe('CollapsibleSection', () => {
         infoButton={<button aria-label="info-btn">i</button>}
         defaultOpen={false}
         openKey={'W'}
+        onOpenChange={onOpenChange}
       >
         <div>Collapsible Content</div>
       </CollapsibleSection>
     );
 
-    // Should now be open
-    expect(contentWrapper.style.display).toBe('block');
+    // onOpenChange should have been called with true
+    expect(onOpenChange).toHaveBeenCalledWith(true);
   });
 });

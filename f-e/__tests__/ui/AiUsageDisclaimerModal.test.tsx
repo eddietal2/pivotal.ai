@@ -1,3 +1,26 @@
+import React from 'react';
+import '@testing-library/jest-dom';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import App from '@/app/home/page';
+import { ThemeProvider } from '@/components/context/ThemeContext';
+import { ToastProvider } from '@/components/context/ToastContext';
+import { UIProvider } from '@/components/context/UIContext';
+import { PivyChatProvider } from '@/components/context/PivyChatContext';
+
+// Mock Next.js navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 // Mock MarketOverview to render immediately without delay
 jest.mock('@/components/ui/MarketOverview', () => {
   return function MockMarketOverview() {
@@ -16,13 +39,7 @@ global.fetch = jest.fn(() =>
   })
 ) as unknown as jest.MockedFunction<typeof fetch>;
 
-import React from 'react';
-import '@testing-library/jest-dom';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import App from '@/app/home/page';
-import { ThemeProvider } from '@/components/context/ThemeContext';
-import { ToastProvider } from '@/components/context/ToastContext';
-import { UIProvider } from '@/components/context/UIContext';
+
 
 describe('AI Usage modal flow', () => {
   beforeEach(() => {
@@ -38,7 +55,9 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -60,7 +79,9 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -80,7 +101,9 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PivyChatProvider>
+              <App />
+            </PivyChatProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>

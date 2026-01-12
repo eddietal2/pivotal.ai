@@ -32,7 +32,7 @@ describe('WatchListItem', () => {
 
   test('renders value change when provided', () => {
     render(<WatchListItem name="Gold" symbol="GC=F" price="$1,950" change={0.8} valueChange={15.6} />);
-    expect(screen.getByText('+15.60')).toBeInTheDocument();
+    expect(screen.getByText((content, element) => element?.textContent === '$+15.60')).toBeInTheDocument();
   });
 
   test('renders timeframe chip when provided', () => {

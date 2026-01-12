@@ -42,6 +42,20 @@ jest.mock('@/components/context/ThemeContext', () => ({
   ThemeProvider: ({ children }) => children,
 }));
 
+// Mock Next.js navigation hooks for components that use useRouter, usePathname, etc.
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+  }),
+  usePathname: () => '/home',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 // Utility function to render with ThemeProvider, ToastProvider, UIProvider, and PivyChatProvider
 const renderWithProviders = (ui, options) => {
   return render(

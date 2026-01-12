@@ -6,6 +6,20 @@ import { ToastProvider } from '@/components/context/ToastContext'
 import { UIProvider } from '@/components/context/UIContext'
 import App from '@/app/home/page'
 
+// Mock next/navigation to provide router context
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+  }),
+  usePathname: () => '/home',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 // Mock MarketOverview and heavy animations/components to keep tests deterministic
 jest.mock('@/components/ui/MarketOverview', () => () => <div data-testid="market-overview">Market Overview</div>);
 jest.mock('@/components/ui/CandleStickAnim', () => () => <div data-testid="candlestick">CandleStick</div>);

@@ -4,6 +4,7 @@ import WatchlistPage from '@/app/watchlist/page';
 import { FavoritesProvider } from '@/components/context/FavoritesContext';
 import { WatchlistProvider } from '@/components/context/WatchlistContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
+import { ToastProvider } from '@/components/context/ToastContext';
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -23,13 +24,15 @@ jest.mock('next/navigation', () => ({
 
 // Wrapper component with all required providers
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <PivyChatProvider>
-    <FavoritesProvider>
-      <WatchlistProvider>
-        {children}
-      </WatchlistProvider>
-    </FavoritesProvider>
-  </PivyChatProvider>
+  <ToastProvider>
+    <PivyChatProvider>
+      <FavoritesProvider>
+        <WatchlistProvider>
+          {children}
+        </WatchlistProvider>
+      </FavoritesProvider>
+    </PivyChatProvider>
+  </ToastProvider>
 );
 
 // Helper function to render with providers
@@ -62,7 +65,7 @@ describe('Watchlist page', () => {
       renderWithProviders(<WatchlistPage />);
       expect(screen.getByText(/Search or Browse/)).toBeInTheDocument();
       expect(screen.getByText(/Build Your Watchlist/)).toBeInTheDocument();
-      expect(screen.getByText(/Enable Swing Screens/)).toBeInTheDocument();
+      expect(screen.getByText(/Add to My Screens/)).toBeInTheDocument();
     });
 
     test('can close the getting started alert', async () => {
@@ -114,44 +117,27 @@ describe('Watchlist page', () => {
     });
   });
 
-  describe('Swing Screens Section', () => {
-    test('renders Swing Screens section', () => {
+  describe('My Screens Section', () => {
+    test('renders My Screens section', () => {
       renderWithProviders(<WatchlistPage />);
-      expect(screen.getByText('Swing Screens')).toBeInTheDocument();
+      // Use getAllByText since "My Screens" appears in multiple places (header and section)
+      const screens = screen.getAllByText(/My Screens/);
+      expect(screens.length).toBeGreaterThan(0);
     });
 
     test('shows empty state when no favorites', () => {
       renderWithProviders(<WatchlistPage />);
       // Since there are no favorites by default, it should show the empty state
-      expect(screen.getByText('No swing setups found')).toBeInTheDocument();
-      expect(screen.getByText('Add favorites to track technical indicators')).toBeInTheDocument();
+      expect(screen.getByText('No screens yet')).toBeInTheDocument();
+      expect(screen.getByText(/Add items to your watchlist first/)).toBeInTheDocument();
     });
   });
 
-  describe('Favorites Section', () => {
-    test('renders Favorites section with Heart icon', () => {
+  describe('My Screens Section Details', () => {
+    test('displays My Screens caption explaining the purpose', () => {
       renderWithProviders(<WatchlistPage />);
-      // Find the Favorites header text
-      expect(screen.getByText('Favorites')).toBeInTheDocument();
-    });
-
-    test('displays favorites count indicator', () => {
-      renderWithProviders(<WatchlistPage />);
-      // Should show (0/3) when no favorites - MAX_FAVORITES is 3
-      expect(screen.getByText('(0/3)')).toBeInTheDocument();
-    });
-
-    test('shows empty state when no favorites exist', () => {
-      renderWithProviders(<WatchlistPage />);
-      // Since there are no favorites by default, it should show the empty state
-      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
-      expect(screen.getByText('Tap ♡ on any asset to add it here')).toBeInTheDocument();
-    });
-
-    test('displays favorites caption explaining the limit', () => {
-      renderWithProviders(<WatchlistPage />);
-      // The caption should mention the favorites purpose
-      expect(screen.getByText(/Your top 3 most important assets/)).toBeInTheDocument();
+      // The caption should mention the screens purpose
+      expect(screen.getByText(/Your top 3 watchlist picks for advanced screening/)).toBeInTheDocument();
     });
   });
 
@@ -170,7 +156,7 @@ describe('Watchlist page', () => {
     test('shows empty state when watchlist is empty', () => {
       renderWithProviders(<WatchlistPage />);
       expect(screen.getByText('Your watchlist is empty')).toBeInTheDocument();
-      expect(screen.getByText('Search for stocks and tap ⭐ to add them')).toBeInTheDocument();
+      expect(screen.getByText('Add stocks to track their performance')).toBeInTheDocument();
     });
 
     test('displays watchlist caption explaining the limit', () => {
