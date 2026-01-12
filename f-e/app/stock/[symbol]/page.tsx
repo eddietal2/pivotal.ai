@@ -34,6 +34,7 @@ export default function StockDetailPage() {
   
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
@@ -123,7 +124,10 @@ export default function StockDetailPage() {
       const controller = new AbortController();
       abortControllerRef.current = controller;
       
-      setLoading(true);
+      // Only show full loading state on initial load
+      if (!stockData) {
+        setLoading(true);
+      }
       setError(null);
       
       try {
@@ -147,6 +151,7 @@ export default function StockDetailPage() {
         
         const data = await res.json();
         setStockData(data);
+        setIsInitialLoad(false);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
         console.error('Error fetching stock data:', err);
@@ -502,7 +507,7 @@ export default function StockDetailPage() {
     );
   };
 
-  if (loading) {
+  if (loading && isInitialLoad) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
         <div className="animate-pulse space-y-4">
