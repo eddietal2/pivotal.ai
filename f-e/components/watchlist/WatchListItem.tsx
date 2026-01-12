@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Sparkline from '@/components/ui/Sparkline';
-import { ArrowUpRight, ArrowDownRight, Star, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Star, TrendingUp, Trash2 } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
 type Props = {
@@ -23,9 +23,12 @@ type Props = {
   // Status indicators
   isInWatchlist?: boolean;
   isInSwingScreens?: boolean;
+  // Swipe-to-remove
+  onSwipeRemove?: () => void;
+  enableSwipe?: boolean;
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, onSwipeRemove, enableSwipe = false }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -40,6 +43,107 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
   // Double-tap detection
   const lastTapRef = useRef<number>(0);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Swipe-to-remove state
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [showRemoveButton, setShowRemoveButton] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const SWIPE_THRESHOLD = 80; // pixels to trigger remove button reveal
+  const REMOVE_BUTTON_WIDTH = 80;
+
+  // Reset swipe when clicking outside
+  useEffect(() => {
+    if (!showRemoveButton) return;
+    
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setSwipeX(0);
+        setShowRemoveButton(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showRemoveButton]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!enableSwipe) return;
+    
+    const touch = e.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    setIsSwiping(false);
+  }, [enableSwipe]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!enableSwipe || !swipeStartRef.current) return;
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - swipeStartRef.current.x;
+    const deltaY = touch.clientY - swipeStartRef.current.y;
+    
+    // Only allow left swipe, and only if horizontal movement is dominant
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      setIsSwiping(true);
+      
+      // Cancel long-press when swiping
+      if (longPressRef.current) {
+        clearTimeout(longPressRef.current);
+        longPressRef.current = null;
+        setIsPressed(false);
+      }
+      
+      // Calculate swipe position (only allow left swipe, capped at remove button width)
+      const newSwipeX = showRemoveButton 
+        ? Math.max(-REMOVE_BUTTON_WIDTH, Math.min(0, deltaX - REMOVE_BUTTON_WIDTH))
+        : Math.max(-REMOVE_BUTTON_WIDTH, Math.min(0, deltaX));
+      
+      setSwipeX(newSwipeX);
+    }
+  }, [enableSwipe, showRemoveButton]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!enableSwipe || !swipeStartRef.current) return;
+    
+    const swipedPastThreshold = Math.abs(swipeX) >= SWIPE_THRESHOLD;
+    
+    if (swipedPastThreshold) {
+      // Snap to reveal remove button
+      setSwipeX(-REMOVE_BUTTON_WIDTH);
+      setShowRemoveButton(true);
+    } else {
+      // Snap back
+      setSwipeX(0);
+      setShowRemoveButton(false);
+    }
+    
+    swipeStartRef.current = null;
+    setIsSwiping(false);
+  }, [enableSwipe, swipeX]);
+
+  const handleRemoveClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+    
+    // Reset swipe state
+    setSwipeX(0);
+    setShowRemoveButton(false);
+    
+    // Call remove handler
+    onSwipeRemove?.();
+  }, [onSwipeRemove]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!showQuickActions) return;
@@ -126,18 +230,42 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
   }, [showQuickActions, onClick, onDoubleTap]);
 
   return (
-    <button
-      data-testid={`watchlist-item-${symbol}`}
-      type="button"
-      onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerLeave}
-      onPointerMove={handlePointerMove}
-      onContextMenu={handleContextMenu}
-      className={`bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${isPressed ? 'scale-[0.98] opacity-90' : ''}`}
-      aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Long-press or right-click for quick actions. Double-tap to favorite.' : ''}`}
+    <div 
+      ref={containerRef}
+      className="relative overflow-hidden rounded-xl"
     >
+      {/* Remove button (revealed on swipe) */}
+      {enableSwipe && (
+        <button
+          type="button"
+          onClick={handleRemoveClick}
+          className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors z-10"
+          aria-label={`Remove ${symbol} from list`}
+        >
+          <Trash2 className="w-5 h-5 text-white" />
+        </button>
+      )}
+      
+      {/* Main content (slides on swipe) */}
+      <button
+        data-testid={`watchlist-item-${symbol}`}
+        type="button"
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
+        onPointerMove={handlePointerMove}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
+        }}
+        className={`bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${isPressed ? 'scale-[0.98] opacity-90' : ''} relative z-20`}
+        aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Long-press or right-click for quick actions. Double-tap to favorite.' : ''}${enableSwipe ? ' Swipe left to remove.' : ''}`}
+      >
       <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -192,5 +320,6 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         </div>
       </div>
     </button>
+    </div>
   );
 }

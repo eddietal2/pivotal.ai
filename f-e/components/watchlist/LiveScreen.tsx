@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ChevronRight, Star, TrendingUp } from 'lucide-react';
+import { Activity, ChevronRight, Star, TrendingUp, Trash2 } from 'lucide-react';
 
 interface Favorite {
   symbol: string;
@@ -14,9 +14,11 @@ interface LiveScreenProps {
   onLongPress?: (symbol: string, name: string, position: { x: number; y: number }) => void;
   onDoubleTap?: (symbol: string, name: string) => void;
   isInWatchlist?: (symbol: string) => boolean;
+  onSwipeRemove?: (symbol: string, name: string) => void;
+  enableSwipe?: boolean;
 }
 
-export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist }: LiveScreenProps) {
+export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist, onSwipeRemove, enableSwipe = false }: LiveScreenProps) {
   const router = useRouter();
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1m' | '5m' | '15m' | '1h' | '1d'>('5m');
   
@@ -31,6 +33,114 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
   // Double-tap detection refs
   const lastTapRefs = useRef<Record<string, number>>({});
   const tapTimeoutRefs = useRef<Record<string, NodeJS.Timeout | null>>({});
+
+  // Swipe-to-remove state
+  const [swipeX, setSwipeX] = useState<Record<string, number>>({});
+  const [swipingSymbol, setSwipingSymbol] = useState<string | null>(null);
+  const [showRemoveButton, setShowRemoveButton] = useState<Record<string, boolean>>({});
+  const swipeStartRef = useRef<{ x: number; y: number; time: number; symbol: string } | null>(null);
+  const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const SWIPE_THRESHOLD = 80;
+  const REMOVE_BUTTON_WIDTH = 80;
+
+  // Reset swipe when clicking outside
+  useEffect(() => {
+    const symbolsWithRemoveButton = Object.keys(showRemoveButton).filter(s => showRemoveButton[s]);
+    if (symbolsWithRemoveButton.length === 0) return;
+    
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const clickedSymbol = symbolsWithRemoveButton.find(symbol => 
+        containerRefs.current[symbol]?.contains(e.target as Node)
+      );
+      
+      if (!clickedSymbol) {
+        setSwipeX({});
+        setShowRemoveButton({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showRemoveButton]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent, symbol: string) => {
+    if (!enableSwipe) return;
+    
+    const touch = e.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now(), symbol };
+    setSwipingSymbol(null);
+  }, [enableSwipe]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent, symbol: string) => {
+    if (!enableSwipe || !swipeStartRef.current || swipeStartRef.current.symbol !== symbol) return;
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - swipeStartRef.current.x;
+    const deltaY = touch.clientY - swipeStartRef.current.y;
+    
+    // Only allow left swipe, and only if horizontal movement is dominant
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      setSwipingSymbol(symbol);
+      
+      // Cancel long-press when swiping
+      if (longPressRefs.current[symbol]) {
+        clearTimeout(longPressRefs.current[symbol]!);
+        longPressRefs.current[symbol] = null;
+        setPressedSymbol(null);
+      }
+      
+      // Calculate swipe position (only allow left swipe, capped at remove button width)
+      const currentlyShown = showRemoveButton[symbol];
+      const newSwipeX = currentlyShown 
+        ? Math.max(-REMOVE_BUTTON_WIDTH, Math.min(0, deltaX - REMOVE_BUTTON_WIDTH))
+        : Math.max(-REMOVE_BUTTON_WIDTH, Math.min(0, deltaX));
+      
+      setSwipeX(prev => ({ ...prev, [symbol]: newSwipeX }));
+    }
+  }, [enableSwipe, showRemoveButton]);
+
+  const handleTouchEnd = useCallback((symbol: string) => {
+    if (!enableSwipe || !swipeStartRef.current || swipeStartRef.current.symbol !== symbol) return;
+    
+    const currentSwipeX = swipeX[symbol] || 0;
+    const swipedPastThreshold = Math.abs(currentSwipeX) >= SWIPE_THRESHOLD;
+    
+    if (swipedPastThreshold) {
+      // Snap to reveal remove button
+      setSwipeX(prev => ({ ...prev, [symbol]: -REMOVE_BUTTON_WIDTH }));
+      setShowRemoveButton(prev => ({ ...prev, [symbol]: true }));
+    } else {
+      // Snap back
+      setSwipeX(prev => ({ ...prev, [symbol]: 0 }));
+      setShowRemoveButton(prev => ({ ...prev, [symbol]: false }));
+    }
+    
+    swipeStartRef.current = null;
+    setSwipingSymbol(null);
+  }, [enableSwipe, swipeX]);
+
+  const handleRemoveClick = useCallback((e: React.MouseEvent | React.TouchEvent, symbol: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+    
+    // Reset swipe state
+    setSwipeX(prev => ({ ...prev, [symbol]: 0 }));
+    setShowRemoveButton(prev => ({ ...prev, [symbol]: false }));
+    
+    // Call remove handler
+    onSwipeRemove?.(symbol, name);
+  }, [onSwipeRemove]);
 
   // Initialize with demo data for each favorite
   useEffect(() => {
@@ -138,31 +248,57 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
 
       {/* Hint for gestures */}
       <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-        Long-press for options • Double-tap to remove
+        Long-press for options • Double-tap to remove{enableSwipe ? ' • Swipe left to delete' : ''}
       </p>
 
       {/* List of favorited stocks with indicators */}
       {favorites.map((fav) => {
         const history = macdHistory[fav.symbol] || [];
         const inWatchlist = isInWatchlist?.(fav.symbol) ?? false;
+        const currentSwipeX = swipeX[fav.symbol] || 0;
+        const isSwiping = swipingSymbol === fav.symbol;
         
         return (
-          <button
+          <div
             key={fav.symbol}
-            onClick={(e) => handleClick(e, fav.symbol, fav.name)}
-            onPointerDown={(e) => handlePointerDown(e, fav.symbol, fav.name)}
-            onPointerUp={() => handlePointerUp(fav.symbol)}
-            onPointerLeave={() => handlePointerLeave(fav.symbol)}
-            onPointerMove={(e) => handlePointerMove(e, fav.symbol)}
-            onContextMenu={(e) => handleContextMenu(e, fav.symbol, fav.name)}
-            className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left ${
-              pressedSymbol === fav.symbol ? 'scale-[0.98] opacity-90' : ''
-            }`}
+            ref={(el) => { containerRefs.current[fav.symbol] = el; }}
+            className="relative overflow-hidden rounded-xl"
           >
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Activity className="w-4 h-4 text-purple-400" />
+            {/* Remove button (revealed on swipe) */}
+            {enableSwipe && (
+              <button
+                type="button"
+                onClick={(e) => handleRemoveClick(e, fav.symbol, fav.name)}
+                className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors z-10"
+                aria-label={`Remove ${fav.symbol} from My Screens`}
+              >
+                <Trash2 className="w-5 h-5 text-white" />
+              </button>
+            )}
+            
+            {/* Main content (slides on swipe) */}
+            <button
+              onClick={(e) => handleClick(e, fav.symbol, fav.name)}
+              onPointerDown={(e) => handlePointerDown(e, fav.symbol, fav.name)}
+              onPointerUp={() => handlePointerUp(fav.symbol)}
+              onPointerLeave={() => handlePointerLeave(fav.symbol)}
+              onPointerMove={(e) => handlePointerMove(e, fav.symbol)}
+              onContextMenu={(e) => handleContextMenu(e, fav.symbol, fav.name)}
+              onTouchStart={(e) => handleTouchStart(e, fav.symbol)}
+              onTouchMove={(e) => handleTouchMove(e, fav.symbol)}
+              onTouchEnd={() => handleTouchEnd(fav.symbol)}
+              style={{
+                transform: `translateX(${currentSwipeX}px)`,
+                transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
+              }}
+              className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left relative z-20 ${
+                pressedSymbol === fav.symbol ? 'scale-[0.98] opacity-90' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Activity className="w-4 h-4 text-purple-400" />
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                 </div>
                 <div className="flex flex-col items-start">
@@ -199,6 +335,7 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
               </div>
             </div>
           </button>
+          </div>
         );
       })}
     </div>

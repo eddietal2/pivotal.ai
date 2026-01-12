@@ -1094,6 +1094,15 @@ export default function WatchlistPage() {
                           afterHours={tfData?.latest?.is_after_hours}
                           isInSwingScreens={isFavorite(item.symbol)}
                           showQuickActions
+                          enableSwipe
+                          onSwipeRemove={() => {
+                            // Also remove from My Screens if applicable
+                            if (isFavorite(item.symbol)) {
+                              toggleFavorite({ symbol: item.symbol, name: item.name });
+                            }
+                            removeFromWatchlist(item.symbol);
+                            showToast(`${item.symbol} removed from Watchlist`, 'info', 2000, { link: '/watchlist?section=my-watchlist' });
+                          }}
                           onLongPress={(position) => setQuickActionMenu({
                             isOpen: true,
                             symbol: item.symbol,
@@ -1167,6 +1176,11 @@ export default function WatchlistPage() {
                 <LiveScreen 
                   favorites={favorites}
                   isInWatchlist={isInWatchlist}
+                  enableSwipe
+                  onSwipeRemove={(symbol, name) => {
+                    removeFavorite(symbol);
+                    showToast(`${symbol} removed from My Screens`, 'info', 2000, { link: '/watchlist?section=my-screens' });
+                  }}
                   onLongPress={(symbol, name, position) => setQuickActionMenu({
                     isOpen: true,
                     symbol,
