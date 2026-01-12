@@ -88,6 +88,15 @@ export default function WatchlistPage() {
   const watchlistDragIndexRef = useRef<number | null>(null);
   const watchlistDragOverIndexRef = useRef<number | null>(null);
   
+  // Confirmation dialog for removing last item
+  const [lastItemRemoveConfirm, setLastItemRemoveConfirm] = useState<{
+    isOpen: boolean;
+    symbol: string;
+    name: string;
+    listType: 'watchlist' | 'screens';
+    wasInScreens?: boolean;
+  } | null>(null);
+  
   // Quick action menu state
   const [quickActionMenu, setQuickActionMenu] = useState<{
     isOpen: boolean;
@@ -1290,8 +1299,21 @@ export default function WatchlistPage() {
                           }}
                           onTouchDrag={handleWatchlistTouchDrag}
                           onSwipeRemove={() => {
-                            // Also remove from My Screens if applicable
                             const wasInScreens = isFavorite(item.symbol);
+                            
+                            // Check if this is the last item - show confirmation
+                            if (watchlist.length === 1) {
+                              setLastItemRemoveConfirm({
+                                isOpen: true,
+                                symbol: item.symbol,
+                                name: item.name,
+                                listType: 'watchlist',
+                                wasInScreens,
+                              });
+                              return;
+                            }
+                            
+                            // Also remove from My Screens if applicable
                             if (wasInScreens) {
                               toggleFavorite({ symbol: item.symbol, name: item.name });
                             }
@@ -1417,6 +1439,17 @@ export default function WatchlistPage() {
                   isInWatchlist={isInWatchlist}
                   enableSwipe
                   onSwipeRemove={(symbol, name) => {
+                    // Check if this is the last item - show confirmation
+                    if (favorites.length === 1) {
+                      setLastItemRemoveConfirm({
+                        isOpen: true,
+                        symbol,
+                        name,
+                        listType: 'screens',
+                      });
+                      return;
+                    }
+                    
                     removeFavorite(symbol);
                     showToast(`${symbol} removed from My Screens`, 'info', 5000, { 
                       link: '/watchlist?section=my-screens',
@@ -1837,6 +1870,65 @@ export default function WatchlistPage() {
         timeframe={selectedStock?.timeframe || ''}
         timeframes={selectedStock?.timeframes}
       />
+
+      {/* Last Item Removal Confirmation Modal */}
+      {lastItemRemoveConfirm?.isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setLastItemRemoveConfirm(null)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Remove Last Item?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              <span className="font-medium">{lastItemRemoveConfirm.symbol}</span> is the last item in your {lastItemRemoveConfirm.listType === 'watchlist' ? 'Watchlist' : 'My Screens'}. 
+              Removing it will empty the list.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setLastItemRemoveConfirm(null)}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const { symbol, name, listType, wasInScreens } = lastItemRemoveConfirm;
+                  
+                  if (listType === 'watchlist') {
+                    if (wasInScreens) {
+                      toggleFavorite({ symbol, name });
+                    }
+                    removeFromWatchlist(symbol);
+                    showToast(`${symbol} removed from Watchlist`, 'info', 5000, { 
+                      link: '/watchlist?section=my-watchlist',
+                      onUndo: () => {
+                        addToWatchlist({ symbol, name });
+                        if (wasInScreens) addFavorite({ symbol, name });
+                      }
+                    });
+                  } else {
+                    removeFavorite(symbol);
+                    showToast(`${symbol} removed from My Screens`, 'info', 5000, { 
+                      link: '/watchlist?section=my-screens',
+                      onUndo: () => addFavorite({ symbol, name })
+                    });
+                  }
+                  
+                  setLastItemRemoveConfirm(null);
+                }}
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Menu (for long-press/right-click on Market Pulse items) */}
       {quickActionMenu && (
