@@ -1073,9 +1073,28 @@ export default function WatchlistPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     Your watchlist is empty
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Search for stocks and tap ⭐ to add them
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1 mb-4">
+                    Add stocks to track their performance
                   </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => setIsSearchOpen(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      <Search className="w-4 h-4" />
+                      Search Stocks
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveSection('marketPulse');
+                        setTimeout(() => document.getElementById('market-pulse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
+                    >
+                      <Activity className="w-4 h-4" />
+                      Browse Market Pulse
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1181,9 +1200,44 @@ export default function WatchlistPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     No screens yet
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                    Double-tap watchlist items to add to My Screens
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1 mb-4">
+                    {watchlist.length > 0 
+                      ? 'Double-tap watchlist items to add to My Screens'
+                      : 'Add items to your watchlist first, then promote them here'
+                    }
                   </p>
+                  {watchlist.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        setActiveSection('myWatchlist');
+                        setTimeout(() => document.getElementById('my-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      <Star className="w-4 h-4" />
+                      Go to Watchlist
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        onClick={() => setIsSearchOpen(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                      >
+                        <Search className="w-4 h-4" />
+                        Search Stocks
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveSection('marketPulse');
+                          setTimeout(() => document.getElementById('market-pulse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
+                      >
+                        <Activity className="w-4 h-4" />
+                        Browse Market Pulse
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <LiveScreen 
