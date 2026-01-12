@@ -63,7 +63,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       {toasts.length > 0 && (
         <div 
           data-testid="toast-container"
-          className={`fixed z-50 flex flex-col gap-3 ${isMobilePosition ? 'bottom-20 left-1/2 w-11/12 transform -translate-x-1/2' : 'top-4 right-4'} backdrop-blur-md bg-white/70 dark:bg-gray-900/60 rounded-lg p-2`}
+          className={`fixed z-[200] flex flex-col gap-3 ${isMobilePosition ? 'bottom-20 left-1/2 w-11/12 transform -translate-x-1/2' : 'top-4 right-4'} backdrop-blur-md bg-white/70 dark:bg-gray-900/60 rounded-lg p-2`}
           aria-live="polite"
           aria-atomic="true"
         >

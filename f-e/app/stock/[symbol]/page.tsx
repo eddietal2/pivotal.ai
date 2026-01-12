@@ -78,16 +78,16 @@ export default function StockDetailPage() {
     const wasFavorite = isFavorite(symbol);
     if (!wasFavorite && isFavoritesFull()) {
       setToast({ 
-        message: `Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`, 
+        message: `My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`, 
         type: 'error',
-        link: '/watchlist?section=favorites',
+        link: '/watchlist?section=my-screens',
       });
       setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleFavorite({ symbol, name: stockData?.name || symbol });
     setToast({
-      message: wasFavorite ? 'Removed from favorites' : 'Added to favorites',
+      message: wasFavorite ? 'Removed from My Screens' : 'Added to My Screens',
       type: wasFavorite ? 'info' : 'success',
     });
     setTimeout(() => setToast(null), 2500);

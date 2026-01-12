@@ -187,16 +187,16 @@ export default function StockPreviewModal({
     const wasFavorite = isFavorite(symbol);
     if (!wasFavorite && isFavoritesFull()) {
       setToast({
-        message: `Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`,
+        message: `My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES}) - Tap to manage`,
         type: 'error',
-        link: '/watchlist?section=favorites',
+        link: '/watchlist?section=my-screens',
       });
       setTimeout(() => setToast(null), 4000);
       return;
     }
     toggleFavorite({ symbol, name });
     setToast({
-      message: wasFavorite ? `${name} removed from favorites` : `${name} added to favorites`,
+      message: wasFavorite ? `${name} removed from My Screens` : `${name} added to My Screens`,
       type: wasFavorite ? 'info' : 'success',
     });
     // Auto-dismiss toast
