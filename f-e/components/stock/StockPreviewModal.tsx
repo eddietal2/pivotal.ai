@@ -171,6 +171,11 @@ export default function StockPreviewModal({
   );
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
+  
+  // Chart scrubbing state (Robinhood-style touch interaction)
+  const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const [scrubIndex, setScrubIndex] = React.useState<number | null>(null);
+  const chartRef = React.useRef<HTMLDivElement>(null);
 
   // Handle navigating to a section from toast
   const handleToastClick = (link?: string) => {
@@ -281,6 +286,49 @@ export default function StockPreviewModal({
       price: typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price,
     };
   }, [timeframes, selectedTimeframe, sparkline, change, valueChange, price]);
+
+  // Get scrubbed price when touching chart
+  const scrubPrice = React.useMemo(() => {
+    if (scrubIndex === null || !currentData.sparkline || currentData.sparkline.length === 0) return null;
+    const idx = Math.max(0, Math.min(scrubIndex, currentData.sparkline.length - 1));
+    return currentData.sparkline[idx];
+  }, [scrubIndex, currentData.sparkline]);
+
+  // Calculate change from first data point to scrubbed point
+  const scrubChange = React.useMemo(() => {
+    if (scrubPrice === null || !currentData.sparkline || currentData.sparkline.length === 0) return null;
+    const firstPrice = currentData.sparkline[0];
+    const valueChange = scrubPrice - firstPrice;
+    const percentChange = ((scrubPrice - firstPrice) / firstPrice) * 100;
+    return { valueChange, percentChange };
+  }, [scrubPrice, currentData.sparkline]);
+
+  // Handle chart scrubbing
+  const handleChartScrub = React.useCallback((clientX: number) => {
+    if (!chartRef.current || !currentData.sparkline || currentData.sparkline.length === 0) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    const index = Math.round(percent * (currentData.sparkline.length - 1));
+    setScrubIndex(index);
+  }, [currentData.sparkline]);
+
+  const handleScrubStart = React.useCallback((e: React.PointerEvent) => {
+    setIsScrubbing(true);
+    handleChartScrub(e.clientX);
+    // Capture pointer to track movement outside element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [handleChartScrub]);
+
+  const handleScrubMove = React.useCallback((e: React.PointerEvent) => {
+    if (!isScrubbing) return;
+    handleChartScrub(e.clientX);
+  }, [isScrubbing, handleChartScrub]);
+
+  const handleScrubEnd = React.useCallback(() => {
+    setIsScrubbing(false);
+    setScrubIndex(null);
+  }, []);
 
   // Handle close with animation
   const handleClose = React.useCallback(() => {
@@ -428,20 +476,47 @@ export default function StockPreviewModal({
                     </g>
                   );
                 })}
+                {/* Scrub indicator - vertical line and dot */}
+                {isScrubbing && scrubIndex !== null && (() => {
+                  const scrubX = (scrubIndex / (chartData.length - 1)) * 100;
+                  const scrubValue = chartData[scrubIndex];
+                  const scrubY = 100 - ((scrubValue - paddedMin) / paddedRange) * 100;
+                  return (
+                    <>
+                      <line 
+                        x1={scrubX} 
+                        y1="0" 
+                        x2={scrubX} 
+                        y2="100" 
+                        stroke="#6b7280" 
+                        strokeWidth="0.5" 
+                        strokeDasharray="2,2"
+                      />
+                      <circle 
+                        cx={scrubX} 
+                        cy={scrubY} 
+                        r="2" 
+                        fill={scrubValue >= chartData[0] ? '#22c55e' : '#ef4444'}
+                        stroke="white"
+                        strokeWidth="0.5"
+                      />
+                    </>
+                  );
+                })()}
               </svg>
             </div>
-            {/* X-axis labels */}
-            <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0">
-              <span>Open</span>
-              <span>{selectedTimeframe.charAt(0).toUpperCase() + selectedTimeframe.slice(1)}</span>
-              <span>Now</span>
+            {/* X-axis labels - relative times like Robinhood */}
+            <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0 px-2">
+              {selectedTimeframe === 'day' ? (
+                <><span>9:30 AM</span><span>10:30</span><span>11:30</span><span>12:30 PM</span><span>1:30</span><span>2:30</span><span>3:30</span></>
+              ) : selectedTimeframe === 'week' ? (
+                <><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></>
+              ) : selectedTimeframe === 'month' ? (
+                <><span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span></>
+              ) : (
+                <><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span></>
+              )}
             </div>
-          </div>
-          {/* Y-axis labels (right side) */}
-          <div className="flex flex-col justify-between text-[10px] text-gray-400 pl-2 py-1 min-w-[45px] text-left flex-shrink-0">
-            {yLabels.map((yPrice, i) => (
-              <span key={i}>{formatAxisPrice(yPrice, symbol)}</span>
-            ))}
           </div>
         </div>
       );
@@ -458,6 +533,10 @@ export default function StockPreviewModal({
 
     // Create gradient fill
     const fillPoints = `0,100 ${points} 100,100`;
+
+    // Calculate scrub indicator position
+    const scrubX = scrubIndex !== null ? (scrubIndex / (chartData.length - 1)) * 100 : null;
+    const scrubY = scrubIndex !== null ? 100 - ((chartData[scrubIndex] - paddedMin) / paddedRange) * 100 : null;
 
     return (
       <div className="flex h-full overflow-hidden">
@@ -484,20 +563,42 @@ export default function StockPreviewModal({
                 strokeLinejoin="round"
                 points={points}
               />
+              {/* Scrub indicator - vertical line and dot */}
+              {isScrubbing && scrubX !== null && scrubY !== null && (
+                <>
+                  <line 
+                    x1={scrubX} 
+                    y1="0" 
+                    x2={scrubX} 
+                    y2="100" 
+                    stroke="#6b7280" 
+                    strokeWidth="0.5" 
+                    strokeDasharray="2,2"
+                  />
+                  <circle 
+                    cx={scrubX} 
+                    cy={scrubY} 
+                    r="2" 
+                    fill={isPositive ? '#22c55e' : '#ef4444'}
+                    stroke="white"
+                    strokeWidth="0.5"
+                  />
+                </>
+              )}
             </svg>
           </div>
-          {/* X-axis labels */}
-          <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0">
-            <span>Open</span>
-            <span>{selectedTimeframe.charAt(0).toUpperCase() + selectedTimeframe.slice(1)}</span>
-            <span>Now</span>
+          {/* X-axis labels - relative times like Robinhood */}
+          <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0 px-2">
+            {selectedTimeframe === 'day' ? (
+              <><span>9:30 AM</span><span>10:30</span><span>11:30</span><span>12:30 PM</span><span>1:30</span><span>2:30</span><span>3:30</span></>
+            ) : selectedTimeframe === 'week' ? (
+              <><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></>
+            ) : selectedTimeframe === 'month' ? (
+              <><span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span></>
+            ) : (
+              <><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span></>
+            )}
           </div>
-        </div>
-        {/* Y-axis labels (right side) */}
-        <div className="flex flex-col justify-between text-[10px] text-gray-400 pl-2 py-1 min-w-[45px] text-left flex-shrink-0">
-          {yLabels.map((yPrice, i) => (
-            <span key={i}>{formatAxisPrice(yPrice, symbol)}</span>
-          ))}
         </div>
       </div>
     );
@@ -557,22 +658,44 @@ export default function StockPreviewModal({
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Price */}
+          {/* Price - shows scrub price when touching chart */}
           <div className={`flex items-baseline gap-3 flex-wrap transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
-              {pricePrefix}{!isNaN(numericPrice) ? numericPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price}{priceSuffix}
+              {isScrubbing && scrubPrice !== null ? (
+                <>{pricePrefix}{scrubPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{priceSuffix}</>
+              ) : (
+                <>{pricePrefix}{!isNaN(numericPrice) ? numericPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price}{priceSuffix}</>
+              )}
             </span>
-            <div className={`flex items-center gap-1 transition-colors duration-200 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-              {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            <div className={`flex items-center gap-1 transition-colors duration-200 ${
+              isScrubbing && scrubChange 
+                ? (scrubChange.percentChange >= 0 ? 'text-green-500' : 'text-red-500')
+                : (isPositive ? 'text-green-500' : 'text-red-500')
+            }`}>
+              {(isScrubbing && scrubChange ? scrubChange.percentChange >= 0 : isPositive) 
+                ? <TrendingUp className="w-4 h-4" /> 
+                : <TrendingDown className="w-4 h-4" />}
               <span className="font-semibold">
-                {pricePrefix}{isPositive ? '+' : ''}{currentData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({isPositive ? '+' : ''}{currentData.change?.toFixed(2) || '0.00'}%)
+                {isScrubbing && scrubChange ? (
+                  <>{pricePrefix}{scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.valueChange.toFixed(2)}{priceSuffix} ({scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.percentChange.toFixed(2)}%)</>
+                ) : (
+                  <>{pricePrefix}{isPositive ? '+' : ''}{currentData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({isPositive ? '+' : ''}{currentData.change?.toFixed(2) || '0.00'}%)</>
+                )}
               </span>
             </div>
           </div>
 
 
-          {/* Chart */}
-          <div className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+          {/* Chart - interactive scrubbing */}
+          <div 
+            ref={chartRef}
+            className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 touch-none ${isTransitioning ? 'opacity-0' : 'opacity-100'} ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+            onPointerDown={handleScrubStart}
+            onPointerMove={handleScrubMove}
+            onPointerUp={handleScrubEnd}
+            onPointerCancel={handleScrubEnd}
+            onPointerLeave={handleScrubEnd}
+          >
             {renderSparkline()}
           </div>
           
