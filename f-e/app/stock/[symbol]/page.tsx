@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
@@ -39,6 +39,12 @@ export default function StockDetailPage() {
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+  
+  // Chart scrubbing state (Robinhood-style touch interaction)
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
@@ -176,7 +182,72 @@ export default function StockDetailPage() {
     return `${pricePrefix}${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${priceSuffix}`;
   };
 
-  // Render sparkline as SVG with axes
+  // Get scrubbed price when touching chart
+  const scrubPrice = useMemo(() => {
+    const data = stockData?.sparkline || [];
+    if (scrubIndex === null || data.length === 0) return null;
+    const idx = Math.max(0, Math.min(scrubIndex, data.length - 1));
+    return data[idx];
+  }, [scrubIndex, stockData?.sparkline]);
+
+  // Calculate change from first data point to scrubbed point
+  const scrubChange = useMemo(() => {
+    const data = stockData?.sparkline || [];
+    if (scrubPrice === null || data.length === 0) return null;
+    const firstPrice = data[0];
+    const valueChange = scrubPrice - firstPrice;
+    const percentChange = ((scrubPrice - firstPrice) / firstPrice) * 100;
+    return { valueChange, percentChange };
+  }, [scrubPrice, stockData?.sparkline]);
+
+  // Handle chart scrubbing
+  const handleChartScrub = useCallback((clientX: number) => {
+    const data = stockData?.sparkline || [];
+    if (!chartRef.current || data.length === 0) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    const index = Math.round(percent * (data.length - 1));
+    setScrubIndex(index);
+  }, [stockData?.sparkline]);
+
+  const handleScrubStart = useCallback((e: React.PointerEvent) => {
+    setIsScrubbing(true);
+    handleChartScrub(e.clientX);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [handleChartScrub]);
+
+  const handleScrubMove = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbing) return;
+    handleChartScrub(e.clientX);
+  }, [isScrubbing, handleChartScrub]);
+
+  const handleScrubEnd = useCallback(() => {
+    setIsScrubbing(false);
+    setScrubIndex(null);
+  }, []);
+
+  // Get time labels based on timeframe
+  const getTimeLabels = (tf: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL') => {
+    switch (tf) {
+      case '1D': return ['9:30 AM', '10:30', '11:30', '12:30 PM', '1:30', '2:30', '3:30'];
+      case '1W': return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      case '1M': return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      case '3M': return ['Month 1', 'Month 2', 'Month 3'];
+      case '1Y': return ['Jan', 'Apr', 'Jul', 'Oct'];
+      case 'ALL': return ['Start', 'Q1', 'Mid', 'Q3', 'Now'];
+    }
+  };
+
+  // Calculate highlighted time label index based on scrub position
+  const getHighlightedLabelIndex = (dataLength: number) => {
+    if (!isScrubbing || scrubIndex === null || dataLength === 0) return -1;
+    const labels = getTimeLabels(selectedTimeframe);
+    const percent = scrubIndex / (dataLength - 1);
+    return Math.round(percent * (labels.length - 1));
+  };
+
+  // Render sparkline as SVG
   const renderChart = () => {
     const data = stockData?.sparkline || [];
     if (data.length < 2) {
@@ -196,51 +267,9 @@ export default function StockDetailPage() {
     const paddedRange = paddedMax - paddedMin;
     const isPositive = (stockData?.change ?? 0) >= 0;
 
-    // Generate Y-axis labels (5 price levels)
-    const yLabels = [];
-    for (let i = 0; i <= 4; i++) {
-      const yPrice = paddedMax - (paddedRange * i) / 4;
-      yLabels.push(yPrice);
-    }
-
-    // Format price for Y-axis display
-    const formatAxisPriceLocal = (p: number) => {
-      let formatted: string;
-      if (p >= 10000) {
-        formatted = `${(p / 1000).toFixed(0)}K`;
-      } else if (p >= 1000) {
-        formatted = `${(p / 1000).toFixed(1)}K`;
-      } else if (p >= 100) {
-        formatted = p.toFixed(0);
-      } else if (p >= 1) {
-        formatted = p.toFixed(2);
-      } else {
-        formatted = p.toFixed(4);
-      }
-      return `${pricePrefix}${formatted}${priceSuffix}`;
-    };
-
-    // Generate X-axis labels based on timeframe
-    const getXLabels = () => {
-      switch (selectedTimeframe) {
-        case '1D':
-          return ['9:30', '11:00', '12:30', '2:00', '4:00'];
-        case '1W':
-          return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-        case '1M':
-          return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-        case '3M':
-          return ['Month 1', 'Month 2', 'Month 3'];
-        case '1Y':
-          return ['Q1', 'Q2', 'Q3', 'Q4'];
-        case 'ALL':
-          return ['Start', '', 'Mid', '', 'Now'];
-        default:
-          return ['Open', '', '', '', 'Now'];
-      }
-    };
-
-    const xLabels = getXLabels();
+    // Get time labels and highlight index
+    const timeLabels = getTimeLabels(selectedTimeframe);
+    const highlightIdx = getHighlightedLabelIndex(data.length);
 
     // Candlestick mode rendering
     if (chartMode === 'candle') {
@@ -317,20 +346,46 @@ export default function StockDetailPage() {
                     </g>
                   );
                 })}
+                {/* Scrub indicator - crosshair lines and dot */}
+                {isScrubbing && scrubIndex !== null && (() => {
+                  const scrubX = (scrubIndex / (data.length - 1)) * 100;
+                  const scrubValue = data[scrubIndex];
+                  const scrubY = 100 - ((scrubValue - paddedMin) / paddedRange) * 100;
+                  return (
+                    <>
+                      {/* Vertical line */}
+                      <line 
+                        x1={scrubX} 
+                        y1="0" 
+                        x2={scrubX} 
+                        y2="100" 
+                        stroke="#6b7280" 
+                        strokeWidth="0.5" 
+                        strokeDasharray="2,2"
+                      />
+                      {/* Horizontal line */}
+                      <line 
+                        x1="0" 
+                        y1={scrubY} 
+                        x2="100" 
+                        y2={scrubY} 
+                        stroke="#6b7280" 
+                        strokeWidth="0.5" 
+                        strokeDasharray="2,2"
+                      />
+                      <circle 
+                        cx={scrubX} 
+                        cy={scrubY} 
+                        r="2" 
+                        fill={scrubValue >= data[0] ? '#22c55e' : '#ef4444'}
+                        stroke="white"
+                        strokeWidth="0.5"
+                      />
+                    </>
+                  );
+                })()}
               </svg>
             </div>
-            {/* X-axis labels */}
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 px-1">
-              {xLabels.map((label, i) => (
-                <span key={i}>{label}</span>
-              ))}
-            </div>
-          </div>
-          {/* Y-axis labels (right side) */}
-          <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pl-3 py-1 min-w-[55px] text-left">
-            {yLabels.map((yPrice, i) => (
-              <span key={i}>{formatAxisPriceLocal(yPrice)}</span>
-            ))}
           </div>
         </div>
       );
@@ -347,6 +402,10 @@ export default function StockDetailPage() {
 
     // Create gradient fill
     const fillPoints = `0,100 ${points} 100,100`;
+
+    // Calculate scrub indicator position
+    const scrubX = scrubIndex !== null ? (scrubIndex / (data.length - 1)) * 100 : null;
+    const scrubY = scrubIndex !== null ? 100 - ((data[scrubIndex] - paddedMin) / paddedRange) * 100 : null;
 
     return (
       <div className="flex h-full">
@@ -377,21 +436,68 @@ export default function StockDetailPage() {
                 strokeLinejoin="round"
                 points={points}
               />
+              {/* Scrub indicator - crosshair lines and dot */}
+              {isScrubbing && scrubX !== null && scrubY !== null && (
+                <>
+                  {/* Vertical line */}
+                  <line 
+                    x1={scrubX} 
+                    y1="0" 
+                    x2={scrubX} 
+                    y2="100" 
+                    stroke="#6b7280" 
+                    strokeWidth="0.5" 
+                    strokeDasharray="2,2"
+                  />
+                  {/* Horizontal line */}
+                  <line 
+                    x1="0" 
+                    y1={scrubY} 
+                    x2="100" 
+                    y2={scrubY} 
+                    stroke="#6b7280" 
+                    strokeWidth="0.5" 
+                    strokeDasharray="2,2"
+                  />
+                  <circle 
+                    cx={scrubX} 
+                    cy={scrubY} 
+                    r="2" 
+                    fill={isPositive ? '#22c55e' : '#ef4444'}
+                    stroke="white"
+                    strokeWidth="0.5"
+                  />
+                </>
+              )}
             </svg>
           </div>
-          {/* X-axis labels */}
-          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 px-1">
-            {xLabels.map((label, i) => (
-              <span key={i}>{label}</span>
-            ))}
-          </div>
         </div>
-        {/* Y-axis labels (right side) */}
-        <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pl-3 py-1 min-w-[55px] text-left">
-          {yLabels.map((yPrice, i) => (
-            <span key={i}>{formatAxisPriceLocal(yPrice)}</span>
-          ))}
-        </div>
+      </div>
+    );
+  };
+
+  // Render time labels separately (outside chart container)
+  const renderTimeLabels = () => {
+    const data = stockData?.sparkline || [];
+    if (data.length < 2) return null;
+    
+    const timeLabels = getTimeLabels(selectedTimeframe);
+    const highlightIdx = getHighlightedLabelIndex(data.length);
+    
+    return (
+      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 px-4 mt-2">
+        {timeLabels.map((label, i) => (
+          <span 
+            key={i}
+            className={`transition-all duration-100 ${
+              highlightIdx === i 
+                ? 'text-gray-900 dark:text-white font-semibold scale-110' 
+                : ''
+            }`}
+          >
+            {label}
+          </span>
+        ))}
       </div>
     );
   };
@@ -497,25 +603,50 @@ export default function StockDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {stockData?.name || symbol}
           </h1>
+          {/* Price - shows scrub price when touching chart */}
           <div className="flex items-baseline gap-3 mt-2">
             <span className="text-4xl font-bold text-gray-900 dark:text-white">
-              {formatPrice(stockData?.price)}
+              {isScrubbing && scrubPrice !== null ? (
+                formatPrice(scrubPrice)
+              ) : (
+                formatPrice(stockData?.price)
+              )}
             </span>
             {stockData && (
-              <div className={`flex items-center gap-1 ${(stockData.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {(stockData.change ?? 0) >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              <div className={`flex items-center gap-1 ${
+                isScrubbing && scrubChange 
+                  ? (scrubChange.percentChange >= 0 ? 'text-green-500' : 'text-red-500')
+                  : ((stockData.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500')
+              }`}>
+                {(isScrubbing && scrubChange ? scrubChange.percentChange >= 0 : (stockData.change ?? 0) >= 0) 
+                  ? <TrendingUp className="w-5 h-5" /> 
+                  : <TrendingDown className="w-5 h-5" />}
                 <span className="text-lg font-semibold">
-                  {pricePrefix}{(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.change?.toFixed(2) || '0.00'}%)
+                  {isScrubbing && scrubChange ? (
+                    <>{pricePrefix}{scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.valueChange.toFixed(2)}{priceSuffix} ({scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.percentChange.toFixed(2)}%)</>
+                  ) : (
+                    <>{pricePrefix}{(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.change?.toFixed(2) || '0.00'}%)</>
+                  )}
                 </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Chart */}
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-72">
+        {/* Chart - interactive scrubbing */}
+        <div 
+          ref={chartRef}
+          className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-64 overflow-hidden touch-none ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+          onPointerDown={handleScrubStart}
+          onPointerMove={handleScrubMove}
+          onPointerUp={handleScrubEnd}
+          onPointerCancel={handleScrubEnd}
+          onPointerLeave={handleScrubEnd}
+        >
           {renderChart()}
         </div>
+        {/* X-axis time labels */}
+        {renderTimeLabels()}
 
         {/* Timeframe Selector */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
