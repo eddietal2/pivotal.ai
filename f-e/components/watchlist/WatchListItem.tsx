@@ -23,6 +23,8 @@ type Props = {
   // Status indicators
   isInWatchlist?: boolean;
   isInSwingScreens?: boolean;
+  isRecentlyAdded?: boolean; // Shows green pulse animation
+  isRecentlyAddedToScreens?: boolean; // Shows purple pulse animation
   // Swipe-to-remove
   onSwipeRemove?: () => void;
   enableSwipe?: boolean;
@@ -38,7 +40,7 @@ type Props = {
   onTouchDrag?: (touchY: number) => void; // Reports touch Y position during drag
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, onSwipeRemove, enableSwipe = false, enableDrag = false, isDragging = false, isDragOver = false, dragIndex, onDragStart, onDragEnd, onDragOver, onDrop, onTouchDrag }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, isRecentlyAdded = false, isRecentlyAddedToScreens = false, onSwipeRemove, enableSwipe = false, enableDrag = false, isDragging = false, isDragOver = false, dragIndex, onDragStart, onDragEnd, onDragOver, onDrop, onTouchDrag }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -356,6 +358,8 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         isDragging || isTouchDragging ? 'opacity-50 scale-95 z-50' : ''
       } ${
         isDragOver ? 'ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-gray-900' : ''
+      } ${
+        isRecentlyAddedToScreens ? 'animate-pulse-purple' : isRecentlyAdded ? 'animate-pulse-green' : ''
       } ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
       onDragStart={enableDrag ? handleItemDragStart : undefined}
       onDragEnd={enableDrag ? () => onDragEnd?.() : undefined}

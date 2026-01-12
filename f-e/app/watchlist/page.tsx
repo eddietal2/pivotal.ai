@@ -73,7 +73,6 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   }
 };
 
-
 export default function WatchlistPage() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
@@ -96,6 +95,10 @@ export default function WatchlistPage() {
     listType: 'watchlist' | 'screens';
     wasInScreens?: boolean;
   } | null>(null);
+  
+  // Track recently added items for pulse animation
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+  const [recentlyAddedToScreens, setRecentlyAddedToScreens] = useState<Set<string>>(new Set());
   
   // Quick action menu state
   const [quickActionMenu, setQuickActionMenu] = useState<{
@@ -442,6 +445,32 @@ export default function WatchlistPage() {
     setPulseItemOrder(newPulseOrder);
     localStorage.setItem('pulseItemOrder', JSON.stringify(newPulseOrder));
   }, [groupedPulse, pulseItemOrder]);
+
+  // Helper to trigger pulse animation on newly added items
+  const triggerAddedPulse = useCallback((symbol: string) => {
+    setRecentlyAdded(prev => new Set(prev).add(symbol));
+    // Remove from set after animation completes (1.5 seconds)
+    setTimeout(() => {
+      setRecentlyAdded(prev => {
+        const next = new Set(prev);
+        next.delete(symbol);
+        return next;
+      });
+    }, 1500);
+  }, []);
+
+  // Helper to trigger purple pulse animation for My Screens additions
+  const triggerAddedPulsePurple = useCallback((symbol: string) => {
+    setRecentlyAddedToScreens(prev => new Set(prev).add(symbol));
+    // Remove from set after animation completes (1.5 seconds)
+    setTimeout(() => {
+      setRecentlyAddedToScreens(prev => {
+        const next = new Set(prev);
+        next.delete(symbol);
+        return next;
+      });
+    }, 1500);
+  }, []);
 
   // Touch drag handler - finds element at touch position and updates drag-over state
   const handleWatchlistTouchDrag = useCallback((touchY: number) => {
@@ -1106,6 +1135,8 @@ export default function WatchlistPage() {
                               rv={(pulse as any).rv}
                               isInWatchlist={isInWatchlist(pulseSymbol)}
                               isInSwingScreens={isFavorite(pulseSymbol)}
+                              isRecentlyAdded={recentlyAdded.has(pulseSymbol)}
+                              isRecentlyAddedToScreens={recentlyAddedToScreens.has(pulseSymbol)}
                               showQuickActions
                               enableDrag={items.length > 1}
                               dragIndex={index}
@@ -1151,6 +1182,7 @@ export default function WatchlistPage() {
                                 if (!isInWatchlist(pulseSymbol)) {
                                   const added = addToWatchlist({ symbol: pulseSymbol, name: pulseName });
                                   if (added) {
+                                    triggerAddedPulse(pulseSymbol);
                                     showToast(`${pulseSymbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist' });
                                   } else {
                                     showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 3000, { link: '/watchlist?section=my-watchlist' });
@@ -1165,6 +1197,7 @@ export default function WatchlistPage() {
                                       onUndo: () => addFavorite({ symbol: pulseSymbol, name: pulseName })
                                     });
                                   } else if (favorites.length < MAX_FAVORITES) {
+                                    triggerAddedPulsePurple(pulseSymbol);
                                     showToast(`${pulseSymbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
                                   } else {
                                     showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 3000, { link: '/watchlist?section=my-screens' });
@@ -1265,6 +1298,8 @@ export default function WatchlistPage() {
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
                           isInSwingScreens={isFavorite(item.symbol)}
+                          isRecentlyAdded={recentlyAdded.has(item.symbol)}
+                          isRecentlyAddedToScreens={recentlyAddedToScreens.has(item.symbol)}
                           showQuickActions
                           enableSwipe
                           enableDrag={watchlist.length > 1}
@@ -1719,6 +1754,7 @@ export default function WatchlistPage() {
                             } else {
                               const added = addToWatchlist({ symbol: result.symbol, name: result.name });
                               if (added) {
+                                triggerAddedPulse(result.symbol);
                                 showToast(`${result.symbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist', onClick: () => {
                                   setIsSearchOpen(false);
                                   setActiveSection('myWatchlist');
@@ -1942,6 +1978,7 @@ export default function WatchlistPage() {
             const menuName = quickActionMenu.name;
             if (action === 'favorite') {
               if (added) {
+                triggerAddedPulsePurple(symbol);
                 showToast(`${symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
               } else if (!isFavorite(symbol) && !isInWatchlist(symbol)) {
                 // Tried to add but not in watchlist (tiered requirement)
@@ -1970,6 +2007,7 @@ export default function WatchlistPage() {
                   }
                 );
               } else {
+                triggerAddedPulse(symbol);
                 showToast(`${symbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist' });
               }
             }
