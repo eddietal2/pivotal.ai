@@ -172,6 +172,13 @@ export default function StockPreviewModal({
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   
+  // State for fetched data when timeframes prop is not provided
+  const [fetchedData, setFetchedData] = React.useState<{
+    timeframes?: StockPreviewModalProps['timeframes'];
+    loading: boolean;
+    error: string | null;
+  }>({ loading: false, error: null });
+  
   // Chart scrubbing state (Robinhood-style touch interaction)
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [scrubIndex, setScrubIndex] = React.useState<number | null>(null);
@@ -267,10 +274,94 @@ export default function StockPreviewModal({
     }
   }, [isOpen, timeframe]);
 
+  // Fetch data when modal opens without timeframes (e.g., search results)
+  React.useEffect(() => {
+    if (!isOpen || !symbol) return;
+    
+    // Check if we have valid timeframes data from props
+    const hasValidTimeframes = timeframes && 
+      Object.keys(timeframes).length > 0 && 
+      Object.values(timeframes).some(tf => tf && tf.closes && tf.closes.length > 0);
+    
+    // Also check if we have valid sparkline data
+    const hasValidSparkline = sparkline && sparkline.length > 0;
+    
+    // If we already have valid data from props, don't fetch
+    if (hasValidTimeframes || hasValidSparkline) {
+      setFetchedData({ loading: false, error: null });
+      return;
+    }
+    
+    // Reset and fetch data for this symbol using stock-detail endpoint
+    setFetchedData({ loading: true, error: null });
+    
+    const controller = new AbortController();
+    
+    // Fetch all timeframes in parallel using stock-detail endpoint
+    const timeframeMap = { day: 'day', week: 'week', month: 'month', year: 'year' };
+    
+    Promise.all(
+      Object.entries(timeframeMap).map(([key, apiTf]) =>
+        fetch(`http://127.0.0.1:8000/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=${apiTf}`, {
+          signal: controller.signal,
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => ({ key, data }))
+          .catch(() => ({ key, data: null }))
+      )
+    )
+      .then(results => {
+        const fetchedTimeframes: StockPreviewModalProps['timeframes'] = {};
+        let hasAnyData = false;
+        
+        results.forEach(({ key, data }) => {
+          if (data && data.sparkline && data.sparkline.length > 0) {
+            hasAnyData = true;
+            fetchedTimeframes[key as 'day' | 'week' | 'month' | 'year'] = {
+              closes: data.sparkline,
+              latest: {
+                close: String(data.price || 0),
+                change: data.change || 0,
+                value_change: data.valueChange || 0,
+                is_after_hours: false,
+              },
+            };
+          }
+        });
+        
+        if (hasAnyData) {
+          console.log('StockPreviewModal fetched data for', symbol, ':', fetchedTimeframes);
+          setFetchedData({
+            timeframes: fetchedTimeframes,
+            loading: false,
+            error: null,
+          });
+        } else {
+          setFetchedData({ loading: false, error: 'No data available for this symbol' });
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        console.error('Error fetching stock data:', err);
+        setFetchedData({ loading: false, error: err.message });
+      });
+    
+    return () => controller.abort();
+  }, [isOpen, symbol, timeframes, sparkline]);
+
+  // Use fetched timeframes if props don't have valid data
+  const hasValidPropsTimeframes = timeframes && 
+    Object.keys(timeframes).length > 0 && 
+    Object.values(timeframes).some(tf => tf && tf.closes && tf.closes.length > 0);
+  
+  const effectiveTimeframes = hasValidPropsTimeframes 
+    ? timeframes 
+    : fetchedData.timeframes;
+
   // Get current data based on selected timeframe
   const currentData = React.useMemo(() => {
-    if (timeframes && timeframes[selectedTimeframe]) {
-      const tfData = timeframes[selectedTimeframe]!;
+    if (effectiveTimeframes && effectiveTimeframes[selectedTimeframe]) {
+      const tfData = effectiveTimeframes[selectedTimeframe]!;
       return {
         sparkline: tfData.closes || [],
         change: tfData.latest?.change ?? change,
@@ -285,7 +376,7 @@ export default function StockPreviewModal({
       valueChange,
       price: typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price,
     };
-  }, [timeframes, selectedTimeframe, sparkline, change, valueChange, price]);
+  }, [effectiveTimeframes, selectedTimeframe, sparkline, change, valueChange, price]);
 
   // Get scrubbed price when touching chart
   const scrubPrice = React.useMemo(() => {
@@ -422,6 +513,27 @@ export default function StockPreviewModal({
 
   // Render sparkline chart with axes
   const renderSparkline = () => {
+    // Show loading state while fetching
+    if (fetchedData.loading) {
+      return (
+        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            Loading chart data...
+          </div>
+        </div>
+      );
+    }
+    
+    // Show error state
+    if (fetchedData.error) {
+      return (
+        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+          {fetchedData.error}
+        </div>
+      );
+    }
+    
     const chartData = currentData.sparkline;
     if (!chartData || chartData.length < 2) {
       return (
