@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import Sparkline from '@/components/ui/Sparkline';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
@@ -16,22 +16,124 @@ type Props = {
   afterHours?: boolean;
   rv?: number; // relative volume (e.g., 1.2 for 1.2x)
   onClick?: () => void;
+  // Quick action props
+  onLongPress?: (position: { x: number; y: number }) => void;
+  onDoubleTap?: () => void;
+  showQuickActions?: boolean;
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
   const pricePrefix = getPricePrefix(symbol);
   const priceSuffix = getPriceSuffix(symbol);
 
+  // Long-press detection
+  const longPressRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPressed, setIsPressed] = useState(false);
+  const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  
+  // Double-tap detection
+  const lastTapRef = useRef<number>(0);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!showQuickActions) return;
+    
+    setIsPressed(true);
+    pressStartPosRef.current = { x: e.clientX, y: e.clientY };
+    
+    longPressRef.current = setTimeout(() => {
+      if (onLongPress && pressStartPosRef.current) {
+        // Haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+        onLongPress(pressStartPosRef.current);
+      }
+      setIsPressed(false);
+    }, 500);
+  }, [showQuickActions, onLongPress]);
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+    setIsPressed(false);
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+    setIsPressed(false);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // Cancel long-press if moved more than 10px
+    if (pressStartPosRef.current && longPressRef.current) {
+      const dx = Math.abs(e.clientX - pressStartPosRef.current.x);
+      const dy = Math.abs(e.clientY - pressStartPosRef.current.y);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(longPressRef.current);
+        longPressRef.current = null;
+        setIsPressed(false);
+      }
+    }
+  }, []);
+
+  // Context menu for right-click
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!showQuickActions || !onLongPress) return;
+    e.preventDefault();
+    onLongPress({ x: e.clientX, y: e.clientY });
+  }, [showQuickActions, onLongPress]);
+
+  // Handle click with double-tap detection
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!showQuickActions) {
+      onClick?.();
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+    
+    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+      // Double-tap detected
+      e.preventDefault();
+      e.stopPropagation();
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+        tapTimeoutRef.current = null;
+      }
+      onDoubleTap?.();
+      lastTapRef.current = 0;
+    } else {
+      // Single tap - wait to see if it's a double tap
+      lastTapRef.current = now;
+      tapTimeoutRef.current = setTimeout(() => {
+        onClick?.();
+        lastTapRef.current = 0;
+      }, 300);
+    }
+  }, [showQuickActions, onClick, onDoubleTap]);
+
   return (
     <button
       data-testid={`watchlist-item-${symbol}`}
       type="button"
-      onClick={onClick}
-      className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press"
-      aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}`}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
+      onPointerMove={handlePointerMove}
+      onContextMenu={handleContextMenu}
+      className={`bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${isPressed ? 'scale-[0.98] opacity-90' : ''}`}
+      aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Long-press or right-click for quick actions. Double-tap to favorite.' : ''}`}
     >
       <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
