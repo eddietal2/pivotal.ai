@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CollapsibleSection from '../../components/ui/CollapsibleSection';
 
@@ -9,9 +9,11 @@ const DEBUG_LOGS = true;
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
+import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import { Info, LineChart, ChevronDown, Settings, Star, Heart, Search, X, Activity, TrendingUp } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
+import { useToast } from '@/components/context/ToastContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 
 // Ticker to name mapping for Market Pulse
@@ -73,10 +75,19 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
 
 
 export default function WatchlistPage() {
-  const { favorites } = useFavorites();
-  const { watchlist } = useWatchlist();
+  const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
+  const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
+  
+  // Quick action menu state
+  const [quickActionMenu, setQuickActionMenu] = useState<{
+    isOpen: boolean;
+    symbol: string;
+    name: string;
+    position: { x: number; y: number };
+  } | null>(null);
   // Track which section is open (accordion behavior - only one open at a time)
   const [activeSection, setActiveSection] = useState<'marketPulse' | 'favorites' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
   // Track if fixed header should be shown
@@ -975,10 +986,11 @@ export default function WatchlistPage() {
                         </div>
                         {items.map((pulse, index) => {
                           const pulseSymbol = (pulse as any).symbol ?? (pulse as any).ticker ?? '—';
+                          const pulseName = (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—';
                           return (
                           <div key={`${classKey}-${index}`} className="flex-shrink-0 w-full">
                             <WatchListItem
-                              name={(pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—'}
+                              name={pulseName}
                               symbol={pulseSymbol}
                               price={(pulse as any).price ?? (typeof (pulse as any).value === 'number' ? (pulse as any).value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String((pulse as any).value))}
                               change={typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change}
@@ -987,9 +999,26 @@ export default function WatchlistPage() {
                               timeframe={(pulse as any).timeframe}
                               afterHours={(pulse as any).afterHours}
                               rv={(pulse as any).rv}
+                              showQuickActions
+                              onLongPress={(position) => setQuickActionMenu({
+                                isOpen: true,
+                                symbol: pulseSymbol,
+                                name: pulseName,
+                                position,
+                              })}
+                              onDoubleTap={() => {
+                                const added = toggleFavorite({ symbol: pulseSymbol, name: pulseName });
+                                if (isFavorite(pulseSymbol)) {
+                                  showToast(`${pulseSymbol} removed from Favorites`, 'info', 2000);
+                                } else if (added) {
+                                  showToast(`${pulseSymbol} added to Favorites`, 'success', 2000);
+                                } else {
+                                  showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                                }
+                              }}
                               onClick={() => setSelectedStock({
                                 symbol: pulseSymbol,
-                                name: (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—',
+                                name: pulseName,
                                 price: typeof (pulse as any).price === 'number' ? (pulse as any).price : parseFloat(String((pulse as any).price).replace(/,/g, '')),
                                 change: typeof (pulse as any).change === 'string' ? parseFloat(((pulse as any).change as string).replace('%', '')) : (pulse as any).change,
                                 valueChange: (pulse as any).valueChange ?? 0,
@@ -1351,46 +1380,120 @@ export default function WatchlistPage() {
               </div>
             ) : searchResults.length > 0 ? (
               <div className="space-y-2">
-                {searchResults.map((result) => (
-                  <button
-                    key={result.symbol}
-                    onClick={() => {
-                      // Open StockPreviewModal with this stock
-                      const existingData = marketData[result.symbol];
-                      const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
-                      const tfData = existingData?.timeframes?.[timeframeKey];
-                      
-                      setSelectedStock({
-                        symbol: result.symbol,
-                        name: result.name,
-                        price: tfData?.latest?.close 
-                          ? parseFloat(String(tfData.latest.close).replace(/,/g, '')) 
-                          : (existingData?.price ?? 0),
-                        change: tfData?.latest?.change ?? existingData?.change ?? 0,
-                        valueChange: tfData?.latest?.value_change ?? existingData?.valueChange ?? 0,
-                        sparkline: tfData?.closes ?? existingData?.sparkline ?? [],
-                        timeframe: selectedTimeframe,
-                        timeframes: existingData?.timeframes,
-                      });
-                      
-                      // Close search drawer
-                      setIsSearchOpen(false);
-                      setSearchQuery('');
-                      setSearchResults([]);
-                    }}
-                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="font-semibold text-gray-900 dark:text-white">{result.symbol}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{result.name}</span>
+                {searchResults.map((result) => {
+                  const isResultInWatchlist = isInWatchlist(result.symbol);
+                  const isResultFavorite = isFavorite(result.symbol);
+                  
+                  return (
+                    <div
+                      key={result.symbol}
+                      className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      {/* Main clickable area */}
+                      <button
+                        onClick={() => {
+                          const existingData = marketData[result.symbol];
+                          const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
+                          const tfData = existingData?.timeframes?.[timeframeKey];
+                          
+                          setSelectedStock({
+                            symbol: result.symbol,
+                            name: result.name,
+                            price: tfData?.latest?.close 
+                              ? parseFloat(String(tfData.latest.close).replace(/,/g, '')) 
+                              : (existingData?.price ?? 0),
+                            change: tfData?.latest?.change ?? existingData?.change ?? 0,
+                            valueChange: tfData?.latest?.value_change ?? existingData?.valueChange ?? 0,
+                            sparkline: tfData?.closes ?? existingData?.sparkline ?? [],
+                            timeframe: selectedTimeframe,
+                            timeframes: existingData?.timeframes,
+                          });
+                          
+                          setIsSearchOpen(false);
+                          setSearchQuery('');
+                          setSearchResults([]);
+                        }}
+                        className="flex flex-col items-start flex-1 text-left"
+                      >
+                        <span className="font-semibold text-gray-900 dark:text-white">{result.symbol}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{result.name}</span>
+                      </button>
+
+                      {/* Quick action buttons */}
+                      <div className="flex items-center gap-1 ml-2">
+                        {/* Watchlist toggle */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isResultInWatchlist) {
+                              removeFromWatchlist(result.symbol);
+                              showToast(`${result.symbol} removed from Watchlist`, 'info', 2000);
+                            } else {
+                              const added = addToWatchlist({ symbol: result.symbol, name: result.name });
+                              if (added) {
+                                showToast(`${result.symbol} added to Watchlist`, 'success', 2000);
+                              } else {
+                                showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 2000);
+                              }
+                            }
+                          }}
+                          className={`p-2 rounded-full transition-all ${
+                            isResultInWatchlist
+                              ? 'bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40'
+                              : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                          title={isResultInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                        >
+                          <Star
+                            className={`w-4 h-4 transition-colors ${
+                              isResultInWatchlist
+                                ? 'text-yellow-500 fill-yellow-500'
+                                : 'text-gray-400 hover:text-yellow-500'
+                            }`}
+                          />
+                        </button>
+
+                        {/* Favorite toggle */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isResultFavorite) {
+                              removeFavorite(result.symbol);
+                              showToast(`${result.symbol} removed from Favorites`, 'info', 2000);
+                            } else {
+                              const added = addFavorite({ symbol: result.symbol, name: result.name });
+                              if (added) {
+                                showToast(`${result.symbol} added to Favorites`, 'success', 2000);
+                              } else {
+                                showToast(`Favorites full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 2000);
+                              }
+                            }
+                          }}
+                          className={`p-2 rounded-full transition-all ${
+                            isResultFavorite
+                              ? 'bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-800/40'
+                              : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                          title={isResultFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                        >
+                          <Heart
+                            className={`w-4 h-4 transition-colors ${
+                              isResultFavorite
+                                ? 'text-pink-500 fill-pink-500'
+                                : 'text-gray-400 hover:text-pink-500'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {result.type && (
+                        <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full ml-2">
+                          {result.type}
+                        </span>
+                      )}
                     </div>
-                    {result.type && (
-                      <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-                        {result.type}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             ) : searchQuery.length > 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1445,6 +1548,32 @@ export default function WatchlistPage() {
         timeframe={selectedStock?.timeframe || ''}
         timeframes={selectedStock?.timeframes}
       />
+
+      {/* Quick Action Menu (for long-press/right-click on Market Pulse items) */}
+      {quickActionMenu && (
+        <QuickActionMenu
+          symbol={quickActionMenu.symbol}
+          name={quickActionMenu.name}
+          isOpen={quickActionMenu.isOpen}
+          onClose={() => setQuickActionMenu(null)}
+          position={quickActionMenu.position}
+          onActionComplete={(action, added, symbol) => {
+            if (action === 'favorite') {
+              showToast(
+                added ? `${symbol} added to Favorites` : `${symbol} removed from Favorites`,
+                added ? 'success' : 'info',
+                2000
+              );
+            } else {
+              showToast(
+                added ? `${symbol} added to Watchlist` : `${symbol} removed from Watchlist`,
+                added ? 'success' : 'info',
+                2000
+              );
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
