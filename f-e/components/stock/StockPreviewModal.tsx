@@ -379,6 +379,47 @@ export default function StockPreviewModal({
   const pricePrefix = getPricePrefix(symbol);
   const priceSuffix = getPriceSuffix(symbol);
 
+  // Get time labels based on timeframe
+  const getTimeLabels = (tf: 'day' | 'week' | 'month' | 'year') => {
+    switch (tf) {
+      case 'day': return ['9:30 AM', '10:30', '11:30', '12:30 PM', '1:30', '2:30', '3:30'];
+      case 'week': return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      case 'month': return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      case 'year': return ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
+    }
+  };
+
+  // Calculate highlighted time label index based on scrub position
+  const getHighlightedLabelIndex = (dataLength: number) => {
+    if (!isScrubbing || scrubIndex === null || dataLength === 0) return -1;
+    const labels = getTimeLabels(selectedTimeframe);
+    const percent = scrubIndex / (dataLength - 1);
+    return Math.round(percent * (labels.length - 1));
+  };
+
+  // Render time labels with optional highlighting
+  const renderTimeLabels = (dataLength: number) => {
+    const labels = getTimeLabels(selectedTimeframe);
+    const highlightIdx = getHighlightedLabelIndex(dataLength);
+    
+    return (
+      <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0 px-2">
+        {labels.map((label, i) => (
+          <span 
+            key={i} 
+            className={`transition-all duration-100 ${
+              highlightIdx === i 
+                ? 'text-gray-900 dark:text-white font-semibold scale-110' 
+                : ''
+            }`}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   // Render sparkline chart with axes
   const renderSparkline = () => {
     const chartData = currentData.sparkline;
@@ -506,17 +547,7 @@ export default function StockPreviewModal({
               </svg>
             </div>
             {/* X-axis labels - relative times like Robinhood */}
-            <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0 px-2">
-              {selectedTimeframe === 'day' ? (
-                <><span>9:30 AM</span><span>10:30</span><span>11:30</span><span>12:30 PM</span><span>1:30</span><span>2:30</span><span>3:30</span></>
-              ) : selectedTimeframe === 'week' ? (
-                <><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></>
-              ) : selectedTimeframe === 'month' ? (
-                <><span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span></>
-              ) : (
-                <><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span></>
-              )}
-            </div>
+            {renderTimeLabels(chartData.length)}
           </div>
         </div>
       );
@@ -588,17 +619,7 @@ export default function StockPreviewModal({
             </svg>
           </div>
           {/* X-axis labels - relative times like Robinhood */}
-          <div className="flex justify-between text-[10px] text-gray-400 pt-1 flex-shrink-0 px-2">
-            {selectedTimeframe === 'day' ? (
-              <><span>9:30 AM</span><span>10:30</span><span>11:30</span><span>12:30 PM</span><span>1:30</span><span>2:30</span><span>3:30</span></>
-            ) : selectedTimeframe === 'week' ? (
-              <><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></>
-            ) : selectedTimeframe === 'month' ? (
-              <><span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span></>
-            ) : (
-              <><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span></>
-            )}
-          </div>
+          {renderTimeLabels(chartData.length)}
         </div>
       </div>
     );
