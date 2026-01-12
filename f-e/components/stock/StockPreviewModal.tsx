@@ -517,18 +517,29 @@ export default function StockPreviewModal({
                     </g>
                   );
                 })}
-                {/* Scrub indicator - vertical line and dot */}
+                {/* Scrub indicator - crosshair lines and dot */}
                 {isScrubbing && scrubIndex !== null && (() => {
                   const scrubX = (scrubIndex / (chartData.length - 1)) * 100;
                   const scrubValue = chartData[scrubIndex];
                   const scrubY = 100 - ((scrubValue - paddedMin) / paddedRange) * 100;
                   return (
                     <>
+                      {/* Vertical line */}
                       <line 
                         x1={scrubX} 
                         y1="0" 
                         x2={scrubX} 
                         y2="100" 
+                        stroke="#6b7280" 
+                        strokeWidth="0.5" 
+                        strokeDasharray="2,2"
+                      />
+                      {/* Horizontal line */}
+                      <line 
+                        x1="0" 
+                        y1={scrubY} 
+                        x2="100" 
+                        y2={scrubY} 
                         stroke="#6b7280" 
                         strokeWidth="0.5" 
                         strokeDasharray="2,2"
@@ -594,14 +605,25 @@ export default function StockPreviewModal({
                 strokeLinejoin="round"
                 points={points}
               />
-              {/* Scrub indicator - vertical line and dot */}
+              {/* Scrub indicator - crosshair lines and dot */}
               {isScrubbing && scrubX !== null && scrubY !== null && (
                 <>
+                  {/* Vertical line */}
                   <line 
                     x1={scrubX} 
                     y1="0" 
                     x2={scrubX} 
                     y2="100" 
+                    stroke="#6b7280" 
+                    strokeWidth="0.5" 
+                    strokeDasharray="2,2"
+                  />
+                  {/* Horizontal line */}
+                  <line 
+                    x1="0" 
+                    y1={scrubY} 
+                    x2="100" 
+                    y2={scrubY} 
                     stroke="#6b7280" 
                     strokeWidth="0.5" 
                     strokeDasharray="2,2"
