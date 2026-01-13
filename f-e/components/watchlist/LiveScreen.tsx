@@ -264,12 +264,13 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
             ref={(el) => { containerRefs.current[fav.symbol] = el; }}
             className="relative overflow-hidden rounded-xl"
           >
-            {/* Remove button (revealed on swipe) */}
-            {enableSwipe && (
+            {/* Remove button (revealed on swipe) - only show when swiping or revealed */}
+            {enableSwipe && (currentSwipeX < 0 || showRemoveButton[fav.symbol]) && (
               <button
                 type="button"
                 onClick={(e) => handleRemoveClick(e, fav.symbol, fav.name)}
-                className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors z-10"
+                className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                style={{ zIndex: 5 }}
                 aria-label={`Remove ${fav.symbol} from My Screens`}
               >
                 <Trash2 className="w-5 h-5 text-white" />
@@ -291,50 +292,56 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
                 transform: `translateX(${currentSwipeX}px)`,
                 transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
               }}
-              className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left relative z-20 ${
+              className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left relative ${
                 pressedSymbol === fav.symbol ? 'scale-[0.98] opacity-90' : ''
               }`}
+              style={{
+                transform: `translateX(${currentSwipeX}px)`,
+                transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
+                zIndex: 10,
+              }}
             >
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+              <div className="flex items-center justify-between px-4 py-3 gap-3">
+                {/* Left: Icon + Info */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="relative flex-shrink-0">
                     <Activity className="w-4 h-4 text-purple-400" />
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
-                    {/* Status indicators */}
-                    <div className="flex items-center gap-0.5">
-                      {inWatchlist && (
-                        <span title="In Watchlist">
-                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                        </span>
-                      )}
-                      <span title="In My Screens">
-                        <TrendingUp className="w-3 h-3 text-purple-500" />
-                      </span>
-                    </div>
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{fav.name}</span>
+                  <div className="flex flex-col items-start min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
+                      {/* Status indicators */}
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        {inWatchlist && (
+                          <span title="In Watchlist">
+                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                          </span>
+                        )}
+                        <span title="In My Screens">
+                          <TrendingUp className="w-3 h-3 text-purple-500" />
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px] sm:max-w-none">{fav.name}</span>
+                  </div>
+                </div>
+                
+                {/* Right: Mini MACD preview + Chevron */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="h-6 w-12 sm:w-16 flex items-end justify-between gap-px">
+                    {history.slice(-10).map((value, index) => (
+                      <div
+                        key={index}
+                        className={`flex-1 rounded-t-sm ${value >= 0 ? 'bg-green-500/60' : 'bg-red-500/60'}`}
+                        style={{ height: `${Math.abs(value) * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </div>
               </div>
-              
-              {/* Mini MACD preview */}
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-16 flex items-end justify-between gap-px">
-                  {history.slice(-10).map((value, index) => (
-                    <div
-                      key={index}
-                      className={`flex-1 rounded-t-sm ${value >= 0 ? 'bg-green-500/60' : 'bg-red-500/60'}`}
-                      style={{ height: `${Math.abs(value) * 100}%` }}
-                    />
-                  ))}
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-          </button>
+            </button>
           </div>
         );
       })}
