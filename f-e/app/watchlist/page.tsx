@@ -922,10 +922,14 @@ export default function WatchlistPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">2</span>
-                      <span><strong>Build Your Watchlist</strong> — Tap ⭐ to add up to 10 assets you want to track</span>
+                      <span><strong>Live Screens</strong> — Browse AI-curated daily stock screens. Double-tap stocks to add to Watchlist</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">3</span>
+                      <span><strong>Build Your Watchlist</strong> — Tap ⭐ to add up to 10 assets you want to track</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">4</span>
                       <span><strong>Add to My Screens</strong> — Double-tap watchlist items or tap 
                         <TrendingUp className="w-3.5 h-3.5 mx-1 relative bottom-0.5 inline text-purple-500" />
                         to add them to My Screens for swing trade analysis</span>
