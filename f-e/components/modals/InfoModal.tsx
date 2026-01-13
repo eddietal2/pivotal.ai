@@ -126,16 +126,16 @@ export default function InfoModal({ open, onClose, title, children, ariaLabel, o
               </button>
             </div>
           </div>
-          <div className={`flex-1 flex flex-col ${verticalAlign === 'top' ? 'justify-start items-start pt-8' : 'justify-center items-center pt-8'} pb-8 px-2 overflow-y-auto w-full max-h-screen`}
+          <div className={`flex-1 flex flex-col justify-start items-center pt-4 pb-8 px-2 overflow-y-auto w-full max-h-screen`}
             style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>
           {/* Footer close button pinned to bottom of modal */}
           <div className="w-full py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
               <button
               type="button"
-              className="w-full px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               onClick={onClose}
               aria-label="Close modal"
               data-testid="modal-close-bottom"

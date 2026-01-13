@@ -2180,41 +2180,142 @@ export default function WatchlistPage() {
         ariaLabel="My Watchlist Information"
       >
         <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
-          {/* Watchlist illustration - Stars constellation */}
-          <svg className="w-full h-24 mb-2" viewBox="0 0 400 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="watchlistGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#eab308" stopOpacity="0.3" />
-                <stop offset="50%" stopColor="#eab308" />
-                <stop offset="100%" stopColor="#eab308" stopOpacity="0.3" />
-              </linearGradient>
-            </defs>
-            {/* Connecting lines */}
-            <path
-              d="M50 50 L120 30 L200 55 L280 25 L350 50"
-              stroke="url(#watchlistGradient)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray="4 4"
-              className="opacity-50"
-            />
-            {/* Stars at key points */}
-            {[[50, 50], [120, 30], [200, 55], [280, 25], [350, 50]].map(([cx, cy], i) => (
-              <g key={i} transform={`translate(${cx}, ${cy})`}>
+          {/* Watchlist illustration - Items being added to list */}
+          <div className="w-full h-32 mb-2 relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800/50">
+            <style>{`
+              @keyframes scrollItems {
+                0% { transform: translateY(120px); }
+                100% { transform: translateY(-280px); }
+              }
+              .watchlist-scroll-items {
+                animation: scrollItems 10s linear infinite;
+              }
+            `}</style>
+            <svg className="w-full h-full" viewBox="0 0 400 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <clipPath id="listClipWatchlist">
+                  <rect x="100" y="5" width="290" height="120" rx="8" />
+                </clipPath>
+              </defs>
+              
+              {/* Star icon on left side */}
+              <g transform="translate(45, 65)">
                 <polygon
-                  points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4"
+                  points="0,-22 6,-8 22,-8 9,3 14,20 0,11 -14,20 -9,3 -22,-8 -6,-8"
                   fill="#eab308"
-                  className={i === 2 ? "animate-pulse" : ""}
-                  style={{ animationDelay: `${i * 0.2}s` }}
+                  className="animate-pulse"
                 />
               </g>
-            ))}
-            {/* Subtle sparkles */}
-            <circle cx="85" cy="60" r="2" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '2s' }} />
-            <circle cx="240" cy="70" r="1.5" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
-            <circle cx="320" cy="35" r="1.5" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }} />
-          </svg>
+              
+              {/* Arrow pointing to list */}
+              <path d="M75 65 L95 65" stroke="#eab308" strokeWidth="3" strokeLinecap="round" />
+              <polygon points="95,60 105,65 95,70" fill="#eab308" />
+              
+              {/* List container border */}
+              <rect x="100" y="5" width="290" height="120" rx="8" fill="none" stroke="#4b5563" strokeWidth="2" />
+              
+              {/* Scrolling list items */}
+              <g clipPath="url(#listClipWatchlist)">
+                <g className="watchlist-scroll-items">
+                  {/* Item 1 */}
+                  <g transform="translate(110, 20)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">AAPL</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Apple Inc.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+2.4%</text>
+                  </g>
+                  {/* Item 2 */}
+                  <g transform="translate(110, 60)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">TSLA</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Tesla Inc.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#ef4444">-1.2%</text>
+                  </g>
+                  {/* Item 3 */}
+                  <g transform="translate(110, 100)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">NVDA</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">NVIDIA Corp.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+5.1%</text>
+                  </g>
+                  {/* Item 4 */}
+                  <g transform="translate(110, 140)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">BTC</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Bitcoin</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+3.8%</text>
+                  </g>
+                  {/* Item 5 */}
+                  <g transform="translate(110, 180)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">GOOGL</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Alphabet Inc.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+0.9%</text>
+                  </g>
+                  {/* Item 6 */}
+                  <g transform="translate(110, 220)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">AMZN</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Amazon.com</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#ef4444">-0.5%</text>
+                  </g>
+                  {/* Item 7 */}
+                  <g transform="translate(110, 260)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">MSFT</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Microsoft</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+1.7%</text>
+                  </g>
+                  {/* Duplicate items for seamless loop */}
+                  {/* Item 1 repeat */}
+                  <g transform="translate(110, 300)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">AAPL</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Apple Inc.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+2.4%</text>
+                  </g>
+                  {/* Item 2 repeat */}
+                  <g transform="translate(110, 340)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">TSLA</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">Tesla Inc.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#ef4444">-1.2%</text>
+                  </g>
+                  {/* Item 3 repeat */}
+                  <g transform="translate(110, 380)">
+                    <rect x="0" y="0" width="270" height="32" rx="6" fill="#374151" fillOpacity="0.6" />
+                    <polygon points="16,16 18,11 23,11 19,14 20,19 16,17 12,19 13,14 9,11 14,11" fill="#eab308" />
+                    <text x="32" y="20" fontSize="12" fontWeight="bold" fill="white">NVDA</text>
+                    <text x="80" y="20" fontSize="10" fill="#9ca3af">NVIDIA Corp.</text>
+                    <text x="230" y="20" fontSize="11" fontWeight="600" fill="#22c55e">+5.1%</text>
+                  </g>
+                </g>
+              </g>
+              
+              {/* Fade overlays */}
+              <defs>
+                <linearGradient id="fadeTopWatchlist" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#f3f4f6" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#f3f4f6" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="fadeBottomWatchlist" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#f3f4f6" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#f3f4f6" stopOpacity="1" />
+                </linearGradient>
+              </defs>
+              <rect x="100" y="5" width="290" height="25" fill="url(#fadeTopWatchlist)" className="dark:opacity-80" />
+              <rect x="100" y="100" width="290" height="25" fill="url(#fadeBottomWatchlist)" className="dark:opacity-80" />
+            </svg>
+          </div>
 
           <p>
             <strong>My Watchlist</strong> is your personal collection of up to {MAX_WATCHLIST} assets you want to track closely.
