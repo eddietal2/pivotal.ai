@@ -10,6 +10,7 @@ import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
+import InfoModal from '../../components/modals/InfoModal';
 import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
@@ -116,6 +117,8 @@ export default function WatchlistPage() {
   // Alert visibility state
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
+  // Market Pulse info modal state
+  const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1001,6 +1004,7 @@ export default function WatchlistPage() {
                         className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
                         title="Learn more about Market Overview"
                         aria-label="More info about Market Overview"
+                        onClick={() => setIsMarketPulseInfoOpen(true)}
                       >
                         <Info className="w-5 h-5 text-orange-300" />
                       </button>
@@ -1049,6 +1053,7 @@ export default function WatchlistPage() {
                     className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
                     title="Learn more about Market Overview"
                     aria-label="More info about Market Overview"
+                    onClick={() => setIsMarketPulseInfoOpen(true)}
                   >
                     <Info className="w-5 h-5 text-orange-300" />
                   </button>
@@ -2044,6 +2049,52 @@ export default function WatchlistPage() {
           </div>
         </div>
       )}
+
+      {/* Market Pulse Info Modal */}
+      <InfoModal
+        open={isMarketPulseInfoOpen}
+        onClose={() => setIsMarketPulseInfoOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-green-500" />
+            About Market Pulse
+          </span>
+        }
+        ariaLabel="Market Pulse Information"
+      >
+        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+          <p>
+            <strong>Market Pulse</strong> provides a real-time snapshot of key market indicators across multiple asset classes.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📈 Stock Indexes</h4>
+              <p className="text-sm">Track major indices like S&P 500, Dow Jones, Nasdaq, and Russell 2000 to gauge overall market sentiment.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">₿ Cryptocurrency</h4>
+              <p className="text-sm">Monitor leading cryptocurrencies including Bitcoin, Ethereum, and more, along with the Crypto Fear & Greed Index.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">⛏️ Precious Metals</h4>
+              <p className="text-sm">Follow gold, silver, copper, and other metals that often serve as safe-haven assets.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">⚡ Energy</h4>
+              <p className="text-sm">Track crude oil, natural gas, and clean energy ETFs to understand energy market dynamics.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📊 Market Indicators</h4>
+              <p className="text-sm">The VIX (Fear Index), Put/Call Ratio, and Treasury yields help assess market risk and investor sentiment.</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <strong>Tip:</strong> Use the settings button to change timeframes (Day, Week, Month, Year) or rearrange asset classes to your preference.
+            </p>
+          </div>
+        </div>
+      </InfoModal>
 
       {/* Quick Action Menu (for long-press/right-click on Market Pulse items) */}
       {quickActionMenu && (
