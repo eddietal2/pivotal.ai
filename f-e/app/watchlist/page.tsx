@@ -1059,7 +1059,7 @@ export default function WatchlistPage() {
           {/* Getting Started Alert */}
           {isAlertVisible && (
             <div 
-              className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-96 p-4'}`}
+              className={`mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-96 p-4'}`}
               style={{ overflow: 'hidden' }}
             >
               <div className="flex items-start gap-3">
