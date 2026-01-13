@@ -693,11 +693,17 @@ export default function WatchlistPage() {
       // Sync activeSection with tab
       const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
       setActiveSection(sections[newTab]);
+      // Persist and scroll to top
+      localStorage.setItem('watchlistActiveTab', newTab.toString());
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } else if (isRightSwipe && activeTab > 0) {
       const newTab = activeTab - 1;
       setActiveTab(newTab);
       const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
       setActiveSection(sections[newTab]);
+      // Persist and scroll to top
+      localStorage.setItem('watchlistActiveTab', newTab.toString());
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
     
     setTouchStart(null);
@@ -713,6 +719,8 @@ export default function WatchlistPage() {
     setActiveSection(sections[tabIndex]);
     // Persist to localStorage
     localStorage.setItem('watchlistActiveTab', tabIndex.toString());
+    // Scroll to top when switching tabs to prevent scroll jump issues
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   React.useEffect(() => {
