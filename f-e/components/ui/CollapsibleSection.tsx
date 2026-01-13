@@ -169,24 +169,33 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
   }, [openKey, isControlled]);
 
   return (
-    <div ref={containerRef} className={`mb-4 ${borderBottom && open ? 'border-b border-gray-200 dark:border-gray-700 pb-4' : ''}`}>
+    <div ref={containerRef} className={`mb-4 ${borderBottom && open ? 'border-b border-gray-200/50 dark:border-gray-700/50 pb-4' : ''}`}>
       {!hideHeader && (
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-3">
         {/* Collapse toggle button (arrow + title) */}
         <button
           type="button"
           aria-label={currentOpen ? 'Collapse section' : 'Expand section'}
-          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800 focus:outline-none group"
+          className="flex items-center gap-3 px-3 py-2 -ml-3 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-1 dark:focus:ring-offset-gray-900 transition-all duration-200 group"
           onClick={(e) => { e.stopPropagation(); toggle(); }}
           disabled={isAnimating}
         >
-          <span 
-            className={`transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentOpen ? '' : 'rotate-180'}`}
-            style={{ transformOrigin: 'center' }}
-          >
-            ▼
+          {/* Modern chevron icon */}
+          <div className={`flex items-center justify-center w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800/80 group-hover:bg-gray-200 dark:group-hover:bg-gray-700/80 transition-all duration-200 ${currentOpen ? 'shadow-sm' : ''}`}>
+            <svg 
+              className={`w-3.5 h-3.5 text-gray-500 dark:text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentOpen ? 'rotate-0' : '-rotate-90'}`}
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          {/* Title with improved typography */}
+          <span className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
+            {title}
           </span>
-          {title}
         </button>
         {/* Info button (separate, does not toggle collapse) */}
         {infoButton && (
