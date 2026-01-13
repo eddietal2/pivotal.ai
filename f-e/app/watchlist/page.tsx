@@ -2062,7 +2062,53 @@ export default function WatchlistPage() {
         }
         ariaLabel="Market Pulse Information"
       >
-        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          {/* Animated Pulse Line Illustration */}
+          <svg className="w-full h-24 mb-2" viewBox="0 0 400 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="50%" stopColor="#eab308" />
+                <stop offset="100%" stopColor="#ef4444" />
+              </linearGradient>
+            </defs>
+            {/* Background grid */}
+            <g className="opacity-20 dark:opacity-10">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <line key={`h-${i}`} x1="0" y1={i * 25} x2="400" y2={i * 25} stroke="currentColor" strokeWidth="0.5" />
+              ))}
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <line key={`v-${i}`} x1={i * 50} y1="0" x2={i * 50} y2="100" stroke="currentColor" strokeWidth="0.5" />
+              ))}
+            </g>
+            {/* Glow effect (behind main line) */}
+            <path
+              d="M0 50 L50 50 L70 20 L90 80 L110 35 L130 65 L150 45 L180 30 L210 55 L240 25 L270 60 L300 40 L330 50 L360 35 L400 50"
+              stroke="url(#pulseGradient)"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="opacity-30"
+              style={{ filter: 'blur(4px)' }}
+            />
+            {/* Main pulse line */}
+            <path
+              d="M0 50 L50 50 L70 20 L90 80 L110 35 L130 65 L150 45 L180 30 L210 55 L240 25 L270 60 L300 40 L330 50 L360 35 L400 50"
+              stroke="url(#pulseGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Animated dot traveling along the line */}
+            <circle r="5" fill="#22c55e">
+              <animateMotion
+                dur="3s"
+                repeatCount="indefinite"
+                path="M0 50 L50 50 L70 20 L90 80 L110 35 L130 65 L150 45 L180 30 L210 55 L240 25 L270 60 L300 40 L330 50 L360 35 L400 50"
+              />
+            </circle>
+          </svg>
+
           <p>
             <strong>Market Pulse</strong> provides a real-time snapshot of key market indicators across multiple asset classes.
           </p>
