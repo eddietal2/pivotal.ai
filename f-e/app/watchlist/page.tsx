@@ -121,6 +121,8 @@ export default function WatchlistPage() {
   const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
   // My Watchlist info modal state
   const [isMyWatchlistInfoOpen, setIsMyWatchlistInfoOpen] = useState(false);
+  // My Screens info modal state
+  const [isMyScreensInfoOpen, setIsMyScreensInfoOpen] = useState(false);
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1023,6 +1025,18 @@ export default function WatchlistPage() {
                         <Info className="w-5 h-5 text-gray-300" />
                       </button>
                     )}
+                    {/* Info button - only show for My Screens */}
+                    {activeSection === 'swingScreening' && (
+                      <button
+                        type="button"
+                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                        title="Learn more about My Screens"
+                        aria-label="More info about My Screens"
+                        onClick={() => setIsMyScreensInfoOpen(true)}
+                      >
+                        <Info className="w-5 h-5 text-gray-300" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1525,6 +1539,17 @@ export default function WatchlistPage() {
                   )}
                 </span>
               }
+              infoButton={activeSection === 'swingScreening' ? (
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  title="Learn more about My Screens"
+                  aria-label="More info about My Screens"
+                  onClick={() => setIsMyScreensInfoOpen(true)}
+                >
+                  <Info className="w-5 h-5 text-gray-300" />
+                </button>
+              ) : null}
               open={activeSection === 'swingScreening'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'swingScreening' : null)}
             >
@@ -2341,6 +2366,130 @@ export default function WatchlistPage() {
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               <strong>Tip:</strong> Items in your watchlist can be promoted to My Screens for swing trade screening and deeper analysis.
+            </p>
+          </div>
+        </div>
+      </InfoModal>
+
+      {/* My Screens Info Modal */}
+      <InfoModal
+        open={isMyScreensInfoOpen}
+        onClose={() => setIsMyScreensInfoOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-purple-500" />
+            About My Screens
+          </span>
+        }
+        ariaLabel="My Screens Information"
+      >
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          {/* My Screens illustration - Chart analysis animation */}
+          <div className="w-full h-32 mb-2 relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800/50">
+            <style>{`
+              @keyframes analyzeChart {
+                0%, 100% { transform: translateX(0); }
+                50% { transform: translateX(10px); }
+              }
+              @keyframes pulseGlow {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 0.8; }
+              }
+              .analyze-line {
+                animation: analyzeChart 2s ease-in-out infinite;
+              }
+              .glow-effect {
+                animation: pulseGlow 2s ease-in-out infinite;
+              }
+            `}</style>
+            <svg className="w-full h-full" viewBox="0 0 400 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Background grid */}
+              <g className="opacity-20">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <line key={`h-${i}`} x1="30" y1={15 + i * 20} x2="370" y2={15 + i * 20} stroke="#9ca3af" strokeWidth="0.5" />
+                ))}
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <line key={`v-${i}`} x1={30 + i * 48.5} y1="15" x2={30 + i * 48.5} y2="115" stroke="#9ca3af" strokeWidth="0.5" />
+                ))}
+              </g>
+              
+              {/* Chart line with glow */}
+              <path
+                d="M30 90 Q80 85 100 70 T150 55 T200 65 T250 40 T300 50 T350 30 L370 25"
+                stroke="#a855f7"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                className="glow-effect"
+                style={{ filter: 'blur(6px)' }}
+              />
+              <path
+                d="M30 90 Q80 85 100 70 T150 55 T200 65 T250 40 T300 50 T350 30 L370 25"
+                stroke="#a855f7"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              
+              {/* Analysis scan line */}
+              <g className="analyze-line">
+                <line x1="200" y1="10" x2="200" y2="120" stroke="#a855f7" strokeWidth="2" strokeDasharray="4 4" className="opacity-60" />
+                <circle cx="200" cy="65" r="8" fill="#a855f7" className="opacity-80" />
+                <circle cx="200" cy="65" r="4" fill="white" />
+              </g>
+              
+              {/* Trend arrow */}
+              <g transform="translate(320, 35)">
+                <polygon points="0,15 15,0 30,15 22,15 22,30 8,30 8,15" fill="#22c55e" className="opacity-80" />
+              </g>
+              
+              {/* Data points */}
+              {[[100, 70], [150, 55], [250, 40], [350, 30]].map(([cx, cy], i) => (
+                <circle key={i} cx={cx} cy={cy} r="5" fill="#a855f7" stroke="white" strokeWidth="2" />
+              ))}
+              
+              {/* Mini indicator badges */}
+              <g transform="translate(50, 100)">
+                <rect x="0" y="0" width="45" height="18" rx="4" fill="#22c55e" fillOpacity="0.2" stroke="#22c55e" strokeWidth="1" />
+                <text x="22.5" y="13" fontSize="10" fontWeight="bold" fill="#22c55e" textAnchor="middle">RSI</text>
+              </g>
+              <g transform="translate(105, 100)">
+                <rect x="0" y="0" width="55" height="18" rx="4" fill="#a855f7" fillOpacity="0.2" stroke="#a855f7" strokeWidth="1" />
+                <text x="27.5" y="13" fontSize="10" fontWeight="bold" fill="#a855f7" textAnchor="middle">MACD</text>
+              </g>
+              <g transform="translate(170, 100)">
+                <rect x="0" y="0" width="40" height="18" rx="4" fill="#eab308" fillOpacity="0.2" stroke="#eab308" strokeWidth="1" />
+                <text x="20" y="13" fontSize="10" fontWeight="bold" fill="#eab308" textAnchor="middle">BB</text>
+              </g>
+            </svg>
+          </div>
+
+          <p>
+            <strong>My Screens</strong> is your advanced screening dashboard for up to {MAX_FAVORITES} priority assets from your watchlist.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📈 Swing Trade Analysis</h4>
+              <p className="text-sm">Get detailed technical indicators, support/resistance levels, and trend analysis for each screened asset.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">⬆️ Promoting Assets</h4>
+              <p className="text-sm"><strong>Double-tap</strong> any watchlist item to promote it to My Screens for deeper analysis.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">🎯 Priority Focus</h4>
+              <p className="text-sm">Limited to {MAX_FAVORITES} assets to help you focus on your best trading opportunities.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">🔄 Easy Management</h4>
+              <p className="text-sm"><strong>Double-tap</strong> to remove from screens. <strong>Swipe left</strong> for quick removal.</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <strong>Tip:</strong> Use My Screens for assets you're actively considering for trades. Keep your watchlist for broader market monitoring.
             </p>
           </div>
         </div>
