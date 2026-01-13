@@ -1284,5 +1284,715 @@ def main():
         # Fallback test/demo
         print(json.dumps({'^GSPC': {'close': None, 'change': 0.0, 'sparkline': [], 'is_after_hours': False, 'rv': None, 'rv_grade': None}}))
 
+
+# =============================================================================
+# Live Screens Service - DYNAMIC Market Scanner
+# =============================================================================
+# Goal	                Recommended Size
+# MVP/Beta	            100-300 (current is fine)
+# Production Launch	    500-1,000
+# Competitive Product	2,000-3,000
+# ----------------------------------------------------------------------------
+# Universe of stocks to scan - liquid, tradeable stocks across sectors
+SCAN_UNIVERSE = [
+    # ==========================================================================
+    # MEGA-CAP TECH (20)
+    # ==========================================================================
+    'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'META', 'NVDA', 'TSLA', 'AVGO', 'ORCL',
+    'ADBE', 'CRM', 'AMD', 'INTC', 'QCOM', 'TXN', 'AMAT', 'MU', 'LRCX', 'KLAC',
+    
+    # ==========================================================================
+    # GROWTH TECH / SOFTWARE (30)
+    # ==========================================================================
+    'NFLX', 'PYPL', 'SQ', 'SHOP', 'SNOW', 'DDOG', 'CRWD', 'NET', 'ZS', 'PANW',
+    'PLTR', 'COIN', 'HOOD', 'SOFI', 'AFRM', 'UPST', 'RBLX', 'U', 'ROKU', 'TTD',
+    'SNAP', 'PINS', 'TWLO', 'OKTA', 'MDB', 'ESTC', 'DOCN', 'PATH', 'S', 'GTLB',
+    
+    # ==========================================================================
+    # AI / SEMICONDUCTORS (25)
+    # ==========================================================================
+    'SMCI', 'ARM', 'MRVL', 'ON', 'MPWR', 'MCHP', 'NXPI', 'SWKS', 'QRVO', 'ADI',
+    'SNPS', 'CDNS', 'ASML', 'TSM', 'WOLF', 'CRUS', 'SLAB', 'SITM', 'ALGM', 'ACLS',
+    'LSCC', 'RMBS', 'POWI', 'DIOD', 'AMBA',
+    
+    # ==========================================================================
+    # EV / CLEAN ENERGY (20)
+    # ==========================================================================
+    'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'PLUG', 'FCEL', 'CHPT', 'BLNK', 'QS',
+    'ENPH', 'SEDG', 'FSLR', 'RUN', 'NOVA', 'ARRY', 'STEM', 'EVGO', 'BLDP', 'BE',
+    
+    # ==========================================================================
+    # FINANCE / BANKS (30)
+    # ==========================================================================
+    'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'USB', 'PNC', 'SCHW', 'BLK',
+    'V', 'MA', 'AXP', 'COF', 'DFS', 'SYF', 'ALLY', 'MTB', 'FITB', 'KEY',
+    'CFG', 'HBAN', 'RF', 'ZION', 'CMA', 'FRC', 'SIVB', 'WAL', 'PACW', 'FHN',
+    
+    # ==========================================================================
+    # HEALTHCARE / BIOTECH (35)
+    # ==========================================================================
+    'JNJ', 'UNH', 'PFE', 'MRK', 'ABBV', 'LLY', 'TMO', 'ABT', 'BMY', 'AMGN',
+    'GILD', 'MRNA', 'BNTX', 'REGN', 'VRTX', 'BIIB', 'ILMN', 'DXCM', 'ISRG', 'ZTS',
+    'CI', 'HUM', 'ELV', 'CVS', 'MCK', 'CAH', 'CNC', 'MOH', 'HCA', 'DHR',
+    'SGEN', 'EXAS', 'INCY', 'ALNY', 'SRPT',
+    
+    # ==========================================================================
+    # CONSUMER / RETAIL (30)
+    # ==========================================================================
+    'WMT', 'COST', 'HD', 'LOW', 'TGT', 'SBUX', 'MCD', 'NKE', 'LULU', 'DIS',
+    'CMCSA', 'NFLX', 'ABNB', 'BKNG', 'EXPE', 'MAR', 'HLT', 'RCL', 'CCL', 'WYNN',
+    'LVS', 'MGM', 'DPZ', 'CMG', 'DASH', 'UBER', 'LYFT', 'YUM', 'QSR', 'WING',
+    
+    # ==========================================================================
+    # INDUSTRIAL / AEROSPACE / DEFENSE (25)
+    # ==========================================================================
+    'CAT', 'DE', 'BA', 'RTX', 'LMT', 'GE', 'HON', 'UPS', 'FDX', 'MMM',
+    'EMR', 'ITW', 'PH', 'ROK', 'ETN', 'IR', 'CARR', 'OTIS', 'NOC', 'GD',
+    'TXT', 'HII', 'LHX', 'AXON', 'TDG',
+    
+    # ==========================================================================
+    # ENERGY / OIL & GAS (20)
+    # ==========================================================================
+    'XOM', 'CVX', 'COP', 'SLB', 'OXY', 'DVN', 'MRO', 'HAL', 'BKR', 'EOG',
+    'PXD', 'FANG', 'HES', 'VLO', 'MPC', 'PSX', 'KMI', 'WMB', 'OKE', 'TRGP',
+    
+    # ==========================================================================
+    # TELECOM / MEDIA (15)
+    # ==========================================================================
+    'T', 'VZ', 'TMUS', 'CHTR', 'PARA', 'WBD', 'FOX', 'FOXA', 'DISH', 'LUMN',
+    'SIRI', 'MTCH', 'IAC', 'ZG', 'RDFN',
+    
+    # ==========================================================================
+    # MEME / HIGH SHORT INTEREST / SPECULATIVE (15)
+    # ==========================================================================
+    'GME', 'AMC', 'BBBY', 'CVNA', 'MARA', 'RIOT', 'BITF', 'HUT', 'CLSK', 'WKHS',
+    'GOEV', 'MULN', 'FFIE', 'NKLA', 'RIDE',
+    
+    # ==========================================================================
+    # QUANTUM / SPACE / EVTOL / SPECULATIVE TECH (15)
+    # ==========================================================================
+    'IONQ', 'RGTI', 'QUBT', 'ARQQ', 'JOBY', 'ACHR', 'LILM', 'SPCE', 'RDW', 'ASTR',
+    'RKLB', 'LUNR', 'ASTS', 'SATL', 'BKSY',
+    
+    # ==========================================================================
+    # VALUE / DIVIDEND / DEFENSIVE (25)
+    # ==========================================================================
+    'WBA', 'F', 'GM', 'IBM', 'KO', 'PEP', 'PG', 'CL', 'KMB', 'GIS',
+    'K', 'SJM', 'CPB', 'HRL', 'MKC', 'CLX', 'CHD', 'EL', 'KHC', 'MDLZ',
+    'HSY', 'TAP', 'STZ', 'BF.B', 'DEO',
+    
+    # ==========================================================================
+    # REITS (15)
+    # ==========================================================================
+    'AMT', 'PLD', 'CCI', 'EQIX', 'PSA', 'SPG', 'O', 'WELL', 'DLR', 'AVB',
+    'EQR', 'VTR', 'ARE', 'MAA', 'UDR',
+    
+    # ==========================================================================
+    # SECTOR ETFs (10)
+    # ==========================================================================
+    'XLK', 'XLF', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLU', 'XLB', 'XLRE',
+]
+# Total: ~300 stocks
+
+# Screen definitions - criteria for dynamic scanning
+SCREEN_DEFINITIONS = {
+    'morning-movers': {
+        'id': 'morning-movers',
+        'title': 'Morning Movers',
+        'description': 'Top gainers with high volume today',
+        'icon': '🚀',
+        'category': 'momentum',
+        'criteria': 'top_gainers',  # Filter function to use
+        'limit': 5,
+        'refreshInterval': 15,  # Refresh every 15 minutes
+    },
+    'unusual-volume': {
+        'id': 'unusual-volume',
+        'title': 'Unusual Volume',
+        'description': 'Stocks trading 2x+ their average volume',
+        'icon': '🔥',
+        'category': 'unusual',
+        'criteria': 'unusual_volume',
+        'limit': 5,
+        'refreshInterval': 15,
+    },
+    'oversold-bounces': {
+        'id': 'oversold-bounces',
+        'title': 'Oversold Bounces',
+        'description': 'Stocks with RSI < 35 showing reversal',
+        'icon': '📉',
+        'category': 'technical',
+        'criteria': 'oversold',
+        'limit': 5,
+        'refreshInterval': 30,
+    },
+    'overbought-warning': {
+        'id': 'overbought-warning',
+        'title': 'Overbought Warning',
+        'description': 'Stocks with RSI > 70 - potential pullback',
+        'icon': '⚠️',
+        'category': 'technical',
+        'criteria': 'overbought',
+        'limit': 5,
+        'refreshInterval': 30,
+    },
+    'volatility-squeeze': {
+        'id': 'volatility-squeeze',
+        'title': 'Volatility Squeeze',
+        'description': 'Low volatility stocks ready to move',
+        'icon': '⚡',
+        'category': 'volatility',
+        'criteria': 'volatility_squeeze',
+        'limit': 5,
+        'refreshInterval': 60,
+    },
+    'breakout-watch': {
+        'id': 'breakout-watch',
+        'title': 'Breakout Watch',
+        'description': 'Stocks near 52-week highs with momentum',
+        'icon': '📊',
+        'category': 'technical',
+        'criteria': 'near_highs',
+        'limit': 5,
+        'refreshInterval': 30,
+    },
+    'sector-leaders': {
+        'id': 'sector-leaders',
+        'title': 'Sector Leaders',
+        'description': 'Top performing sector ETFs today',
+        'icon': '🏭',
+        'category': 'sector',
+        'criteria': 'sector_etfs',
+        'limit': 5,
+        'refreshInterval': 30,
+    },
+    'value-plays': {
+        'id': 'value-plays',
+        'title': 'Value Plays',
+        'description': 'Low P/E stocks with positive momentum',
+        'icon': '💎',
+        'category': 'value',
+        'criteria': 'value_stocks',
+        'limit': 5,
+        'refreshInterval': 60,
+    },
+}
+
+# Cache for live screens data
+_live_screens_cache = {}
+_live_screens_cache_timestamp = None
+LIVE_SCREENS_CACHE_DURATION = 300  # 5 minutes - can be adjusted
+
+# Cache for scanned market data (longer cache since it's expensive)
+_market_scan_cache = {}
+_market_scan_timestamp = None
+MARKET_SCAN_CACHE_DURATION = 180  # 3 minutes
+
+
+class LiveScreensService:
+    """Service for DYNAMIC market scanning and stock screens."""
+    
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+    
+    @staticmethod
+    def get_market_times():
+        """Get market open/close times for today."""
+        eastern = pytz.timezone('US/Eastern')
+        now = datetime.now(eastern)
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        return market_open, market_close
+    
+    @staticmethod
+    def calculate_rsi(closes, period=14):
+        """Calculate RSI for a list of closing prices."""
+        if len(closes) < period + 1:
+            return None
+        
+        deltas = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+        gains = [d if d > 0 else 0 for d in deltas]
+        losses = [-d if d < 0 else 0 for d in deltas]
+        
+        avg_gain = sum(gains[:period]) / period
+        avg_loss = sum(losses[:period]) / period
+        
+        for i in range(period, len(deltas)):
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        
+        if avg_loss == 0:
+            return 100
+        rs = avg_gain / avg_loss
+        return round(100 - (100 / (1 + rs)), 1)
+    
+    @staticmethod
+    def calculate_bollinger_width(closes, period=20):
+        """Calculate Bollinger Band width (volatility indicator)."""
+        if len(closes) < period:
+            return None
+        
+        recent = closes[-period:]
+        sma = sum(recent) / period
+        variance = sum((x - sma) ** 2 for x in recent) / period
+        std = variance ** 0.5
+        
+        if sma == 0:
+            return None
+        
+        # BB width as percentage of price
+        width = (2 * std / sma) * 100
+        return round(width, 2)
+    
+    def scan_market(self):
+        """
+        Scan the entire universe and calculate metrics for all stocks.
+        This is cached to avoid repeated expensive API calls.
+        """
+        global _market_scan_cache, _market_scan_timestamp
+        
+        # Check cache
+        if _market_scan_timestamp and (time.time() - _market_scan_timestamp) < MARKET_SCAN_CACHE_DURATION:
+            if _market_scan_cache:
+                print("Returning cached market scan data")
+                return _market_scan_cache
+        
+        import yfinance as yf
+        import pandas as pd
+        
+        print(f"🔍 Scanning {len(SCAN_UNIVERSE)} stocks...")
+        start_time = time.time()
+        
+        scanned_data = {}
+        
+        try:
+            with yf_lock:
+                # Batch download 1 month of daily data for all tickers
+                df_daily = yf.download(
+                    SCAN_UNIVERSE,
+                    period='1mo',
+                    interval='1d',
+                    progress=False,
+                    group_by='ticker',
+                    threads=True
+                )
+                
+                # Also get intraday for sparklines
+                df_intraday = yf.download(
+                    SCAN_UNIVERSE,
+                    period='1d',
+                    interval='5m',
+                    progress=False,
+                    group_by='ticker',
+                    threads=True
+                )
+            
+            # Process each ticker
+            for ticker in SCAN_UNIVERSE:
+                try:
+                    # Extract data
+                    if len(SCAN_UNIVERSE) == 1:
+                        daily_df = df_daily.copy()
+                        intraday_df = df_intraday.copy()
+                    else:
+                        if ticker not in df_daily.columns.get_level_values(0):
+                            continue
+                        daily_df = df_daily[ticker].copy()
+                        intraday_df = df_intraday[ticker].copy() if ticker in df_intraday.columns.get_level_values(0) else pd.DataFrame()
+                    
+                    if daily_df.empty or 'Close' not in daily_df.columns:
+                        continue
+                    
+                    daily_df = daily_df.dropna(subset=['Close'])
+                    if len(daily_df) < 5:
+                        continue
+                    
+                    closes = daily_df['Close'].tolist()
+                    volumes = daily_df['Volume'].tolist() if 'Volume' in daily_df.columns else []
+                    highs = daily_df['High'].tolist() if 'High' in daily_df.columns else []
+                    lows = daily_df['Low'].tolist() if 'Low' in daily_df.columns else []
+                    
+                    current_price = float(closes[-1])
+                    prev_close = float(closes[-2]) if len(closes) >= 2 else current_price
+                    
+                    # Calculate metrics
+                    change_pct = round(((current_price - prev_close) / prev_close) * 100, 2) if prev_close else 0
+                    value_change = round(current_price - prev_close, 2)
+                    
+                    # Relative volume
+                    rv = None
+                    if len(volumes) >= 5:
+                        avg_vol = sum(volumes[-5:-1]) / 4 if len(volumes) > 4 else sum(volumes[:-1]) / (len(volumes) - 1)
+                        if avg_vol > 0 and volumes[-1]:
+                            rv = round(volumes[-1] / avg_vol, 2)
+                    
+                    # RSI
+                    rsi = self.calculate_rsi(closes)
+                    
+                    # Bollinger Band width
+                    bb_width = self.calculate_bollinger_width(closes)
+                    
+                    # 52-week high/low proximity
+                    high_52w = max(highs) if highs else current_price
+                    low_52w = min(lows) if lows else current_price
+                    pct_from_high = round(((current_price - high_52w) / high_52w) * 100, 2) if high_52w else 0
+                    pct_from_low = round(((current_price - low_52w) / low_52w) * 100, 2) if low_52w else 0
+                    
+                    # Sparkline (prefer intraday)
+                    sparkline = []
+                    if not intraday_df.empty and 'Close' in intraday_df.columns:
+                        sparkline = intraday_df['Close'].dropna().tolist()[-20:]
+                    if not sparkline:
+                        sparkline = closes[-20:]
+                    
+                    # Get company name (cached in yfinance)
+                    try:
+                        info = yf.Ticker(ticker).info
+                        name = info.get('shortName') or info.get('longName') or ticker
+                        pe_ratio = info.get('trailingPE')
+                        dividend_yield = info.get('dividendYield')
+                    except:
+                        name = ticker
+                        pe_ratio = None
+                        dividend_yield = None
+                    
+                    scanned_data[ticker] = {
+                        'symbol': ticker,
+                        'name': name,
+                        'price': current_price,
+                        'change': change_pct,
+                        'valueChange': value_change,
+                        'rv': rv,
+                        'rsi': rsi,
+                        'bb_width': bb_width,
+                        'pct_from_high': pct_from_high,
+                        'pct_from_low': pct_from_low,
+                        'sparkline': sparkline,
+                        'pe_ratio': pe_ratio,
+                        'dividend_yield': dividend_yield,
+                        'volume': volumes[-1] if volumes else None,
+                    }
+                    
+                except Exception as e:
+                    print(f"Error scanning {ticker}: {e}")
+                    continue
+            
+            elapsed = time.time() - start_time
+            print(f"✅ Market scan complete: {len(scanned_data)} stocks in {elapsed:.1f}s")
+            
+            # Update cache
+            _market_scan_cache = scanned_data
+            _market_scan_timestamp = time.time()
+            
+            return scanned_data
+            
+        except Exception as e:
+            print(f"❌ Market scan error: {e}")
+            return _market_scan_cache or {}
+    
+    def filter_top_gainers(self, data, limit=5):
+        """Filter for top gaining stocks with volume."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('change', 0) > 1  # At least 1% gain
+            and info.get('rv', 0) and info['rv'] >= 1.0  # Normal or higher volume
+        ]
+        candidates.sort(key=lambda x: x[1]['change'], reverse=True)
+        return candidates[:limit]
+    
+    def filter_unusual_volume(self, data, limit=5):
+        """Filter for stocks with unusual volume (2x+ average)."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('rv', 0) and info['rv'] >= 2.0
+        ]
+        candidates.sort(key=lambda x: x[1]['rv'], reverse=True)
+        return candidates[:limit]
+    
+    def filter_oversold(self, data, limit=5):
+        """Filter for oversold stocks (RSI < 35) with positive momentum today."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('rsi') and info['rsi'] < 35
+            and info.get('change', 0) > -2  # Not crashing today
+        ]
+        candidates.sort(key=lambda x: x[1]['rsi'])  # Lowest RSI first
+        return candidates[:limit]
+    
+    def filter_overbought(self, data, limit=5):
+        """Filter for overbought stocks (RSI > 70)."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('rsi') and info['rsi'] > 70
+        ]
+        candidates.sort(key=lambda x: x[1]['rsi'], reverse=True)  # Highest RSI first
+        return candidates[:limit]
+    
+    def filter_volatility_squeeze(self, data, limit=5):
+        """Filter for low volatility stocks (tight Bollinger Bands)."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('bb_width') and info['bb_width'] < 8  # Tight bands
+        ]
+        candidates.sort(key=lambda x: x[1]['bb_width'])  # Tightest first
+        return candidates[:limit]
+    
+    def filter_near_highs(self, data, limit=5):
+        """Filter for stocks near 52-week highs with momentum."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('pct_from_high') and info['pct_from_high'] > -5  # Within 5% of high
+            and info.get('change', 0) > 0  # Positive today
+            and info.get('rv', 0) and info['rv'] >= 1.0
+        ]
+        candidates.sort(key=lambda x: x[1]['pct_from_high'], reverse=True)  # Closest to high
+        return candidates[:limit]
+    
+    def filter_sector_etfs(self, data, limit=5):
+        """Filter sector ETFs and sort by performance."""
+        sector_etfs = ['XLK', 'XLF', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLU', 'XLB', 'XLRE']
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if ticker in sector_etfs
+        ]
+        candidates.sort(key=lambda x: x[1].get('change', 0), reverse=True)
+        return candidates[:limit]
+    
+    def filter_value_stocks(self, data, limit=5):
+        """Filter for value stocks with low P/E and positive momentum."""
+        candidates = [
+            (ticker, info) for ticker, info in data.items()
+            if info.get('pe_ratio') and 0 < info['pe_ratio'] < 15  # Low P/E
+            and info.get('change', 0) > 0  # Positive today
+        ]
+        candidates.sort(key=lambda x: x[1]['pe_ratio'])  # Lowest P/E first
+        return candidates[:limit]
+    
+    def generate_signals(self, ticker, info, screen_type):
+        """Generate dynamic signals based on actual metrics."""
+        signals = []
+        
+        # RSI signals
+        rsi = info.get('rsi')
+        if rsi:
+            if rsi < 30:
+                signals.append(f'RSI {rsi:.0f} (Oversold)')
+            elif rsi < 40:
+                signals.append(f'RSI {rsi:.0f}')
+            elif rsi > 70:
+                signals.append(f'RSI {rsi:.0f} (Overbought)')
+            elif rsi > 60:
+                signals.append(f'RSI {rsi:.0f}')
+        
+        # Volume signals
+        rv = info.get('rv')
+        if rv:
+            if rv >= 3:
+                signals.append(f'Volume {rv:.1f}x (Extreme)')
+            elif rv >= 2:
+                signals.append(f'Volume {rv:.1f}x (High)')
+            elif rv >= 1.5:
+                signals.append(f'Volume {rv:.1f}x')
+        
+        # Price position signals
+        pct_from_high = info.get('pct_from_high', -100)
+        pct_from_low = info.get('pct_from_low', 0)
+        if pct_from_high > -2:
+            signals.append('Near 52W High')
+        elif pct_from_low < 10:
+            signals.append('Near 52W Low')
+        
+        # BB width signals
+        bb_width = info.get('bb_width')
+        if bb_width and bb_width < 5:
+            signals.append('BB Squeeze')
+        
+        # Change signals
+        change = info.get('change', 0)
+        if change > 5:
+            signals.append('Big Mover')
+        elif change > 3:
+            signals.append('Strong Momentum')
+        elif change < -5:
+            signals.append('Sharp Drop')
+        
+        return signals[:4]  # Max 4 signals
+    
+    def generate_reason(self, ticker, info, screen_type):
+        """Generate dynamic reason based on actual metrics."""
+        change = info.get('change', 0)
+        rv = info.get('rv')
+        rsi = info.get('rsi')
+        bb_width = info.get('bb_width')
+        pct_from_high = info.get('pct_from_high')
+        pe = info.get('pe_ratio')
+        
+        if screen_type == 'top_gainers':
+            rv_text = f", RV {rv:.1f}x" if rv else ""
+            return f"+{change:.1f}% today{rv_text}"
+        
+        elif screen_type == 'unusual_volume':
+            return f"Volume {rv:.1f}x average, {'+' if change > 0 else ''}{change:.1f}%"
+        
+        elif screen_type == 'oversold':
+            return f"RSI {rsi:.0f}, bouncing {'+' if change > 0 else ''}{change:.1f}%"
+        
+        elif screen_type == 'overbought':
+            return f"RSI {rsi:.0f}, extended {'+' if change > 0 else ''}{change:.1f}%"
+        
+        elif screen_type == 'volatility_squeeze':
+            return f"BB width {bb_width:.1f}%, coiling for breakout"
+        
+        elif screen_type == 'near_highs':
+            return f"{pct_from_high:.1f}% from 52W high, momentum building"
+        
+        elif screen_type == 'sector_etfs':
+            return f"Sector {'leading' if change > 0 else 'lagging'} {'+' if change > 0 else ''}{change:.1f}%"
+        
+        elif screen_type == 'value_stocks':
+            return f"P/E {pe:.1f}, value with momentum"
+        
+        return f"{'+' if change > 0 else ''}{change:.1f}% today"
+    
+    def calculate_score(self, info, screen_type):
+        """Calculate dynamic score based on metrics."""
+        base_score = 70
+        
+        change = abs(info.get('change', 0))
+        rv = info.get('rv', 1)
+        rsi = info.get('rsi', 50)
+        
+        # Change contribution (up to 15 points)
+        change_score = min(15, change * 3)
+        
+        # Volume contribution (up to 10 points)
+        rv_score = 0
+        if rv:
+            if rv >= 3:
+                rv_score = 10
+            elif rv >= 2:
+                rv_score = 7
+            elif rv >= 1.5:
+                rv_score = 4
+        
+        # RSI contribution for oversold/overbought screens
+        rsi_score = 0
+        if screen_type == 'oversold' and rsi and rsi < 30:
+            rsi_score = 5
+        elif screen_type == 'overbought' and rsi and rsi > 75:
+            rsi_score = 5
+        
+        return min(99, int(base_score + change_score + rv_score + rsi_score))
+    
+    def fetch_live_screens(self, categories=None):
+        """
+        Fetch dynamically scanned live screens.
+        
+        Args:
+            categories: Optional list of categories to filter by
+        
+        Returns:
+            list: List of LiveScreen objects with real-time data
+        """
+        global _live_screens_cache, _live_screens_cache_timestamp
+        
+        # Check cache
+        cache_key = ','.join(sorted(categories)) if categories else 'all'
+        if _live_screens_cache_timestamp and (time.time() - _live_screens_cache_timestamp) < LIVE_SCREENS_CACHE_DURATION:
+            if cache_key in _live_screens_cache:
+                print("Returning cached live screens")
+                return _live_screens_cache[cache_key]
+        
+        # Scan the market
+        market_data = self.scan_market()
+        
+        if not market_data:
+            print("No market data available")
+            return []
+        
+        # Filter screens by category if specified
+        screens_to_build = SCREEN_DEFINITIONS
+        if categories:
+            screens_to_build = {
+                k: v for k, v in SCREEN_DEFINITIONS.items()
+                if v['category'] in categories
+            }
+        
+        # Build screens dynamically
+        market_open, market_close = self.get_market_times()
+        eastern = pytz.timezone('US/Eastern')
+        now = datetime.now(eastern)
+        
+        screens = []
+        
+        for screen_id, definition in screens_to_build.items():
+            criteria = definition['criteria']
+            limit = definition.get('limit', 5)
+            
+            # Apply the appropriate filter
+            filter_map = {
+                'top_gainers': self.filter_top_gainers,
+                'unusual_volume': self.filter_unusual_volume,
+                'oversold': self.filter_oversold,
+                'overbought': self.filter_overbought,
+                'volatility_squeeze': self.filter_volatility_squeeze,
+                'near_highs': self.filter_near_highs,
+                'sector_etfs': self.filter_sector_etfs,
+                'value_stocks': self.filter_value_stocks,
+            }
+            
+            filter_func = filter_map.get(criteria)
+            if not filter_func:
+                continue
+            
+            filtered = filter_func(market_data, limit)
+            
+            # Build stocks list
+            stocks = []
+            for rank, (ticker, info) in enumerate(filtered, 1):
+                stock = {
+                    'symbol': ticker,
+                    'name': info['name'],
+                    'price': info['price'],
+                    'change': info['change'],
+                    'valueChange': info['valueChange'],
+                    'sparkline': info['sparkline'],
+                    'timeframe': 'day',
+                    'screenReason': self.generate_reason(ticker, info, criteria),
+                    'rank': rank,
+                    'score': self.calculate_score(info, criteria),
+                    'signals': self.generate_signals(ticker, info, criteria),
+                }
+                stocks.append(stock)
+            
+            # Calculate expiry based on refresh interval
+            refresh_mins = definition.get('refreshInterval', 30)
+            next_refresh = now + timedelta(minutes=refresh_mins)
+            
+            screen = {
+                'id': definition['id'],
+                'title': definition['title'],
+                'description': definition['description'],
+                'icon': definition['icon'],
+                'category': definition['category'],
+                'stocks': stocks,
+                'generatedAt': now.isoformat(),
+                'expiresAt': min(next_refresh, market_close).isoformat(),
+                'refreshInterval': refresh_mins,
+            }
+            
+            screens.append(screen)
+        
+        # Update cache
+        _live_screens_cache[cache_key] = screens
+        _live_screens_cache_timestamp = time.time()
+        
+        return screens
+
+
+# Import pandas at module level for LiveScreensService
+import pandas as pd
+
+
 if __name__ == '__main__':
     main()

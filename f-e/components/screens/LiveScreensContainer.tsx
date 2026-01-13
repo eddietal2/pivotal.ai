@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { RefreshCw, Zap } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { RefreshCw, Zap, AlertCircle, Loader2 } from 'lucide-react';
 import { LiveScreen, LiveScreenStock, ScreenCategory } from '@/types/screens';
-import { mockLiveScreens, getTimeUntilRefresh } from '@/data/mockLiveScreens';
+import { getTimeUntilRefresh } from '@/data/mockLiveScreens';
 import LiveScreenCard from './LiveScreenCard';
 
 interface LiveScreensContainerProps {
@@ -33,16 +33,50 @@ export default function LiveScreensContainer({
 }: LiveScreensContainerProps) {
   // Track which screens are expanded (multiple can be open)
   const [expandedScreens, setExpandedScreens] = useState<Set<string>>(new Set(['morning-movers']));
+  
+  // API state
+  const [screens, setScreens] = useState<LiveScreen[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter screens by selected categories
-  const screens = useMemo(() => {
-    if (!selectedCategories || selectedCategories.length === 0) {
-      return mockLiveScreens;
+  // Fetch screens from API
+  const fetchScreens = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const categoriesParam = selectedCategories && selectedCategories.length > 0
+        ? `?categories=${selectedCategories.join(',')}`
+        : '';
+      
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/market-data/live-screens/${categoriesParam}`,
+        { credentials: 'include' }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch screens: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setScreens(data.screens || []);
+      
+      // Auto-expand first screen if none expanded
+      if (data.screens?.length > 0 && expandedScreens.size === 0) {
+        setExpandedScreens(new Set([data.screens[0].id]));
+      }
+    } catch (err) {
+      console.error('Error fetching live screens:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load screens');
+    } finally {
+      setLoading(false);
     }
-    return mockLiveScreens.filter(screen => 
-      selectedCategories.includes(screen.category as ScreenCategory)
-    );
   }, [selectedCategories]);
+
+  // Fetch on mount and when categories change
+  useEffect(() => {
+    fetchScreens();
+  }, [fetchScreens]);
 
   // Calculate next global refresh time
   const nextRefresh = useMemo(() => {
@@ -74,6 +108,43 @@ export default function LiveScreensContainer({
     setExpandedScreens(new Set());
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+        <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+          Loading Live Screens...
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
+          Fetching AI-curated stock data
+        </p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-dashed border-red-300 dark:border-red-700">
+        <AlertCircle className="w-10 h-10 text-red-400 dark:text-red-500 mb-3" />
+        <p className="text-sm text-red-600 dark:text-red-400 text-center">
+          Failed to load Live Screens
+        </p>
+        <p className="text-xs text-red-500 dark:text-red-500 text-center mt-1 mb-3">
+          {error}
+        </p>
+        <button
+          onClick={fetchScreens}
+          className="px-4 py-2 text-sm bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Empty state
   if (screens.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
@@ -82,7 +153,7 @@ export default function LiveScreensContainer({
           No Live Screens available
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-          Check back at market open for today's AI-curated screens
+          Check back at market open for today&apos;s AI-curated screens
         </p>
       </div>
     );
@@ -93,7 +164,13 @@ export default function LiveScreensContainer({
       {/* Header Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <RefreshCw className="w-3.5 h-3.5" />
+          <button
+            onClick={fetchScreens}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Refresh screens"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
           <span>Refreshes in {nextRefresh}</span>
         </div>
         <div className="flex items-center gap-2">

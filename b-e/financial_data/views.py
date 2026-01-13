@@ -417,3 +417,49 @@ def stock_detail(request):
     response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
     response['Access-Control-Allow-Credentials'] = 'true'
     return response
+
+
+@require_http_methods(["GET", "OPTIONS"])
+def live_screens(request):
+    """
+    API endpoint to fetch AI-curated live stock screens.
+    
+    Query params:
+    - categories: Comma-separated list of categories to filter by (optional)
+                  Valid: momentum, sector, unusual, technical, value, volatility
+    """
+    if request.method == 'OPTIONS':
+        response = JsonResponse({})
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    from .services import LiveScreensService
+    
+    categories_param = request.GET.get('categories', '')
+    categories = [c.strip() for c in categories_param.split(',') if c.strip()] if categories_param else None
+    
+    print(f"live_screens called with categories: {categories}")
+    
+    import time
+    start_time = time.time()
+    
+    try:
+        service = LiveScreensService()
+        screens = service.fetch_live_screens(categories=categories)
+        elapsed = time.time() - start_time
+        print(f"live_screens completed in {elapsed:.2f}s - returned {len(screens)} screens")
+        
+        response = JsonResponse({'screens': screens})
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+        
+    except Exception as e:
+        print(f"Error fetching live screens: {e}")
+        response = JsonResponse({'error': str(e), 'screens': []}, status=500)
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
