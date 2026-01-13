@@ -11,7 +11,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
-import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -981,7 +981,20 @@ export default function WatchlistPage() {
                           Market Pulse
                         </span>
                         {/* Top Market Indicators in fixed header */}
-                        {!loading && (topIndicators.bullish || topIndicators.bearish) && (
+                        {loading ? (
+                          <div className="flex items-center gap-3 text-xs font-normal">
+                            <span className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                              <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                              <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                              <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                              <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                            </span>
+                          </div>
+                        ) : (topIndicators.bullish || topIndicators.bearish) && (
                           <div className="flex items-center gap-3 text-xs font-normal">
                             {topIndicators.bullish && (
                               <span className="flex items-center gap-1 text-green-500">
@@ -1086,8 +1099,21 @@ export default function WatchlistPage() {
                     <Activity className="w-5 h-5 text-green-500" />
                     Market Pulse
                   </span>
-                  {/* Top Market Indicators - shown when data is loaded */}
-                  {!loading && (topIndicators.bullish || topIndicators.bearish) && (
+                  {/* Top Market Indicators - skeleton when loading, data when loaded */}
+                  {loading ? (
+                    <div className="flex items-center gap-3 text-xs font-normal">
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                        <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                        <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                        <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                        <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      </span>
+                    </div>
+                  ) : (topIndicators.bullish || topIndicators.bearish) && (
                     <div className="flex items-center gap-3 text-xs font-normal">
                       {topIndicators.bullish && (
                         <span className="flex items-center gap-1 text-green-500">
@@ -1849,13 +1875,17 @@ export default function WatchlistPage() {
             <div className="flex-1 overflow-y-auto p-4">
               {/* Timeframes */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection1Expanded(!section1Expanded);
-                  setSection2Expanded(false); // Close other sections
+                  setSection2Expanded(false);
+                  setSection3Expanded(false);
                 }}
               >
-                <h3>Timeframes</h3>
+                <h3 className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  Timeframes
+                </h3>
                 <ChevronDown className={`w-5 h-5 transition-transform ${section1Expanded ? 'rotate-180' : ''}`} />
               </button>
               {section1Expanded && (
@@ -1896,13 +1926,17 @@ export default function WatchlistPage() {
 
               {/* Arrange */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded || section3Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
-                  setSection1Expanded(false); // Close other sections
+                  setSection1Expanded(false);
+                  setSection3Expanded(false);
                 }}
               >
-                <h3>Arrange Market Pulse Asset Classes</h3>
+                <h3 className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-500" />
+                  Arrange Market Pulse Asset Classes
+                </h3>
                 <ChevronDown className={`w-5 h-5 transition-transform ${section2Expanded ? 'rotate-180' : ''}`} />
               </button>
               {section2Expanded && (
@@ -1946,6 +1980,23 @@ export default function WatchlistPage() {
                     {allScreenCategories.map((category) => {
                       const config = categoryConfig[category];
                       const isSelected = selectedScreenCategories.includes(category);
+                      // Explicit border color mapping (Tailwind JIT can't detect dynamic classes)
+                      const borderColors: Record<ScreenCategory, string> = {
+                        momentum: 'border-l-green-500',
+                        sector: 'border-l-purple-500',
+                        unusual: 'border-l-red-500',
+                        technical: 'border-l-cyan-500',
+                        value: 'border-l-blue-500',
+                        volatility: 'border-l-orange-500',
+                      };
+                      const checkboxBorderColors: Record<ScreenCategory, string> = {
+                        momentum: 'border-green-500',
+                        sector: 'border-purple-500',
+                        unusual: 'border-red-500',
+                        technical: 'border-cyan-500',
+                        value: 'border-blue-500',
+                        volatility: 'border-orange-500',
+                      };
                       return (
                         <button
                           key={category}
@@ -1959,24 +2010,26 @@ export default function WatchlistPage() {
                               localStorage.setItem('selectedScreenCategories', JSON.stringify(newCategories));
                             }
                           }}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-4 transition-all ${borderColors[category]} ${
                             isSelected 
-                              ? `${config.bgColor} ${config.borderColor} ${config.color}` 
-                              : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'
+                              ? 'bg-white dark:bg-gray-700 border border-l-4 border-gray-200 dark:border-gray-600 shadow-sm' 
+                              : 'bg-gray-50 dark:bg-gray-800/50 border border-l-4 border-gray-100 dark:border-gray-700/50 opacity-60'
                           }`}
                         >
-                          <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                          <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
                             isSelected 
-                              ? `${config.borderColor} ${config.bgColor}` 
-                              : 'border-gray-300 dark:border-gray-600'
+                              ? `${checkboxBorderColors[category]} bg-white dark:bg-gray-800` 
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
                           }`}>
                             {isSelected && (
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className={`w-3 h-3 ${config.color}`} fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
                           </div>
-                          <span className="text-sm font-medium">{config.label}</span>
+                          <span className={`text-sm font-medium ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {config.label}
+                          </span>
                         </button>
                       );
                     })}
