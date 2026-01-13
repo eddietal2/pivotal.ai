@@ -288,10 +288,6 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
               onTouchStart={(e) => handleTouchStart(e, fav.symbol)}
               onTouchMove={(e) => handleTouchMove(e, fav.symbol)}
               onTouchEnd={() => handleTouchEnd(fav.symbol)}
-              style={{
-                transform: `translateX(${currentSwipeX}px)`,
-                transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
-              }}
               className={`w-full bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all text-left relative ${
                 pressedSymbol === fav.symbol ? 'scale-[0.98] opacity-90' : ''
               }`}

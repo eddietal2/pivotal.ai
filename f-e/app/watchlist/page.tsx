@@ -109,10 +109,33 @@ export default function WatchlistPage() {
     name: string;
     position: { x: number; y: number };
   } | null>(null);
-  // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | null>('marketPulse');
   // Track active tab for swipeable navigation (0: Market Pulse, 1: Live Screens, 2: My Watchlist, 3: My Screens)
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistActiveTab');
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+          return parsed;
+        }
+      }
+    }
+    return 0;
+  });
+  // Track which section is open (accordion behavior - only one open at a time)
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | null>(() => {
+    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistActiveTab');
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+          return sections[parsed];
+        }
+      }
+    }
+    return 'marketPulse';
+  });
   // Track swipe gesture
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -683,11 +706,13 @@ export default function WatchlistPage() {
     setIsSwipingTab(false);
   };
 
-  // Tab change handler (syncs activeSection)
+  // Tab change handler (syncs activeSection and persists to localStorage)
   const handleTabChange = (tabIndex: number) => {
     setActiveTab(tabIndex);
     const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
     setActiveSection(sections[tabIndex]);
+    // Persist to localStorage
+    localStorage.setItem('watchlistActiveTab', tabIndex.toString());
   };
 
   React.useEffect(() => {
