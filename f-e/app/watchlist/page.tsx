@@ -119,6 +119,8 @@ export default function WatchlistPage() {
   const [isAlertClosing, setIsAlertClosing] = useState(false);
   // Market Pulse info modal state
   const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
+  // My Watchlist info modal state
+  const [isMyWatchlistInfoOpen, setIsMyWatchlistInfoOpen] = useState(false);
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1006,7 +1008,19 @@ export default function WatchlistPage() {
                         aria-label="More info about Market Overview"
                         onClick={() => setIsMarketPulseInfoOpen(true)}
                       >
-                        <Info className="w-5 h-5 text-orange-300" />
+                        <Info className="w-5 h-5 text-gray-300" />
+                      </button>
+                    )}
+                    {/* Info button - only show for My Watchlist */}
+                    {activeSection === 'myWatchlist' && (
+                      <button
+                        type="button"
+                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                        title="Learn more about My Watchlist"
+                        aria-label="More info about My Watchlist"
+                        onClick={() => setIsMyWatchlistInfoOpen(true)}
+                      >
+                        <Info className="w-5 h-5 text-gray-300" />
                       </button>
                     )}
                   </div>
@@ -1055,7 +1069,7 @@ export default function WatchlistPage() {
                     aria-label="More info about Market Overview"
                     onClick={() => setIsMarketPulseInfoOpen(true)}
                   >
-                    <Info className="w-5 h-5 text-orange-300" />
+                    <Info className="w-5 h-5 text-gray-300" />
                   </button>
                 </div>
               ) : null}
@@ -1320,6 +1334,17 @@ export default function WatchlistPage() {
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                 </span>
               }
+              infoButton={activeSection === 'myWatchlist' ? (
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  title="Learn more about My Watchlist"
+                  aria-label="More info about My Watchlist"
+                  onClick={() => setIsMyWatchlistInfoOpen(true)}
+                >
+                  <Info className="w-5 h-5 text-gray-300" />
+                </button>
+              ) : null}
               open={activeSection === 'myWatchlist'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'myWatchlist' : null)}
             >
@@ -2137,6 +2162,84 @@ export default function WatchlistPage() {
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               <strong>Tip:</strong> Use the settings button to change timeframes (Day, Week, Month, Year) or rearrange asset classes to your preference.
+            </p>
+          </div>
+        </div>
+      </InfoModal>
+
+      {/* My Watchlist Info Modal */}
+      <InfoModal
+        open={isMyWatchlistInfoOpen}
+        onClose={() => setIsMyWatchlistInfoOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+            About My Watchlist
+          </span>
+        }
+        ariaLabel="My Watchlist Information"
+      >
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          {/* Watchlist illustration - Stars constellation */}
+          <svg className="w-full h-24 mb-2" viewBox="0 0 400 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="watchlistGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#eab308" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#eab308" />
+                <stop offset="100%" stopColor="#eab308" stopOpacity="0.3" />
+              </linearGradient>
+            </defs>
+            {/* Connecting lines */}
+            <path
+              d="M50 50 L120 30 L200 55 L280 25 L350 50"
+              stroke="url(#watchlistGradient)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray="4 4"
+              className="opacity-50"
+            />
+            {/* Stars at key points */}
+            {[[50, 50], [120, 30], [200, 55], [280, 25], [350, 50]].map(([cx, cy], i) => (
+              <g key={i} transform={`translate(${cx}, ${cy})`}>
+                <polygon
+                  points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4"
+                  fill="#eab308"
+                  className={i === 2 ? "animate-pulse" : ""}
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                />
+              </g>
+            ))}
+            {/* Subtle sparkles */}
+            <circle cx="85" cy="60" r="2" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '2s' }} />
+            <circle cx="240" cy="70" r="1.5" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            <circle cx="320" cy="35" r="1.5" fill="#eab308" className="opacity-40 animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }} />
+          </svg>
+
+          <p>
+            <strong>My Watchlist</strong> is your personal collection of up to {MAX_WATCHLIST} assets you want to track closely.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">⭐ Adding Assets</h4>
+              <p className="text-sm">Search for any stock, ETF, or crypto, or tap the star icon on Market Pulse items to add them.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📱 Quick Actions</h4>
+              <p className="text-sm"><strong>Double-tap</strong> to promote an asset to My Screens for advanced analysis. <strong>Long-press</strong> for more options.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">↔️ Organize</h4>
+              <p className="text-sm"><strong>Long-press and drag</strong> to reorder your watchlist. <strong>Swipe left</strong> to remove an item.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📊 Real-time Data</h4>
+              <p className="text-sm">See live prices, percentage changes, and mini sparkline charts for all your tracked assets.</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <strong>Tip:</strong> Items in your watchlist can be promoted to My Screens for swing trade screening and deeper analysis.
             </p>
           </div>
         </div>
