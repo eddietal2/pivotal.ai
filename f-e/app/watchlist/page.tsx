@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import CollapsibleSection from '../../components/ui/CollapsibleSection';
 
 // Set to true to enable timer/fetch logging
 const DEBUG_LOGS = true;
@@ -112,6 +111,13 @@ export default function WatchlistPage() {
   } | null>(null);
   // Track which section is open (accordion behavior - only one open at a time)
   const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | null>('marketPulse');
+  // Track active tab for swipeable navigation (0: Market Pulse, 1: Live Screens, 2: My Watchlist, 3: My Screens)
+  const [activeTab, setActiveTab] = useState(0);
+  // Track swipe gesture
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwipingTab, setIsSwipingTab] = useState(false);
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -152,6 +158,24 @@ export default function WatchlistPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
   // Track brief loading state when switching timeframes
   const [timeframeSwitching, setTimeframeSwitching] = useState(false);
+
+  // Asset class dropdown expanded state - first one expanded by default
+  const [expandedAssetClasses, setExpandedAssetClasses] = useState<Set<string>>(() => {
+    const keys = Object.keys(assetClasses);
+    return new Set(keys.length > 0 ? [keys[0]] : []);
+  });
+
+  const toggleAssetClassExpanded = useCallback((classKey: string) => {
+    setExpandedAssetClasses(prev => {
+      const next = new Set(prev);
+      if (next.has(classKey)) {
+        next.delete(classKey);
+      } else {
+        next.add(classKey);
+      }
+      return next;
+    });
+  }, []);
 
   // Rearrange mode state
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
@@ -592,28 +616,79 @@ export default function WatchlistPage() {
     </div>
   );
 
-  // Handle URL search params to scroll to and open a specific section
+  // Handle URL search params to navigate to specific tab
   React.useEffect(() => {
     const section = searchParams.get('section');
     if (section === 'watchlist' || section === 'my-watchlist') {
+      setActiveTab(2); // My Watchlist tab
       setActiveSection('myWatchlist');
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        const element = document.getElementById('my-watchlist');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
     } else if (section === 'favorites' || section === 'my-screens' || section === 'screens') {
+      setActiveTab(3); // My Screens tab
       setActiveSection('swingScreening');
-      setTimeout(() => {
-        const element = document.getElementById('my-screens');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
+    } else if (section === 'live-screens') {
+      setActiveTab(1); // Live Screens tab
+      setActiveSection('liveScreens');
+    } else if (section === 'market-pulse') {
+      setActiveTab(0); // Market Pulse tab
+      setActiveSection('marketPulse');
     }
   }, [searchParams]);
+
+  // Swipe gesture handling for tab navigation
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsSwipingTab(true);
+  };
+  
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    const distance = currentTouch - touchStart;
+    // Limit swipe offset to prevent overscroll
+    const maxOffset = 100;
+    setSwipeOffset(Math.max(-maxOffset, Math.min(maxOffset, distance)));
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) {
+      setIsSwipingTab(false);
+      setSwipeOffset(0);
+      return;
+    }
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && activeTab < 3) {
+      const newTab = activeTab + 1;
+      setActiveTab(newTab);
+      // Sync activeSection with tab
+      const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+      setActiveSection(sections[newTab]);
+    } else if (isRightSwipe && activeTab > 0) {
+      const newTab = activeTab - 1;
+      setActiveTab(newTab);
+      const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+      setActiveSection(sections[newTab]);
+    }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
+    setSwipeOffset(0);
+    setIsSwipingTab(false);
+  };
+
+  // Tab change handler (syncs activeSection)
+  const handleTabChange = (tabIndex: number) => {
+    setActiveTab(tabIndex);
+    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+    setActiveSection(sections[tabIndex]);
+  };
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -887,19 +962,99 @@ export default function WatchlistPage() {
         `}
       </style>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto lg:px-64">
-        <div className="space-y-8 p-4 sm:p-8 md:mt-10">
-
-          {/* Header */}
-          <div className='flex items-center gap-2'>
-            <div className='w-[30px] h-[30px] flex items-center justify-center'>
-              <CandleStickAnim></CandleStickAnim>
+      {/* Fixed Header and Tab Navigation */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="lg:px-64 px-4 sm:px-8">
+          {/* Header with Search */}
+          <div className='flex items-center justify-between gap-3 py-3 md:pt-6'>
+            <div className='flex items-center gap-2'>
+              <div className='w-[30px] h-[30px] flex items-center justify-center'>
+                <CandleStickAnim></CandleStickAnim>
+              </div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white relative top-1.5 left-1.5">
+                WatchList
+              </h1>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white relative top-1.5 left-1.5">
-              WatchList
-            </h1>
+            
+            {/* Search Button */}
+            {!isRearrangeMode && (
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/50 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
+                aria-label="Search stocks"
+              >
+                <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Search</span>
+              </button>
+            )}
           </div>
+
+          {/* Tab Navigation Bar - Robinhood Style */}
+          <div className="flex items-center justify-between overflow-x-auto scrollbar-hide">
+            {[
+              { id: 0, label: 'Market Pulse', icon: Activity, color: 'green' },
+              { id: 1, label: 'Live Screens', icon: Zap, color: 'cyan' },
+              { id: 2, label: 'My Watchlist', icon: Star, color: 'yellow' },
+              { id: 3, label: 'My Screens', icon: TrendingUp, color: 'purple' },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex-1 min-w-0 py-3 px-2 text-center font-medium text-sm transition-colors relative whitespace-nowrap ${
+                    isActive
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Icon className={`w-4 h-4 ${
+                      isActive
+                        ? tab.color === 'green' ? 'text-green-500' :
+                          tab.color === 'cyan' ? 'text-cyan-500' :
+                          tab.color === 'yellow' ? 'text-yellow-500 fill-yellow-500' :
+                          'text-purple-500'
+                        : ''
+                    }`} />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </div>
+                  {/* Active indicator */}
+                  {isActive && (
+                    <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                      tab.color === 'green' ? 'bg-green-500' :
+                      tab.color === 'cyan' ? 'bg-cyan-500' :
+                      tab.color === 'yellow' ? 'bg-yellow-500' :
+                      'bg-purple-500'
+                    }`} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area - with top padding for fixed header */}
+      <div className="flex-1 overflow-y-auto lg:px-64 pt-[5em] md:pt-[140px]">
+        <div className="space-y-4 p-4 sm:p-8">
+
+          {/* Swipeable Content Container */}
+          <div 
+            className="relative overflow-hidden -mx-4 sm:-mx-8"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            <div 
+              className="flex transition-transform duration-300 ease-out"
+              style={{ 
+                transform: `translateX(calc(-${activeTab * 100}% + ${isSwipingTab ? swipeOffset : 0}px))`,
+              }}
+            >
+              {/* Tab 0: Market Pulse */}
+              <div className="w-full flex-shrink-0 px-4 sm:px-8">
 
           {/* Getting Started Alert */}
           {isAlertVisible && (
@@ -949,213 +1104,63 @@ export default function WatchlistPage() {
             </div>
           )}
 
-          {/* Search Bar Button - hidden during rearrange mode */}
-          {!isRearrangeMode && (
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
-          >
-            <Search className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-500 dark:text-gray-400">Search stocks, ETFs, crypto...</span>
-          </button>
-          )}
-
-          {/* Fixed positioned headers for Sticky Effect */}
-          {showFixedHeader && activeSection && (
-            <div className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="lg:px-64 px-4 sm:px-8 py-3">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 text-lg font-semibold hover:bg-gray-800 px-2 py-1 rounded transition-colors"
-                    onClick={() => {
-                      setActiveSection(null);
-                      // Scroll to top if not already at top
-                      if (window.scrollY > 0) {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }
-                    }}
-                    aria-label={`Collapse ${activeSection} section`}
-                  >
-                    <span className="transition-transform duration-200">▼</span>
-                    {activeSection === 'marketPulse' && (
-                      <div className="flex flex-col">
-                        <span className="flex items-center gap-2">
-                          <Activity className="w-5 h-5 text-green-500" />
-                          Market Pulse
+          {/* Global Market Pulse */}
+          <div ref={collapsibleSectionRef} className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+            <div>
+              {/* Section Header */}
+              {!isRearrangeMode && (
+                <div className="flex items-center justify-between py-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2 text-lg font-semibold">
+                      <Activity className="w-5 h-5 text-green-500" />
+                      Market Pulse
+                    </span>
+                    {/* Top Market Indicators - skeleton when loading, data when loaded */}
+                    {loading ? (
+                      <div className="flex items-center gap-3 text-xs font-normal">
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                          <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                          <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
                         </span>
-                        {/* Top Market Indicators in fixed header */}
-                        {loading ? (
-                          <div className="flex items-center gap-3 text-xs font-normal">
-                            <span className="flex items-center gap-1">
-                              <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                              <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                              <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                              <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                              <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                            </span>
-                          </div>
-                        ) : (topIndicators.bullish || topIndicators.bearish) && (
-                          <div className="flex items-center gap-3 text-xs font-normal">
-                            {topIndicators.bullish && (
-                              <span className="flex items-center gap-1 text-green-500">
-                                <TrendingUp className="w-3 h-3" />
-                                <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
-                                <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
-                              </span>
-                            )}
-                            {topIndicators.bearish && (
-                              <span className="flex items-center gap-1 text-red-500">
-                                <TrendingDown className="w-3 h-3" />
-                                <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
-                                <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
-                              </span>
-                            )}
-                          </div>
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                          <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                          <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                        </span>
+                      </div>
+                    ) : (topIndicators.bullish || topIndicators.bearish) && (
+                      <div className="flex items-center gap-3 text-xs font-normal">
+                        {topIndicators.bullish && (
+                          <span className="flex items-center gap-1 text-green-500">
+                            <TrendingUp className="w-3 h-3" />
+                            <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                            <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
+                          </span>
+                        )}
+                        {topIndicators.bearish && (
+                          <span className="flex items-center gap-1 text-red-500">
+                            <TrendingDown className="w-3 h-3" />
+                            <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                            <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
+                          </span>
                         )}
                       </div>
                     )}
-                    {activeSection === 'myWatchlist' && (
-                      <span className="flex items-center gap-2">
-                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                        My Watchlist
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
-                      </span>
-                    )}
-                    {activeSection === 'liveScreens' && (
-                      <span className="flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-cyan-500" />
-                        Live Screens
-                      </span>
-                    )}
-                    {activeSection === 'swingScreening' && (
-                      <span className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-purple-500" />
-                        My Screens
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({favorites.length}/{MAX_FAVORITES})</span>
-                      </span>
-                    )}
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {/* Overview info button - only show for Market Pulse */}
-                    {activeSection === 'marketPulse' && !error && (
-                      <button
-                        type="button"
-                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                        title="Learn more about Market Overview"
-                        aria-label="More info about Market Overview"
-                        onClick={() => setIsMarketPulseInfoOpen(true)}
-                      >
-                        <Info className="w-5 h-5 text-gray-300" />
-                      </button>
-                    )}
-                    {/* Info button - only show for My Watchlist */}
-                    {activeSection === 'myWatchlist' && (
-                      <button
-                        type="button"
-                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                        title="Learn more about My Watchlist"
-                        aria-label="More info about My Watchlist"
-                        onClick={() => setIsMyWatchlistInfoOpen(true)}
-                      >
-                        <Info className="w-5 h-5 text-gray-300" />
-                      </button>
-                    )}
-                    {/* Info button - only show for Live Screens */}
-                    {activeSection === 'liveScreens' && (
-                      <button
-                        type="button"
-                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                        title="Learn more about Live Screens"
-                        aria-label="More info about Live Screens"
-                        onClick={() => setIsLiveScreensInfoOpen(true)}
-                      >
-                        <Info className="w-5 h-5 text-gray-300" />
-                      </button>
-                    )}
-                    {/* Info button - only show for My Screens */}
-                    {activeSection === 'swingScreening' && (
-                      <button
-                        type="button"
-                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                        title="Learn more about My Screens"
-                        aria-label="More info about My Screens"
-                        onClick={() => setIsMyScreensInfoOpen(true)}
-                      >
-                        <Info className="w-5 h-5 text-gray-300" />
-                      </button>
-                    )}
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Global Market Pulse */}
-          <div ref={collapsibleSectionRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-            <CollapsibleSection
-              title={
-                <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-green-500" />
-                    Market Pulse
-                  </span>
-                  {/* Top Market Indicators - skeleton when loading, data when loaded */}
-                  {loading ? (
-                    <div className="flex items-center gap-3 text-xs font-normal">
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                        <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                        <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                        <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                        <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                      </span>
-                    </div>
-                  ) : (topIndicators.bullish || topIndicators.bearish) && (
-                    <div className="flex items-center gap-3 text-xs font-normal">
-                      {topIndicators.bullish && (
-                        <span className="flex items-center gap-1 text-green-500">
-                          <TrendingUp className="w-3 h-3" />
-                          <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
-                          <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
-                        </span>
-                      )}
-                      {topIndicators.bearish && (
-                        <span className="flex items-center gap-1 text-red-500">
-                          <TrendingDown className="w-3 h-3" />
-                          <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
-                          <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
-                        </span>
-                      )}
-                    </div>
+                  {!loading && !error && (
+                    <button
+                      type="button"
+                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      title="Learn more about Market Overview"
+                      aria-label="More info about Market Overview"
+                      onClick={() => setIsMarketPulseInfoOpen(true)}
+                    >
+                      <Info className="w-5 h-5 text-gray-400" />
+                    </button>
                   )}
                 </div>
-              }
-              infoButton={activeSection === 'marketPulse' && !loading && !error ? (
-                <div className="flex items-center gap-2">
-                  {/* Overview info button */}
-                  <button
-                    type="button"
-                    className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                    title="Learn more about Market Overview"
-                    aria-label="More info about Market Overview"
-                    onClick={() => setIsMarketPulseInfoOpen(true)}
-                  >
-                    <Info className="w-5 h-5 text-gray-300" />
-                  </button>
-                </div>
-              ) : null}
-                openKey={pulseTimeframe}
-              open={activeSection === 'marketPulse'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'marketPulse' : null)}
-              hideHeader={isRearrangeMode}
-            >
+              )}
               {/* Toggle between slider and list view for Market Pulse items */}
               {error && loading && (
                 <div className='flex justify-between items-center'>
@@ -1283,16 +1288,31 @@ export default function WatchlistPage() {
                     if (items.length === 0) return null;
 
                     return (
-                      <div key={classKey} className="space-y-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-lg">{classData.icon}</span>
-                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                            {classData.name}
-                          </h3>
-                          {items.length > 1 && (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">Long-press to drag</span>
-                          )}
-                        </div>
+                      <div key={classKey} className="space-y-1">
+                        {/* Asset Class Dropdown Header */}
+                        <button
+                          onClick={() => toggleAssetClassExpanded(classKey)}
+                          className="w-full flex items-center justify-between gap-2 py-3 px-3 -mx-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{classData.icon}</span>
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                              {classData.name}
+                            </h3>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 font-normal normal-case">
+                              ({items.length})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {expandedAssetClasses.has(classKey) && items.length > 1 && (
+                              <span className="text-xs text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">Long-press to drag</span>
+                            )}
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedAssetClasses.has(classKey) ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+                        {/* Collapsible Content */}
+                        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedAssetClasses.has(classKey) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                          <div className="space-y-3 pt-2">
                         {items.map((pulse, index) => {
                           const pulseSymbol = (pulse as any).symbol ?? (pulse as any).ticker ?? '—';
                           const pulseName = (pulse as any).ticker ?? (pulse as any).name ?? (pulse as any).index ?? '—';
@@ -1395,41 +1415,44 @@ export default function WatchlistPage() {
                           </div>
                           );
                         })}
+                          </div>
+                        </div>
                       </div>
                     );
                   })
                 )}
               </div>
-            </CollapsibleSection>
+            </div>
           </div>
+              </div>
+              {/* End Tab 0: Market Pulse */}
+
+              {/* Tab 1: Live Screens */}
+              <div className="w-full flex-shrink-0 px-4 sm:px-8">
           
           {/* Live Screens - hidden during rearrange mode */}
           {!isRearrangeMode && (
-          <div id="live-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
+          <div id="live-screens" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+            <div>
+              {/* Section Header */}
+              <div className="flex items-center justify-between py-4">
+                <span className="flex items-center gap-2 text-lg font-semibold">
                   <Zap className="w-5 h-5 text-cyan-500" />
                   <span>Live Screens</span>
                   <span className="px-2 py-0.5 text-[10px] font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full">
                     4 Daily
                   </span>
                 </span>
-              }
-              infoButton={activeSection === 'liveScreens' ? (
                 <button
                   type="button"
-                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   title="Learn more about Live Screens"
                   aria-label="More info about Live Screens"
                   onClick={() => setIsLiveScreensInfoOpen(true)}
                 >
-                  <Info className="w-5 h-5 text-gray-300" />
+                  <Info className="w-5 h-5 text-gray-400" />
                 </button>
-              ) : null}
-              open={activeSection === 'liveScreens'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'liveScreens' : null)}
-            >
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 AI-curated daily stock screens. Double-tap stocks to add to Watchlist.
               </p>
@@ -1527,35 +1550,36 @@ export default function WatchlistPage() {
                 recentlyAddedToScreens={recentlyAddedToScreens}
                 selectedScreenIds={selectedScreenIds}
               />
-            </CollapsibleSection>
+            </div>
           </div>
           )}
+              </div>
+              {/* End Tab 1: Live Screens */}
+
+              {/* Tab 2: My Watchlist */}
+              <div className="w-full flex-shrink-0 px-4 sm:px-8">
 
           {/* My Watchlist - hidden during rearrange mode */}
           {!isRearrangeMode && (
-          <div id="my-watchlist" className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 scroll-mt-20">
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
+          <div id="my-watchlist" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+            <div>
+              {/* Section Header */}
+              <div className="flex items-center justify-between py-4">
+                <span className="flex items-center gap-2 text-lg font-semibold">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                   My Watchlist
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                 </span>
-              }
-              infoButton={activeSection === 'myWatchlist' ? (
                 <button
                   type="button"
-                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   title="Learn more about My Watchlist"
                   aria-label="More info about My Watchlist"
                   onClick={() => setIsMyWatchlistInfoOpen(true)}
                 >
-                  <Info className="w-5 h-5 text-gray-300" />
+                  <Info className="w-5 h-5 text-gray-400" />
                 </button>
-              ) : null}
-              open={activeSection === 'myWatchlist'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'myWatchlist' : null)}
-            >
+              </div>
               {/* Caption explaining limit */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Track up to {MAX_WATCHLIST} assets. Double-tap to add to My Screens
@@ -1716,17 +1740,22 @@ export default function WatchlistPage() {
                   })}
                 </div>
               )}
-            </CollapsibleSection>
+            </div>
           </div>
           )}
+              </div>
+              {/* End Tab 2: My Watchlist */}
 
+              {/* Tab 3: My Screens */}
+              <div className="w-full flex-shrink-0 px-4 sm:px-8">
 
           {/* My Screens - hidden during rearrange mode */}
           {!isRearrangeMode && (
-          <div id="my-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
+          <div id="my-screens" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+            <div>
+              {/* Section Header */}
+              <div className="flex items-center justify-between py-4">
+                <span className="flex items-center gap-2 text-lg font-semibold">
                   <TrendingUp className="w-5 h-5 text-purple-500" />
                   <span>My Screens</span>
                   {favorites.length > 0 && (
@@ -1735,21 +1764,16 @@ export default function WatchlistPage() {
                     </span>
                   )}
                 </span>
-              }
-              infoButton={activeSection === 'swingScreening' ? (
                 <button
                   type="button"
-                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   title="Learn more about My Screens"
                   aria-label="More info about My Screens"
                   onClick={() => setIsMyScreensInfoOpen(true)}
                 >
-                  <Info className="w-5 h-5 text-gray-300" />
+                  <Info className="w-5 h-5 text-gray-400" />
                 </button>
-              ) : null}
-              open={activeSection === 'swingScreening'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'swingScreening' : null)}
-            >
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
               </p>
@@ -1838,9 +1862,15 @@ export default function WatchlistPage() {
                   }}
                 />
               )}
-            </CollapsibleSection>
+            </div>
           </div>
           )}
+              </div>
+              {/* End Tab 3: My Screens */}
+
+            </div>
+          </div>
+          {/* End Swipeable Tab Content Container */}
 
         </div>
       </div>
