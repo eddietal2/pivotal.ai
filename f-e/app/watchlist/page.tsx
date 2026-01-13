@@ -2781,10 +2781,98 @@ export default function WatchlistPage() {
           </div>
 
           <p>
-            <strong>Live Screens</strong> - Real-time screening and analysis tools.
+            <strong>Live Screens</strong> are AI-powered market scanners that automatically find trading opportunities based on technical indicators, volume patterns, and market conditions. Updated in real-time during market hours.
           </p>
-          <div className="py-8 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Content coming soon...</p>
+          
+          {/* Screen Descriptions */}
+          <div className="space-y-3 mt-4">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              <span>Available Screens</span>
+              <span className="text-xs font-normal text-gray-500">(8 screens)</span>
+            </h3>
+            
+            {/* Morning Movers */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border-l-3 border-green-500">
+              <span className="text-lg">🚀</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Morning Movers</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Top gaining stocks with above-average volume. Identifies early momentum plays that could continue trending throughout the day.</p>
+              </div>
+            </div>
+            
+            {/* Unusual Volume */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border-l-3 border-red-500">
+              <span className="text-lg">🔥</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Unusual Volume</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Stocks trading 2x+ their 20-day average volume. High volume often precedes significant price moves and indicates institutional interest.</p>
+              </div>
+            </div>
+            
+            {/* Oversold Bounces */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/10 border-l-3 border-cyan-500">
+              <span className="text-lg">📉</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Oversold Bounces</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Stocks with RSI below 35 showing reversal signals. These may be ready to bounce back after being oversold.</p>
+              </div>
+            </div>
+            
+            {/* Overbought Warning */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border-l-3 border-yellow-500">
+              <span className="text-lg">⚠️</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Overbought Warning</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Stocks with RSI above 70, potentially due for a pullback. Useful for taking profits or avoiding chasing extended moves.</p>
+              </div>
+            </div>
+            
+            {/* Volatility Squeeze */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/10 border-l-3 border-orange-500">
+              <span className="text-lg">⚡</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Volatility Squeeze</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Stocks with narrowing Bollinger Bands, indicating low volatility. These often precede explosive breakout moves.</p>
+              </div>
+            </div>
+            
+            {/* Breakout Watch */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/10 border-l-3 border-cyan-500">
+              <span className="text-lg">📊</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Breakout Watch</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Stocks trading near 52-week highs with momentum. Breaking to new highs often signals continued strength.</p>
+              </div>
+            </div>
+            
+            {/* Sector Leaders */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-500/10 border-l-3 border-purple-500">
+              <span className="text-lg">🏭</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Sector Leaders</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Top performing sector ETFs today. Track which sectors are leading the market for rotation strategies.</p>
+              </div>
+            </div>
+            
+            {/* Value Plays */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border-l-3 border-blue-500">
+              <span className="text-lg">💎</span>
+              <div>
+                <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Value Plays</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Low P/E stocks with positive momentum. Combines value metrics with technical strength for quality picks.</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* How to Use */}
+          <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800/50 rounded-lg">
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">💡 How to Use</h4>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              <li>• <strong>Tap</strong> a stock card to view detailed info</li>
+              <li>• <strong>Double-tap</strong> to quickly add to your watchlist</li>
+              <li>• <strong>Long-press</strong> for quick actions menu</li>
+              <li>• Use <strong>Settings</strong> to show/hide specific screens</li>
+            </ul>
           </div>
         </div>
       </InfoModal>
