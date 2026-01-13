@@ -61,9 +61,10 @@ describe('Watchlist page', () => {
       expect(screen.getByText('How Pivy Watchlist Works')).toBeInTheDocument();
     });
 
-    test('displays 3 instructional steps in the alert', () => {
+    test('displays 4 instructional steps in the alert', () => {
       renderWithProviders(<WatchlistPage />);
       expect(screen.getByText(/Search or Browse/)).toBeInTheDocument();
+      expect(screen.getByText(/Browse AI-curated daily stock screens/)).toBeInTheDocument();
       expect(screen.getByText(/Build Your Watchlist/)).toBeInTheDocument();
       expect(screen.getByText(/Add to My Screens/)).toBeInTheDocument();
     });
