@@ -95,9 +95,10 @@ describe('Watchlist page', () => {
   });
 
   describe('Search Bar', () => {
-    test('renders search bar placeholder text', () => {
+    test('renders search button in header', () => {
       renderWithProviders(<WatchlistPage />);
-      expect(screen.getByText('Search stocks, ETFs, crypto...')).toBeInTheDocument();
+      // Search button is now in header with aria-label
+      expect(screen.getByRole('button', { name: 'Search stocks' })).toBeInTheDocument();
     });
   });
 
@@ -145,7 +146,9 @@ describe('Watchlist page', () => {
   describe('My Watchlist Section', () => {
     test('renders My Watchlist section with Star icon', () => {
       renderWithProviders(<WatchlistPage />);
-      expect(screen.getByText('My Watchlist')).toBeInTheDocument();
+      // My Watchlist appears in both tab navigation and section header
+      const myWatchlistElements = screen.getAllByText('My Watchlist');
+      expect(myWatchlistElements.length).toBeGreaterThan(0);
     });
 
     test('displays watchlist count indicator', () => {
@@ -253,14 +256,14 @@ describe('Watchlist page', () => {
   });
 
   describe('Search Drawer', () => {
-    test('opens search drawer when search bar is clicked', async () => {
+    test('opens search drawer when search button is clicked', async () => {
       renderWithProviders(<WatchlistPage />);
       
-      // Find and click the search bar button
-      const searchBarButton = screen.getByText('Search stocks, ETFs, crypto...').closest('button');
-      expect(searchBarButton).toBeInTheDocument();
+      // Find and click the search button in the header (has aria-label)
+      const searchButton = screen.getByRole('button', { name: 'Search stocks' });
+      expect(searchButton).toBeInTheDocument();
       
-      fireEvent.click(searchBarButton!);
+      fireEvent.click(searchButton);
       
       // Search input should now be visible
       await waitFor(() => {
@@ -271,8 +274,9 @@ describe('Watchlist page', () => {
     test('displays popular searches in search drawer', async () => {
       renderWithProviders(<WatchlistPage />);
       
-      const searchBarButton = screen.getByText('Search stocks, ETFs, crypto...').closest('button');
-      fireEvent.click(searchBarButton!);
+      // Click the search button in header
+      const searchButton = screen.getByRole('button', { name: 'Search stocks' });
+      fireEvent.click(searchButton);
       
       await waitFor(() => {
         expect(screen.getByText('Popular Searches')).toBeInTheDocument();
@@ -288,8 +292,9 @@ describe('Watchlist page', () => {
     test('has close button in search drawer', async () => {
       renderWithProviders(<WatchlistPage />);
       
-      const searchBarButton = screen.getByText('Search stocks, ETFs, crypto...').closest('button');
-      fireEvent.click(searchBarButton!);
+      // Click the search button in header
+      const searchButton = screen.getByRole('button', { name: 'Search stocks' });
+      fireEvent.click(searchButton);
       
       await waitFor(() => {
         // Find the Close button in the search drawer
