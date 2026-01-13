@@ -1883,8 +1883,7 @@ class LiveScreensService:
             rv_text = f", RV {rv:.1f}x" if rv else ""
             return f"+{change:.1f}% today{rv_text}"
         
-        elif screen_type == 'unusual_volume':
-            return f"Volume {rv:.1f}x average, {'+' if change > 0 else ''}{change:.1f}%"
+        elif screen_type == 'unusual_volume':            return f"Volume {rv:.1f}x average, {'+' if change > 0 else ''}{change:.1f}%"
         
         elif screen_type == 'oversold':
             return f"RSI {rsi:.0f}, bouncing {'+' if change > 0 else ''}{change:.1f}%"
