@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange, open }: { title: React.ReactNode; infoButton?: React.ReactNode | ((open: boolean) => React.ReactNode); children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void; open?: boolean }) {
+export default function CollapsibleSection({ title, infoButton, children, defaultOpen = true, openKey, borderBottom = true, onOpenChange, open, hideHeader = false }: { title: React.ReactNode; infoButton?: React.ReactNode | ((open: boolean) => React.ReactNode); children: React.ReactNode; defaultOpen?: boolean; openKey?: string | number | boolean; borderBottom?: boolean; onOpenChange?: (isOpen: boolean) => void; open?: boolean; hideHeader?: boolean }) {
   const [internalOpen, setInternalOpen] = React.useState<boolean>(() => defaultOpen ?? true);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const isControlled = open !== undefined;
@@ -170,6 +170,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
 
   return (
     <div ref={containerRef} className={`mb-4 ${borderBottom && open ? 'border-b border-gray-200 dark:border-gray-700 pb-4' : ''}`}>
+      {!hideHeader && (
       <div className="flex items-center justify-between gap-2">
         {/* Collapse toggle button (arrow + title) */}
         <button
@@ -194,6 +195,7 @@ export default function CollapsibleSection({ title, infoButton, children, defaul
           </div>
         )}
       </div>
+      )}
       <div ref={contentRef} className="overflow-hidden">
         <div ref={innerRef} className="mt-4">
           {children}

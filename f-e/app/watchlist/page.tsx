@@ -933,7 +933,8 @@ export default function WatchlistPage() {
             </div>
           )}
 
-          {/* Search Bar Button */}
+          {/* Search Bar Button - hidden during rearrange mode */}
+          {!isRearrangeMode && (
           <button
             onClick={() => setIsSearchOpen(true)}
             className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
@@ -941,6 +942,7 @@ export default function WatchlistPage() {
             <Search className="w-5 h-5 text-gray-400" />
             <span className="text-gray-500 dark:text-gray-400">Search stocks, ETFs, crypto...</span>
           </button>
+          )}
 
           {/* Fixed positioned headers for Sticky Effect */}
           {showFixedHeader && activeSection && (
@@ -1110,6 +1112,7 @@ export default function WatchlistPage() {
                 openKey={pulseTimeframe}
               open={activeSection === 'marketPulse'}
               onOpenChange={(isOpen) => setActiveSection(isOpen ? 'marketPulse' : null)}
+              hideHeader={isRearrangeMode}
             >
               {/* Toggle between slider and list view for Market Pulse items */}
               {error && loading && (
@@ -1358,7 +1361,8 @@ export default function WatchlistPage() {
             </CollapsibleSection>
           </div>
 
-          {/* My Watchlist */}
+          {/* My Watchlist - hidden during rearrange mode */}
+          {!isRearrangeMode && (
           <div id="my-watchlist" className="bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 scroll-mt-20">
             <CollapsibleSection
               title={
@@ -1544,8 +1548,10 @@ export default function WatchlistPage() {
               )}
             </CollapsibleSection>
           </div>
+          )}
 
-          {/* Live Screens */}
+          {/* Live Screens - hidden during rearrange mode */}
+          {!isRearrangeMode && (
           <div id="live-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <CollapsibleSection
               title={
@@ -1574,8 +1580,10 @@ export default function WatchlistPage() {
               </div>
             </CollapsibleSection>
           </div>
+          )}
 
-          {/* My Screens */}
+          {/* My Screens - hidden during rearrange mode */}
+          {!isRearrangeMode && (
           <div id="my-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <CollapsibleSection
               title={
@@ -1693,6 +1701,7 @@ export default function WatchlistPage() {
               )}
             </CollapsibleSection>
           </div>
+          )}
 
         </div>
       </div>
