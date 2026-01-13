@@ -382,7 +382,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
       }}
     >
       {/* Remove button (revealed on swipe) */}
-      {enableSwipe && (
+      {enableSwipe && (showRemoveButton || isSwiping) && (
         <button
           type="button"
           onClick={handleRemoveClick}
