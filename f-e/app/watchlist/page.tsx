@@ -2434,6 +2434,104 @@ export default function WatchlistPage() {
         ariaLabel="Live Screens Information"
       >
         <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          {/* Live Screens illustration - Real-time data streaming animation */}
+          <div className="w-full h-32 mb-2 relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800/50">
+            <style>{`
+              @keyframes streamData {
+                0% { transform: translateX(-100%); opacity: 0; }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
+                100% { transform: translateX(100%); opacity: 0; }
+              }
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.2); opacity: 1; }
+              }
+              @keyframes blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+              }
+              .stream-line { animation: streamData 2s ease-in-out infinite; }
+              .stream-line-2 { animation: streamData 2s ease-in-out 0.3s infinite; }
+              .stream-line-3 { animation: streamData 2s ease-in-out 0.6s infinite; }
+              .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
+              .blink-indicator { animation: blink 1s ease-in-out infinite; }
+            `}</style>
+            <svg className="w-full h-full" viewBox="0 0 400 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Background grid */}
+              <g className="opacity-10">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <line key={`h-${i}`} x1="0" y1={15 + i * 20} x2="400" y2={15 + i * 20} stroke="#9ca3af" strokeWidth="0.5" />
+                ))}
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <line key={`v-${i}`} x1={i * 50} y1="0" x2={i * 50} y2="130" stroke="#9ca3af" strokeWidth="0.5" />
+                ))}
+              </g>
+              
+              {/* Live indicator */}
+              <g transform="translate(15, 15)">
+                <circle cx="6" cy="6" r="6" fill="#ef4444" className="blink-indicator" />
+                <circle cx="6" cy="6" r="3" fill="#fff" />
+                <text x="18" y="10" fontSize="10" fontWeight="bold" fill="#ef4444">LIVE</text>
+              </g>
+              
+              {/* Central radar/screen element */}
+              <g transform="translate(200, 65)">
+                <circle cx="0" cy="0" r="40" stroke="#06b6d4" strokeWidth="2" fill="none" className="opacity-30" />
+                <circle cx="0" cy="0" r="30" stroke="#06b6d4" strokeWidth="1.5" fill="none" className="opacity-40" />
+                <circle cx="0" cy="0" r="20" stroke="#06b6d4" strokeWidth="1" fill="none" className="opacity-50" />
+                <circle cx="0" cy="0" r="5" fill="#06b6d4" className="pulse-dot" />
+                {/* Radar sweep */}
+                <line x1="0" y1="0" x2="35" y2="-20" stroke="#06b6d4" strokeWidth="2" className="opacity-60">
+                  <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite" />
+                </line>
+                {/* Detection dots */}
+                <circle cx="25" cy="-15" r="4" fill="#22c55e" className="pulse-dot" style={{ animationDelay: '0.2s' }} />
+                <circle cx="-20" cy="25" r="4" fill="#22c55e" className="pulse-dot" style={{ animationDelay: '0.5s' }} />
+                <circle cx="30" cy="10" r="4" fill="#eab308" className="pulse-dot" style={{ animationDelay: '0.8s' }} />
+              </g>
+              
+              {/* Streaming data lines - left side */}
+              <g className="stream-line">
+                <rect x="20" y="40" width="80" height="6" rx="3" fill="#06b6d4" fillOpacity="0.6" />
+              </g>
+              <g className="stream-line-2">
+                <rect x="20" y="60" width="60" height="6" rx="3" fill="#06b6d4" fillOpacity="0.4" />
+              </g>
+              <g className="stream-line-3">
+                <rect x="20" y="80" width="70" height="6" rx="3" fill="#06b6d4" fillOpacity="0.5" />
+              </g>
+              
+              {/* Streaming data lines - right side */}
+              <g className="stream-line" style={{ animationDirection: 'reverse' }}>
+                <rect x="300" y="40" width="80" height="6" rx="3" fill="#06b6d4" fillOpacity="0.6" />
+              </g>
+              <g className="stream-line-2" style={{ animationDirection: 'reverse' }}>
+                <rect x="310" y="60" width="60" height="6" rx="3" fill="#06b6d4" fillOpacity="0.4" />
+              </g>
+              <g className="stream-line-3" style={{ animationDirection: 'reverse' }}>
+                <rect x="305" y="80" width="70" height="6" rx="3" fill="#06b6d4" fillOpacity="0.5" />
+              </g>
+              
+              {/* Status indicators at bottom */}
+              <g transform="translate(80, 105)">
+                <rect x="0" y="0" width="50" height="16" rx="4" fill="#22c55e" fillOpacity="0.2" stroke="#22c55e" strokeWidth="1" />
+                <circle cx="10" cy="8" r="4" fill="#22c55e" className="blink-indicator" />
+                <text x="30" y="12" fontSize="9" fontWeight="bold" fill="#22c55e" textAnchor="middle">SCAN</text>
+              </g>
+              <g transform="translate(175, 105)">
+                <rect x="0" y="0" width="50" height="16" rx="4" fill="#06b6d4" fillOpacity="0.2" stroke="#06b6d4" strokeWidth="1" />
+                <circle cx="10" cy="8" r="4" fill="#06b6d4" className="pulse-dot" />
+                <text x="30" y="12" fontSize="9" fontWeight="bold" fill="#06b6d4" textAnchor="middle">FEED</text>
+              </g>
+              <g transform="translate(270, 105)">
+                <rect x="0" y="0" width="50" height="16" rx="4" fill="#a855f7" fillOpacity="0.2" stroke="#a855f7" strokeWidth="1" />
+                <circle cx="10" cy="8" r="4" fill="#a855f7" className="blink-indicator" style={{ animationDelay: '0.3s' }} />
+                <text x="30" y="12" fontSize="9" fontWeight="bold" fill="#a855f7" textAnchor="middle">ALERT</text>
+              </g>
+            </svg>
+          </div>
+
           <p>
             <strong>Live Screens</strong> - Real-time screening and analysis tools.
           </p>
