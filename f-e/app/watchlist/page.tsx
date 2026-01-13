@@ -11,7 +11,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
-import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -109,7 +109,7 @@ export default function WatchlistPage() {
     position: { x: number; y: number };
   } | null>(null);
   // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | null>('marketPulse');
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | null>('marketPulse');
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -123,6 +123,8 @@ export default function WatchlistPage() {
   const [isMyWatchlistInfoOpen, setIsMyWatchlistInfoOpen] = useState(false);
   // My Screens info modal state
   const [isMyScreensInfoOpen, setIsMyScreensInfoOpen] = useState(false);
+  // Live Screens info modal state
+  const [isLiveScreensInfoOpen, setIsLiveScreensInfoOpen] = useState(false);
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -992,6 +994,12 @@ export default function WatchlistPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                       </span>
                     )}
+                    {activeSection === 'liveScreens' && (
+                      <span className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-cyan-500" />
+                        Live Screens
+                      </span>
+                    )}
                     {activeSection === 'swingScreening' && (
                       <span className="flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-purple-500" />
@@ -1021,6 +1029,18 @@ export default function WatchlistPage() {
                         title="Learn more about My Watchlist"
                         aria-label="More info about My Watchlist"
                         onClick={() => setIsMyWatchlistInfoOpen(true)}
+                      >
+                        <Info className="w-5 h-5 text-gray-300" />
+                      </button>
+                    )}
+                    {/* Info button - only show for Live Screens */}
+                    {activeSection === 'liveScreens' && (
+                      <button
+                        type="button"
+                        className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                        title="Learn more about Live Screens"
+                        aria-label="More info about Live Screens"
+                        onClick={() => setIsLiveScreensInfoOpen(true)}
                       >
                         <Info className="w-5 h-5 text-gray-300" />
                       </button>
@@ -1522,6 +1542,36 @@ export default function WatchlistPage() {
                   })}
                 </div>
               )}
+            </CollapsibleSection>
+          </div>
+
+          {/* Live Screens */}
+          <div id="live-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-cyan-500" />
+                  <span>Live Screens</span>
+                </span>
+              }
+              infoButton={activeSection === 'liveScreens' ? (
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  title="Learn more about Live Screens"
+                  aria-label="More info about Live Screens"
+                  onClick={() => setIsLiveScreensInfoOpen(true)}
+                >
+                  <Info className="w-5 h-5 text-gray-300" />
+                </button>
+              ) : null}
+              open={activeSection === 'liveScreens'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'liveScreens' : null)}
+            >
+              <div className="py-8 text-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Live Screens</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon...</p>
+              </div>
             </CollapsibleSection>
           </div>
 
@@ -2367,6 +2417,28 @@ export default function WatchlistPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               <strong>Tip:</strong> Items in your watchlist can be promoted to My Screens for swing trade screening and deeper analysis.
             </p>
+          </div>
+        </div>
+      </InfoModal>
+
+      {/* Live Screens Info Modal */}
+      <InfoModal
+        open={isLiveScreensInfoOpen}
+        onClose={() => setIsLiveScreensInfoOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-cyan-500" />
+            About Live Screens
+          </span>
+        }
+        ariaLabel="Live Screens Information"
+      >
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          <p>
+            <strong>Live Screens</strong> - Real-time screening and analysis tools.
+          </p>
+          <div className="py-8 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Content coming soon...</p>
           </div>
         </div>
       </InfoModal>
