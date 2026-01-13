@@ -16,6 +16,8 @@ import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesConte
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
+import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
+import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory } from '@/types/screens';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -136,6 +138,16 @@ export default function WatchlistPage() {
   // Track collapsible section states
   const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
+  const [section3Expanded, setSection3Expanded] = useState(false);
+  // Track selected Live Screen categories
+  const [selectedScreenCategories, setSelectedScreenCategories] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedScreenCategories');
+      if (saved) return JSON.parse(saved);
+    }
+    // Default: all 4 original categories
+    return ['momentum', 'sector', 'unusual', 'technical'];
+  });
   // Track selected timeframe for market data
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
   // Track brief loading state when switching timeframes
@@ -1360,6 +1372,134 @@ export default function WatchlistPage() {
               </div>
             </CollapsibleSection>
           </div>
+          
+          {/* Live Screens - hidden during rearrange mode */}
+          {!isRearrangeMode && (
+          <div id="live-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <CollapsibleSection
+              title={
+                <span className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-cyan-500" />
+                  <span>Live Screens</span>
+                  <span className="px-2 py-0.5 text-[10px] font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full">
+                    4 Daily
+                  </span>
+                </span>
+              }
+              infoButton={activeSection === 'liveScreens' ? (
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
+                  title="Learn more about Live Screens"
+                  aria-label="More info about Live Screens"
+                  onClick={() => setIsLiveScreensInfoOpen(true)}
+                >
+                  <Info className="w-5 h-5 text-gray-300" />
+                </button>
+              ) : null}
+              open={activeSection === 'liveScreens'}
+              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'liveScreens' : null)}
+            >
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                AI-curated daily stock screens. Double-tap stocks to add to Watchlist.
+              </p>
+              <LiveScreensContainer
+                onStockClick={(stock: LiveScreenStock) => setSelectedStock({
+                  symbol: stock.symbol,
+                  name: stock.name,
+                  price: stock.price,
+                  change: stock.change,
+                  valueChange: stock.valueChange,
+                  sparkline: stock.sparkline,
+                  timeframe: stock.timeframe,
+                })}
+                onStockLongPress={(stock: LiveScreenStock, position: { x: number; y: number }) => setQuickActionMenu({
+                  isOpen: true,
+                  symbol: stock.symbol,
+                  name: stock.name,
+                  position,
+                })}
+                onStockDoubleTap={(stock: LiveScreenStock) => {
+                  // Tiered system: first add to watchlist, then can add to My Screens
+                  if (!isInWatchlist(stock.symbol)) {
+                    const added = addToWatchlist({ symbol: stock.symbol, name: stock.name });
+                    if (added) {
+                      triggerAddedPulse(stock.symbol);
+                      showToast(`${stock.symbol} added to Watchlist`, 'success', 2000, { link: '/watchlist?section=my-watchlist' });
+                    } else {
+                      showToast(`Watchlist full (${MAX_WATCHLIST}/${MAX_WATCHLIST})`, 'warning', 3000, { link: '/watchlist?section=my-watchlist' });
+                    }
+                  } else {
+                    // Already in watchlist, toggle My Screens
+                    const wasInScreens = isFavorite(stock.symbol);
+                    toggleFavorite({ symbol: stock.symbol, name: stock.name });
+                    if (wasInScreens) {
+                      showToast(`${stock.symbol} removed from My Screens`, 'info', 5000, { 
+                        link: '/watchlist?section=my-screens',
+                        onUndo: () => addFavorite({ symbol: stock.symbol, name: stock.name })
+                      });
+                    } else if (favorites.length < MAX_FAVORITES) {
+                      triggerAddedPulsePurple(stock.symbol);
+                      showToast(`${stock.symbol} added to My Screens`, 'success', 2000, { link: '/watchlist?section=my-screens' });
+                    } else {
+                      showToast(`My Screens full (${MAX_FAVORITES}/${MAX_FAVORITES})`, 'warning', 3000, { link: '/watchlist?section=my-screens' });
+                    }
+                  }
+                }}
+                onSaveScreen={(screen: LiveScreenType) => {
+                  // Save all stocks from the screen to My Screens
+                  let addedCount = 0;
+                  let alreadyInWatchlist = 0;
+                  
+                  for (const stock of screen.stocks) {
+                    // First ensure it's in watchlist
+                    if (!isInWatchlist(stock.symbol)) {
+                      const added = addToWatchlist({ symbol: stock.symbol, name: stock.name });
+                      if (!added) continue; // Watchlist full
+                    } else {
+                      alreadyInWatchlist++;
+                    }
+                    
+                    // Then add to My Screens if not already there
+                    if (!isFavorite(stock.symbol) && favorites.length + addedCount < MAX_FAVORITES) {
+                      addFavorite({ symbol: stock.symbol, name: stock.name });
+                      addedCount++;
+                    }
+                  }
+                  
+                  if (addedCount > 0) {
+                    showToast(`Added ${addedCount} stocks from "${screen.title}" to My Screens`, 'success', 3000, { link: '/watchlist?section=my-screens' });
+                  } else if (alreadyInWatchlist === screen.stocks.length) {
+                    showToast('All stocks already in your lists', 'info', 2000);
+                  } else {
+                    showToast('My Screens is full', 'warning', 2000);
+                  }
+                }}
+                onSaveAllStocks={(stocks: LiveScreenStock[]) => {
+                  // Similar to onSaveScreen but for arbitrary stocks
+                  let addedCount = 0;
+                  for (const stock of stocks) {
+                    if (!isInWatchlist(stock.symbol)) {
+                      addToWatchlist({ symbol: stock.symbol, name: stock.name });
+                    }
+                    if (!isFavorite(stock.symbol) && favorites.length + addedCount < MAX_FAVORITES) {
+                      addFavorite({ symbol: stock.symbol, name: stock.name });
+                      addedCount++;
+                    }
+                  }
+                  if (addedCount > 0) {
+                    showToast(`Added ${addedCount} stocks to My Screens`, 'success', 2000);
+                  }
+                }}
+                isInWatchlist={isInWatchlist}
+                isFavorite={isFavorite}
+                recentlyAdded={recentlyAdded}
+                recentlyAddedToScreens={recentlyAddedToScreens}
+                selectedCategories={selectedScreenCategories as ScreenCategory[]}
+              />
+            </CollapsibleSection>
+          </div>
+          )}
 
           {/* My Watchlist - hidden during rearrange mode */}
           {!isRearrangeMode && (
@@ -1550,37 +1690,6 @@ export default function WatchlistPage() {
           </div>
           )}
 
-          {/* Live Screens - hidden during rearrange mode */}
-          {!isRearrangeMode && (
-          <div id="live-screens" className="scroll-mt-24 bg-white dark:bg-gray-900/20 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-            <CollapsibleSection
-              title={
-                <span className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-cyan-500" />
-                  <span>Live Screens</span>
-                </span>
-              }
-              infoButton={activeSection === 'liveScreens' ? (
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-800 transition ml-2"
-                  title="Learn more about Live Screens"
-                  aria-label="More info about Live Screens"
-                  onClick={() => setIsLiveScreensInfoOpen(true)}
-                >
-                  <Info className="w-5 h-5 text-gray-300" />
-                </button>
-              ) : null}
-              open={activeSection === 'liveScreens'}
-              onOpenChange={(isOpen) => setActiveSection(isOpen ? 'liveScreens' : null)}
-            >
-              <div className="py-8 text-center">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Live Screens</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon...</p>
-              </div>
-            </CollapsibleSection>
-          </div>
-          )}
 
           {/* My Screens - hidden during rearrange mode */}
           {!isRearrangeMode && (
@@ -1810,6 +1919,71 @@ export default function WatchlistPage() {
                   >
                     {isRearrangeMode ? 'Exit Re-arrange' : 'Re-arrange'}
                   </button>
+                </div>
+              )}
+
+              {/* Live Screen Categories */}
+              <button
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded || section2Expanded ? 'opacity-50' : ''}`}
+                onClick={() => {
+                  setSection3Expanded(!section3Expanded);
+                  setSection1Expanded(false);
+                  setSection2Expanded(false);
+                }}
+              >
+                <h3 className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-cyan-500" />
+                  Live Screen Categories
+                </h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${section3Expanded ? 'rotate-180' : ''}`} />
+              </button>
+              {section3Expanded && (
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Choose which screen categories to display in Live Screens.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {allScreenCategories.map((category) => {
+                      const config = categoryConfig[category];
+                      const isSelected = selectedScreenCategories.includes(category);
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => {
+                            const newCategories = isSelected
+                              ? selectedScreenCategories.filter(c => c !== category)
+                              : [...selectedScreenCategories, category];
+                            // Ensure at least one category is selected
+                            if (newCategories.length > 0) {
+                              setSelectedScreenCategories(newCategories);
+                              localStorage.setItem('selectedScreenCategories', JSON.stringify(newCategories));
+                            }
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                            isSelected 
+                              ? `${config.bgColor} ${config.borderColor} ${config.color}` 
+                              : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                            isSelected 
+                              ? `${config.borderColor} ${config.bgColor}` 
+                              : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                            {isSelected && (
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium">{config.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {selectedScreenCategories.length} of {allScreenCategories.length} categories selected
+                  </p>
                 </div>
               )}
             </div>
