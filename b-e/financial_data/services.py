@@ -6,6 +6,7 @@ import threading
 import logging
 import locale
 import time
+import random
 from functools import lru_cache
 from datetime import datetime, timedelta
 # from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
@@ -22,10 +23,26 @@ except:
 # Lock for yfinance calls to prevent concurrent access issues
 yf_lock = threading.Lock()
 
+# Rate limit tracking
+_last_yf_request = None
+_yf_request_count = 0
+_YF_MIN_DELAY = 0.5  # Minimum delay between requests in seconds
+_YF_RATE_LIMIT_DELAY = 30  # Delay when rate limited (seconds)
+
+def yf_rate_limit_delay():
+    """Add delay between yfinance requests to avoid rate limiting"""
+    global _last_yf_request, _yf_request_count
+    if _last_yf_request:
+        elapsed = time.time() - _last_yf_request
+        if elapsed < _YF_MIN_DELAY:
+            time.sleep(_YF_MIN_DELAY - elapsed + random.uniform(0.1, 0.3))
+    _last_yf_request = time.time()
+    _yf_request_count += 1
+
 # Simple in-memory cache for market data
 _market_data_cache = {}
 _cache_timestamp = None
-CACHE_DURATION_SECONDS = 60  # Cache for 60 seconds
+CACHE_DURATION_SECONDS = 120  # Cache for 2 minutes (increased to reduce API calls)
 
 def format_number_with_commas(value, decimals=2):
     """
@@ -101,36 +118,71 @@ def fetch_all_tickers_batch(tickers):
     intraday_data = {}
     
     # Batch download all yfinance tickers at once - this is the key optimization!
+    df_year = None
+    df_intraday = None
+    
     if yf_tickers:
         print(f"Batch downloading {len(yf_tickers)} tickers...")
         start_time = time.time()
         
-        try:
-            with yf_lock:
-                # Download 1 year of daily data for all tickers at once
-                df_year = yf.download(
-                    yf_tickers, 
-                    period='1y', 
-                    interval='1d', 
-                    progress=False,
-                    group_by='ticker',
-                    threads=True  # Use threading for faster download
-                )
+        # Retry logic with exponential backoff for rate limiting
+        max_retries = 3
+        retry_delay = 5  # Initial delay in seconds
+        
+        for attempt in range(max_retries):
+            try:
+                yf_rate_limit_delay()  # Add delay between requests
                 
-                # Also download intraday data (5-min intervals, last 2 days) for day sparklines
-                df_intraday = yf.download(
-                    yf_tickers,
-                    period='2d',
-                    interval='5m',
-                    progress=False,
-                    group_by='ticker',
-                    threads=True,
-                    prepost=True  # Include pre/post market
-                )
-            
-            print(f"Batch download completed in {time.time() - start_time:.2f}s")
-            
-            # Process intraday data for each ticker
+                with yf_lock:
+                    # Download 1 year of daily data for all tickers at once
+                    df_year = yf.download(
+                        yf_tickers, 
+                        period='1y', 
+                        interval='1d', 
+                        progress=False,
+                        group_by='ticker',
+                        threads=True  # Use threading for faster download
+                    )
+                    
+                    # Check if we got data or hit rate limit
+                    if df_year is None or df_year.empty:
+                        raise Exception("Empty response - possible rate limit")
+                    
+                    yf_rate_limit_delay()  # Add delay before next request
+                    
+                    # Also download intraday data (5-min intervals, last 2 days) for day sparklines
+                    df_intraday = yf.download(
+                        yf_tickers,
+                        period='2d',
+                        interval='5m',
+                        progress=False,
+                        group_by='ticker',
+                        threads=True,
+                        prepost=True  # Include pre/post market
+                    )
+                
+                print(f"Batch download completed in {time.time() - start_time:.2f}s")
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                if 'rate' in error_msg or 'limit' in error_msg or 'too many' in error_msg or 'empty' in error_msg:
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt) + random.uniform(1, 3)
+                        print(f"Rate limited, waiting {wait_time:.1f}s before retry {attempt + 2}/{max_retries}...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"Rate limit persists after {max_retries} attempts. Using cached/empty data.")
+                        df_year = pd.DataFrame()
+                        df_intraday = pd.DataFrame()
+                else:
+                    print(f"yfinance error: {e}")
+                    df_year = pd.DataFrame() if df_year is None else df_year
+                    df_intraday = pd.DataFrame() if df_intraday is None else df_intraday
+                    break
+        
+        # Process intraday data for each ticker
+        if df_intraday is not None and not df_intraday.empty:
             for ticker in yf_tickers:
                 try:
                     if len(yf_tickers) == 1:
@@ -154,8 +206,9 @@ def fetch_all_tickers_batch(tickers):
                                 intraday_data[ticker] = day_df['Close'].tolist()
                 except Exception as e:
                     print(f"Error processing intraday for {ticker}: {e}")
-            
-            # Process each ticker from the batch data
+        
+        # Process each ticker from the batch data
+        if df_year is not None and not df_year.empty:
             for ticker in yf_tickers:
                 try:
                     # Extract data for this ticker
@@ -287,12 +340,11 @@ def fetch_all_tickers_batch(tickers):
                 except Exception as e:
                     print(f"Error processing {ticker}: {e}")
                     result[ticker] = {'error': str(e)}
-        
-        except Exception as e:
-            print(f"Batch download error: {e}")
-            # Fallback: return errors for all tickers
+        else:
+            # No data returned - set errors for all yf tickers
             for ticker in yf_tickers:
-                result[ticker] = {'error': str(e)}
+                if ticker not in result:
+                    result[ticker] = {'error': f'No data for {ticker}'}
     
     # Handle FRED tickers (treasury yields) - these are fast
     for ticker in fred_tickers:
@@ -1884,12 +1936,13 @@ class LiveScreensService:
         
         return min(99, int(base_score + change_score + rv_score + rsi_score))
     
-    def fetch_live_screens(self, categories=None):
+    def fetch_live_screens(self, screen_ids=None, categories=None):
         """
         Fetch dynamically scanned live screens.
         
         Args:
-            categories: Optional list of categories to filter by
+            screen_ids: Optional list of specific screen IDs to filter by
+            categories: Optional list of categories to filter by (legacy support)
         
         Returns:
             list: List of LiveScreen objects with real-time data
@@ -1897,7 +1950,7 @@ class LiveScreensService:
         global _live_screens_cache, _live_screens_cache_timestamp
         
         # Check cache
-        cache_key = ','.join(sorted(categories)) if categories else 'all'
+        cache_key = ','.join(sorted(screen_ids)) if screen_ids else (','.join(sorted(categories)) if categories else 'all')
         if _live_screens_cache_timestamp and (time.time() - _live_screens_cache_timestamp) < LIVE_SCREENS_CACHE_DURATION:
             if cache_key in _live_screens_cache:
                 print("Returning cached live screens")
@@ -1910,9 +1963,14 @@ class LiveScreensService:
             print("No market data available")
             return []
         
-        # Filter screens by category if specified
+        # Filter screens by screen_ids first (takes priority), then by category
         screens_to_build = SCREEN_DEFINITIONS
-        if categories:
+        if screen_ids:
+            screens_to_build = {
+                k: v for k, v in SCREEN_DEFINITIONS.items()
+                if k in screen_ids
+            }
+        elif categories:
             screens_to_build = {
                 k: v for k, v in SCREEN_DEFINITIONS.items()
                 if v['category'] in categories

@@ -438,17 +438,21 @@ def live_screens(request):
     
     from .services import LiveScreensService
     
+    # Support filtering by screen IDs (new) or categories (legacy)
+    screens_param = request.GET.get('screens', '')
+    screen_ids = [s.strip() for s in screens_param.split(',') if s.strip()] if screens_param else None
+    
     categories_param = request.GET.get('categories', '')
     categories = [c.strip() for c in categories_param.split(',') if c.strip()] if categories_param else None
     
-    print(f"live_screens called with categories: {categories}")
+    print(f"live_screens called with screen_ids: {screen_ids}, categories: {categories}")
     
     import time
     start_time = time.time()
     
     try:
         service = LiveScreensService()
-        screens = service.fetch_live_screens(categories=categories)
+        screens = service.fetch_live_screens(screen_ids=screen_ids, categories=categories)
         elapsed = time.time() - start_time
         print(f"live_screens completed in {elapsed:.2f}s - returned {len(screens)} screens")
         

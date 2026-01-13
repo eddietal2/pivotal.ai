@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { RefreshCw, Zap, AlertCircle, Loader2 } from 'lucide-react';
-import { LiveScreen, LiveScreenStock, ScreenCategory } from '@/types/screens';
+import { LiveScreen, LiveScreenStock, ScreenId } from '@/types/screens';
 import { getTimeUntilRefresh } from '@/data/mockLiveScreens';
 import LiveScreenCard from './LiveScreenCard';
 
@@ -16,7 +16,7 @@ interface LiveScreensContainerProps {
   isFavorite: (symbol: string) => boolean;
   recentlyAdded: Set<string>;
   recentlyAddedToScreens: Set<string>;
-  selectedCategories?: ScreenCategory[];
+  selectedScreenIds?: ScreenId[];
 }
 
 export default function LiveScreensContainer({
@@ -29,7 +29,7 @@ export default function LiveScreensContainer({
   isFavorite,
   recentlyAdded,
   recentlyAddedToScreens,
-  selectedCategories,
+  selectedScreenIds,
 }: LiveScreensContainerProps) {
   // Track which screens are expanded (multiple can be open)
   const [expandedScreens, setExpandedScreens] = useState<Set<string>>(new Set(['morning-movers']));
@@ -45,12 +45,12 @@ export default function LiveScreensContainer({
       setLoading(true);
       setError(null);
       
-      const categoriesParam = selectedCategories && selectedCategories.length > 0
-        ? `?categories=${selectedCategories.join(',')}`
+      const screensParam = selectedScreenIds && selectedScreenIds.length > 0
+        ? `?screens=${selectedScreenIds.join(',')}`
         : '';
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/market-data/live-screens/${categoriesParam}`,
+        `http://127.0.0.1:8000/api/market-data/live-screens/${screensParam}`,
         { credentials: 'include' }
       );
       
@@ -71,9 +71,9 @@ export default function LiveScreensContainer({
     } finally {
       setLoading(false);
     }
-  }, [selectedCategories]);
+  }, [selectedScreenIds]);
 
-  // Fetch on mount and when categories change
+  // Fetch on mount and when screen selection changes
   useEffect(() => {
     fetchScreens();
   }, [fetchScreens]);

@@ -17,7 +17,7 @@ import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistConte
 import { useToast } from '@/components/context/ToastContext';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
-import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory } from '@/types/screens';
+import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
 
 // Ticker to name mapping for Market Pulse
 const tickerNames: Record<string, string> = {
@@ -139,14 +139,14 @@ export default function WatchlistPage() {
   const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
   const [section3Expanded, setSection3Expanded] = useState(false);
-  // Track selected Live Screen categories
-  const [selectedScreenCategories, setSelectedScreenCategories] = useState<string[]>(() => {
+  // Track selected Live Screen IDs (individual screens)
+  const [selectedScreenIds, setSelectedScreenIds] = useState<ScreenId[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('selectedScreenCategories');
+      const saved = localStorage.getItem('selectedScreenIds');
       if (saved) return JSON.parse(saved);
     }
-    // Default: all 4 original categories
-    return ['momentum', 'sector', 'unusual', 'technical'];
+    // Default: all 8 screens
+    return [...allScreenIds];
   });
   // Track selected timeframe for market data
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
@@ -1521,7 +1521,7 @@ export default function WatchlistPage() {
                 isFavorite={isFavorite}
                 recentlyAdded={recentlyAdded}
                 recentlyAddedToScreens={recentlyAddedToScreens}
-                selectedCategories={selectedScreenCategories as ScreenCategory[]}
+                selectedScreenIds={selectedScreenIds}
               />
             </CollapsibleSection>
           </div>
@@ -1967,50 +1967,61 @@ export default function WatchlistPage() {
               >
                 <h3 className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-cyan-500" />
-                  Live Screen Categories
+                  Live Screens
                 </h3>
                 <ChevronDown className={`w-5 h-5 transition-transform ${section3Expanded ? 'rotate-180' : ''}`} />
               </button>
               {section3Expanded && (
                 <div className="mt-3 space-y-3">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Choose which screen categories to display in Live Screens.
+                    Choose which screens to display.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    {allScreenCategories.map((category) => {
-                      const config = categoryConfig[category];
-                      const isSelected = selectedScreenCategories.includes(category);
-                      // Explicit border color mapping (Tailwind JIT can't detect dynamic classes)
-                      const borderColors: Record<ScreenCategory, string> = {
-                        momentum: 'border-l-green-500',
-                        sector: 'border-l-purple-500',
-                        unusual: 'border-l-red-500',
-                        technical: 'border-l-cyan-500',
-                        value: 'border-l-blue-500',
-                        volatility: 'border-l-orange-500',
+                    {allScreenIds.map((screenId) => {
+                      const screen = screenTemplates[screenId];
+                      const isSelected = selectedScreenIds.includes(screenId);
+                      // Explicit border color mapping for each screen
+                      const borderColors: Record<string, string> = {
+                        green: 'border-l-green-500',
+                        purple: 'border-l-purple-500',
+                        red: 'border-l-red-500',
+                        cyan: 'border-l-cyan-500',
+                        blue: 'border-l-blue-500',
+                        orange: 'border-l-orange-500',
+                        yellow: 'border-l-yellow-500',
                       };
-                      const checkboxBorderColors: Record<ScreenCategory, string> = {
-                        momentum: 'border-green-500',
-                        sector: 'border-purple-500',
-                        unusual: 'border-red-500',
-                        technical: 'border-cyan-500',
-                        value: 'border-blue-500',
-                        volatility: 'border-orange-500',
+                      const checkboxBorderColors: Record<string, string> = {
+                        green: 'border-green-500',
+                        purple: 'border-purple-500',
+                        red: 'border-red-500',
+                        cyan: 'border-cyan-500',
+                        blue: 'border-blue-500',
+                        orange: 'border-orange-500',
+                        yellow: 'border-yellow-500',
+                      };
+                      const textColors: Record<string, string> = {
+                        green: 'text-green-500',
+                        purple: 'text-purple-500',
+                        red: 'text-red-500',
+                        cyan: 'text-cyan-500',
+                        blue: 'text-blue-500',
+                        orange: 'text-orange-500',
+                        yellow: 'text-yellow-500',
                       };
                       return (
                         <button
-                          key={category}
+                          key={screenId}
                           onClick={() => {
-                            const newCategories = isSelected
-                              ? selectedScreenCategories.filter(c => c !== category)
-                              : [...selectedScreenCategories, category];
-                            // Ensure at least one category is selected
-                            if (newCategories.length > 0) {
-                              setSelectedScreenCategories(newCategories);
-                              localStorage.setItem('selectedScreenCategories', JSON.stringify(newCategories));
+                            const newScreens = isSelected
+                              ? selectedScreenIds.filter(s => s !== screenId)
+                              : [...selectedScreenIds, screenId];
+                            // Ensure at least one screen is selected
+                            if (newScreens.length > 0) {
+                              setSelectedScreenIds(newScreens as ScreenId[]);
+                              localStorage.setItem('selectedScreenIds', JSON.stringify(newScreens));
                             }
                           }}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-4 transition-all ${borderColors[category]} ${
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-l-4 transition-all ${borderColors[screen.color]} ${
                             isSelected 
                               ? 'bg-white dark:bg-gray-700 border border-l-4 border-gray-200 dark:border-gray-600 shadow-sm' 
                               : 'bg-gray-50 dark:bg-gray-800/50 border border-l-4 border-gray-100 dark:border-gray-700/50 opacity-60'
@@ -2018,24 +2029,25 @@ export default function WatchlistPage() {
                         >
                           <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
                             isSelected 
-                              ? `${checkboxBorderColors[category]} bg-white dark:bg-gray-800` 
+                              ? `${checkboxBorderColors[screen.color]} bg-white dark:bg-gray-800` 
                               : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
                           }`}>
                             {isSelected && (
-                              <svg className={`w-3 h-3 ${config.color}`} fill="currentColor" viewBox="0 0 20 20">
+                              <svg className={`w-3 h-3 ${textColors[screen.color]}`} fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
                           </div>
+                          <span className="text-base">{screen.icon}</span>
                           <span className={`text-sm font-medium ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {config.label}
+                            {screen.title}
                           </span>
                         </button>
                       );
                     })}
                   </div>
                   <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {selectedScreenCategories.length} of {allScreenCategories.length} categories selected
+                    {selectedScreenIds.length} of {allScreenIds.length} screens selected
                   </p>
                 </div>
               )}
