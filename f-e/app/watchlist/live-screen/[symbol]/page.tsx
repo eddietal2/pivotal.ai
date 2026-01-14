@@ -2,8 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, RefreshCw, Zap } from 'lucide-react';
+import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
+import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
 
 interface OverallSignal {
   signal: 'BUY' | 'SELL' | 'HOLD';
@@ -51,6 +52,7 @@ export default function LiveScreenDetailPage() {
   const [additionalData, setAdditionalData] = useState<IndicatorResponse | null>(null);
   const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // Callback to receive data from TechnicalIndicatorsPanel (avoids duplicate API calls)
   const handleIndicatorDataLoaded = useCallback((data: ExtendedIndicatorData | null, isLoading: boolean) => {
@@ -150,11 +152,11 @@ export default function LiveScreenDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <button 
-              disabled={isLoadingAdditional}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors disabled:opacity-50 cursor-default"
-              title="Data auto-refreshes every 90 seconds"
+              onClick={() => setIsInfoModalOpen(true)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              title="Indicator Guide"
             >
-              <RefreshCw className={`w-5 h-5 text-gray-500 ${isLoadingAdditional ? 'animate-spin' : ''}`} />
+              <Info className="w-5 h-5 text-gray-500" />
             </button>
             <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
               <Settings className="w-5 h-5 text-gray-500" />
@@ -373,6 +375,12 @@ export default function LiveScreenDetailPage() {
         <ArrowLeft className="w-4 h-4" />
         Back to Watchlist
       </button>
+
+      {/* Indicator Info Modal */}
+      <IndicatorInfoModal 
+        isOpen={isInfoModalOpen} 
+        onClose={() => setIsInfoModalOpen(false)} 
+      />
     </div>
   );
 }

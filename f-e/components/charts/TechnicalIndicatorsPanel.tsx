@@ -1,11 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw } from 'lucide-react';
+import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw, Zap, AlertTriangle, TrendingDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import AnimatedIndicatorChart, { IndicatorData } from './AnimatedIndicatorChart';
 
 type IndicatorType = 'MACD' | 'RSI' | 'STOCH' | 'BB';
 type TimeframeType = 'D' | 'W' | 'M' | 'Y';
+
+interface EventBadge {
+  label: string;
+  type: 'bullish' | 'bearish' | 'neutral' | 'warning';
+  icon?: React.ReactNode;
+}
 
 interface IndicatorCardProps {
   symbol: string;
@@ -104,6 +110,148 @@ function IndicatorCard({
     return null;
   };
 
+  // Detect special events/signals for each indicator
+  const getEventBadges = (): EventBadge[] => {
+    if (!data || isLoading) return [];
+    const events: EventBadge[] = [];
+
+    if (indicator === 'MACD' && data.macd) {
+      const { macd, signal, histogram } = data.macd;
+      const len = macd.length;
+      
+      if (len >= 2) {
+        // Check for MACD/Signal crossover (compare last 2 values)
+        const prevMacd = macd[len - 2];
+        const currMacd = macd[len - 1];
+        const prevSignal = signal[len - 2];
+        const currSignal = signal[len - 1];
+        
+        // Bullish crossover: MACD crosses above Signal
+        if (prevMacd <= prevSignal && currMacd > currSignal) {
+          events.push({ label: 'Bullish Crossover', type: 'bullish', icon: <ArrowUpCircle className="w-3 h-3" /> });
+        }
+        // Bearish crossover: MACD crosses below Signal
+        if (prevMacd >= prevSignal && currMacd < currSignal) {
+          events.push({ label: 'Bearish Crossover', type: 'bearish', icon: <ArrowDownCircle className="w-3 h-3" /> });
+        }
+        
+        // Check for zero line cross
+        const prevHist = histogram[len - 2];
+        const currHist = histogram[len - 1];
+        if (prevHist <= 0 && currHist > 0) {
+          events.push({ label: 'Above Zero', type: 'bullish', icon: <TrendingUp className="w-3 h-3" /> });
+        }
+        if (prevHist >= 0 && currHist < 0) {
+          events.push({ label: 'Below Zero', type: 'bearish', icon: <TrendingDown className="w-3 h-3" /> });
+        }
+        
+        // Histogram momentum
+        if (currHist > 0 && currHist > prevHist) {
+          events.push({ label: 'Rising Momentum', type: 'bullish' });
+        } else if (currHist < 0 && currHist < prevHist) {
+          events.push({ label: 'Falling Momentum', type: 'bearish' });
+        }
+      }
+    }
+
+    if (indicator === 'RSI' && data.rsi) {
+      const { rsi } = data.rsi;
+      const len = rsi.length;
+      const current = data.rsi.current;
+      
+      if (len >= 2) {
+        const prev = rsi[len - 2];
+        
+        // Entering overbought/oversold
+        if (prev < 70 && current >= 70) {
+          events.push({ label: 'Entering Overbought', type: 'warning', icon: <AlertTriangle className="w-3 h-3" /> });
+        }
+        if (prev > 30 && current <= 30) {
+          events.push({ label: 'Entering Oversold', type: 'bullish', icon: <Zap className="w-3 h-3" /> });
+        }
+        
+        // Exiting overbought/oversold
+        if (prev >= 70 && current < 70) {
+          events.push({ label: 'Exiting Overbought', type: 'bearish', icon: <ArrowDownCircle className="w-3 h-3" /> });
+        }
+        if (prev <= 30 && current > 30) {
+          events.push({ label: 'Exiting Oversold', type: 'bullish', icon: <ArrowUpCircle className="w-3 h-3" /> });
+        }
+        
+        // RSI direction
+        if (current > prev && current > 50) {
+          events.push({ label: 'Bullish Momentum', type: 'bullish' });
+        } else if (current < prev && current < 50) {
+          events.push({ label: 'Bearish Momentum', type: 'bearish' });
+        }
+      }
+    }
+
+    if (indicator === 'STOCH' && data.stochastic) {
+      const { k, d } = data.stochastic;
+      const len = k.length;
+      const currK = data.stochastic.current.k;
+      const currD = data.stochastic.current.d;
+      
+      if (len >= 2) {
+        const prevK = k[len - 2];
+        const prevD = d[len - 2];
+        
+        // %K/%D crossover
+        if (prevK <= prevD && currK > currD) {
+          events.push({ label: 'Bullish Crossover', type: 'bullish', icon: <ArrowUpCircle className="w-3 h-3" /> });
+        }
+        if (prevK >= prevD && currK < currD) {
+          events.push({ label: 'Bearish Crossover', type: 'bearish', icon: <ArrowDownCircle className="w-3 h-3" /> });
+        }
+        
+        // Oversold bounce / Overbought reversal
+        if (currK <= 20 && currK > prevK) {
+          events.push({ label: 'Oversold Bounce', type: 'bullish', icon: <Zap className="w-3 h-3" /> });
+        }
+        if (currK >= 80 && currK < prevK) {
+          events.push({ label: 'Overbought Reversal', type: 'bearish', icon: <AlertTriangle className="w-3 h-3" /> });
+        }
+      }
+    }
+
+    if (indicator === 'BB' && data.bollingerBands) {
+      const { percentB } = data.bollingerBands;
+      const len = percentB.length;
+      const current = data.bollingerBands.current.percentB;
+      
+      if (len >= 2) {
+        const prev = percentB[len - 2];
+        
+        // Band touches
+        if (current >= 100) {
+          events.push({ label: 'Upper Band Touch', type: 'warning', icon: <AlertTriangle className="w-3 h-3" /> });
+        }
+        if (current <= 0) {
+          events.push({ label: 'Lower Band Touch', type: 'bullish', icon: <Zap className="w-3 h-3" /> });
+        }
+        
+        // Band breakouts
+        if (prev < 100 && current >= 100) {
+          events.push({ label: 'Upper Breakout', type: 'bearish', icon: <ArrowUpCircle className="w-3 h-3" /> });
+        }
+        if (prev > 0 && current <= 0) {
+          events.push({ label: 'Lower Breakout', type: 'bullish', icon: <ArrowDownCircle className="w-3 h-3" /> });
+        }
+        
+        // Mean reversion signals
+        if (prev >= 80 && current < 80) {
+          events.push({ label: 'Mean Reversion', type: 'bearish' });
+        }
+        if (prev <= 20 && current > 20) {
+          events.push({ label: 'Mean Reversion', type: 'bullish' });
+        }
+      }
+    }
+
+    return events;
+  };
+
   const getCurrentValues = () => {
     if (!data || isLoading) return null;
 
@@ -191,6 +339,8 @@ function IndicatorCard({
     return null;
   };
 
+  const eventBadges = getEventBadges();
+
   return (
     <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -209,6 +359,29 @@ function IndicatorCard({
         animated={true}
         showLabels={true}
       />
+
+      {/* Event Badges */}
+      {eventBadges.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {eventBadges.map((event, idx) => (
+            <span
+              key={idx}
+              className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-medium ${
+                event.type === 'bullish'
+                  ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+                  : event.type === 'bearish'
+                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+                    : event.type === 'warning'
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+              }`}
+            >
+              {event.icon}
+              {event.label}
+            </span>
+          ))}
+        </div>
+      )}
       
       {getCurrentValues()}
     </div>
