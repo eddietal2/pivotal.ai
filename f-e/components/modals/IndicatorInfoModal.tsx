@@ -24,6 +24,445 @@ interface IndicatorSection {
   events: EventInfo[];
 }
 
+// Animated SVG visualization component for each event type
+function EventVisualization({ sectionTitle, eventName }: { sectionTitle: string; eventName: string }) {
+  const isMACD = sectionTitle.includes('MACD');
+  const isRSI = sectionTitle.includes('RSI');
+  const isStochastic = sectionTitle.includes('Stochastic');
+  const isBB = sectionTitle.includes('Bollinger');
+
+  // MACD Visualizations
+  if (isMACD) {
+    if (eventName === 'Bullish Crossover') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.2" strokeDasharray="4" />
+          {/* Signal line (orange) */}
+          <path d="M 10,55 Q 50,50 100,42 T 190,35" fill="none" stroke="#f97316" strokeWidth="2" />
+          {/* MACD line (blue) - crosses above */}
+          <path d="M 10,60 Q 50,55 100,42 T 190,25" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          {/* Crossover point */}
+          <circle cx="100" cy="42" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+          <text x="105" y="38" fontSize="8" fill="#22c55e" fontWeight="bold">Cross</text>
+        </svg>
+      );
+    }
+    if (eventName === 'Bearish Crossover') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.2" strokeDasharray="4" />
+          {/* Signal line (orange) */}
+          <path d="M 10,25 Q 50,30 100,38 T 190,45" fill="none" stroke="#f97316" strokeWidth="2" />
+          {/* MACD line (blue) - crosses below */}
+          <path d="M 10,20 Q 50,25 100,38 T 190,55" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          {/* Crossover point */}
+          <circle cx="100" cy="38" r="4" fill="#ef4444">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+          <text x="105" y="34" fontSize="8" fill="#ef4444" fontWeight="bold">Cross</text>
+        </svg>
+      );
+    }
+    if (eventName === 'Above Zero') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" />
+          <text x="5" y="38" fontSize="7" fill="currentColor" opacity="0.5">0</text>
+          {/* Histogram bars transitioning from negative to positive */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [-15, -10, -5, 0, 8, 15, 20, 25, 28];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 6}
+                y={h >= 0 ? 40 - h : 40}
+                width="12"
+                height={Math.abs(h)}
+                fill={h >= 0 ? '#22c55e' : '#ef4444'}
+                opacity="0.8"
+              >
+                <animate attributeName="height" from="0" to={Math.abs(h)} dur="0.3s" begin={`${i * 0.15}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+        </svg>
+      );
+    }
+    if (eventName === 'Below Zero') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" />
+          <text x="5" y="38" fontSize="7" fill="currentColor" opacity="0.5">0</text>
+          {/* Histogram bars transitioning from positive to negative */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [28, 20, 12, 5, 0, -8, -15, -22, -28];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 6}
+                y={h >= 0 ? 40 - h : 40}
+                width="12"
+                height={Math.abs(h)}
+                fill={h >= 0 ? '#22c55e' : '#ef4444'}
+                opacity="0.8"
+              >
+                <animate attributeName="height" from="0" to={Math.abs(h)} dur="0.3s" begin={`${i * 0.15}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+        </svg>
+      );
+    }
+    if (eventName === 'Rising Momentum') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" />
+          {/* Growing positive histogram bars */}
+          {[25, 50, 75, 100, 125, 150, 175].map((x, i) => {
+            const h = 5 + i * 5;
+            return (
+              <rect key={x} x={x - 8} y={40 - h} width="16" height={h} fill="#22c55e" opacity="0.8">
+                <animate attributeName="height" from="0" to={h} dur="0.4s" begin={`${i * 0.2}s`} fill="freeze" />
+                <animate attributeName="y" from="40" to={40 - h} dur="0.4s" begin={`${i * 0.2}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          <path d="M 20,38 L 180,10" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" opacity="0.5" />
+        </svg>
+      );
+    }
+    if (eventName === 'Falling Momentum') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" />
+          {/* Growing negative histogram bars */}
+          {[25, 50, 75, 100, 125, 150, 175].map((x, i) => {
+            const h = 5 + i * 5;
+            return (
+              <rect key={x} x={x - 8} y={40} width="16" height={h} fill="#ef4444" opacity="0.8">
+                <animate attributeName="height" from="0" to={h} dur="0.4s" begin={`${i * 0.2}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          <path d="M 20,42 L 180,70" stroke="#ef4444" strokeWidth="1" strokeDasharray="4" opacity="0.5" />
+        </svg>
+      );
+    }
+  }
+
+  // RSI Visualizations
+  if (isRSI) {
+    if (eventName === 'Entering Overbought') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Overbought zone */}
+          <rect x="0" y="0" width="200" height="24" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="24" x2="200" y2="24" stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="18" fontSize="7" fill="#ef4444" opacity="0.7">70</text>
+          {/* Oversold zone */}
+          <rect x="0" y="56" width="200" height="24" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="56" x2="200" y2="56" stroke="#22c55e" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="68" fontSize="7" fill="#22c55e" opacity="0.7">30</text>
+          {/* RSI line entering overbought */}
+          <path d="M 10,50 Q 60,45 100,30 T 190,15" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="120" cy="24" r="4" fill="#f59e0b">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Entering Oversold') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="24" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="24" x2="200" y2="24" stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="18" fontSize="7" fill="#ef4444" opacity="0.7">70</text>
+          <rect x="0" y="56" width="200" height="24" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="56" x2="200" y2="56" stroke="#22c55e" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="68" fontSize="7" fill="#22c55e" opacity="0.7">30</text>
+          {/* RSI line entering oversold */}
+          <path d="M 10,30 Q 60,35 100,50 T 190,65" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="120" cy="56" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Exiting Overbought') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="24" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="24" x2="200" y2="24" stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="18" fontSize="7" fill="#ef4444" opacity="0.7">70</text>
+          <rect x="0" y="56" width="200" height="24" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="56" x2="200" y2="56" stroke="#22c55e" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="68" fontSize="7" fill="#22c55e" opacity="0.7">30</text>
+          {/* RSI line exiting overbought */}
+          <path d="M 10,15 Q 60,18 100,24 T 190,40" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="24" r="4" fill="#ef4444">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Exiting Oversold') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="24" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="24" x2="200" y2="24" stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="18" fontSize="7" fill="#ef4444" opacity="0.7">70</text>
+          <rect x="0" y="56" width="200" height="24" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="56" x2="200" y2="56" stroke="#22c55e" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="68" fontSize="7" fill="#22c55e" opacity="0.7">30</text>
+          {/* RSI line exiting oversold */}
+          <path d="M 10,65 Q 60,62 100,56 T 190,40" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="56" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Bullish Momentum') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="38" fontSize="7" fill="currentColor" opacity="0.5">50</text>
+          {/* Rising RSI above 50 */}
+          <path d="M 10,50 Q 60,45 100,38 T 190,25" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <polygon points="185,20 195,25 185,30" fill="#22c55e">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+    if (eventName === 'Bearish Momentum') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <line x1="0" y1="40" x2="200" y2="40" stroke="currentColor" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="38" fontSize="7" fill="currentColor" opacity="0.5">50</text>
+          {/* Falling RSI below 50 */}
+          <path d="M 10,30 Q 60,35 100,42 T 190,55" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <polygon points="185,50 195,55 185,60" fill="#ef4444">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+  }
+
+  // Stochastic Visualizations
+  if (isStochastic) {
+    if (eventName === 'Bullish Crossover') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="16" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="16" x2="200" y2="16" stroke="#ef4444" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="12" fontSize="7" fill="#ef4444" opacity="0.5">80</text>
+          <rect x="0" y="64" width="200" height="16" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="64" x2="200" y2="64" stroke="#22c55e" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="76" fontSize="7" fill="#22c55e" opacity="0.5">20</text>
+          {/* %D (slow) */}
+          <path d="M 10,55 Q 60,52 100,45 T 190,35" fill="none" stroke="#f97316" strokeWidth="2" />
+          {/* %K (fast) crosses above */}
+          <path d="M 10,60 Q 60,55 100,45 T 190,25" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="45" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Bearish Crossover') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="16" fill="#ef4444" opacity="0.1" />
+          <line x1="0" y1="16" x2="200" y2="16" stroke="#ef4444" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="12" fontSize="7" fill="#ef4444" opacity="0.5">80</text>
+          <rect x="0" y="64" width="200" height="16" fill="#22c55e" opacity="0.1" />
+          <line x1="0" y1="64" x2="200" y2="64" stroke="#22c55e" strokeOpacity="0.3" strokeDasharray="4" />
+          <text x="3" y="76" fontSize="7" fill="#22c55e" opacity="0.5">20</text>
+          {/* %D (slow) */}
+          <path d="M 10,25 Q 60,28 100,35 T 190,45" fill="none" stroke="#f97316" strokeWidth="2" />
+          {/* %K (fast) crosses below */}
+          <path d="M 10,20 Q 60,25 100,35 T 190,55" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="35" r="4" fill="#ef4444">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Oversold Bounce') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="64" width="200" height="16" fill="#22c55e" opacity="0.15" />
+          <line x1="0" y1="64" x2="200" y2="64" stroke="#22c55e" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="76" fontSize="7" fill="#22c55e" opacity="0.7">20</text>
+          {/* Lines bouncing in oversold */}
+          <path d="M 10,70 Q 60,72 100,68 T 190,50" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <path d="M 10,72 Q 60,74 100,70 T 190,55" fill="none" stroke="#f97316" strokeWidth="2" opacity="0.7" />
+          <polygon points="185,45 195,50 185,55" fill="#22c55e">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+    if (eventName === 'Overbought Reversal') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <rect x="0" y="0" width="200" height="16" fill="#ef4444" opacity="0.15" />
+          <line x1="0" y1="16" x2="200" y2="16" stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="4" />
+          <text x="3" y="12" fontSize="7" fill="#ef4444" opacity="0.7">80</text>
+          {/* Lines reversing in overbought */}
+          <path d="M 10,10 Q 60,8 100,12 T 190,30" fill="none" stroke="#3b82f6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,300" to="300,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <path d="M 10,8 Q 60,6 100,10 T 190,25" fill="none" stroke="#f97316" strokeWidth="2" opacity="0.7" />
+          <polygon points="185,25 195,30 185,35" fill="#ef4444">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+  }
+
+  // Bollinger Bands Visualizations
+  if (isBB) {
+    if (eventName === 'Upper Band Touch') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Upper band */}
+          <path d="M 0,15 Q 50,12 100,15 T 200,12" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          {/* Middle band */}
+          <path d="M 0,40 Q 50,38 100,40 T 200,38" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          {/* Lower band */}
+          <path d="M 0,65 Q 50,68 100,65 T 200,68" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          {/* Band fill */}
+          <path d="M 0,15 Q 50,12 100,15 T 200,12 L 200,68 Q 150,65 100,65 T 0,68 Z" fill="currentColor" opacity="0.05" />
+          {/* Price touching upper */}
+          <path d="M 10,50 Q 60,35 100,20 T 150,15" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,200" to="200,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="150" cy="15" r="4" fill="#f59e0b">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Lower Band Touch') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <path d="M 0,15 Q 50,12 100,15 T 200,12" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,40 Q 50,38 100,40 T 200,38" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          <path d="M 0,65 Q 50,68 100,65 T 200,68" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,15 Q 50,12 100,15 T 200,12 L 200,68 Q 150,65 100,65 T 0,68 Z" fill="currentColor" opacity="0.05" />
+          {/* Price touching lower */}
+          <path d="M 10,30 Q 60,45 100,60 T 150,65" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,200" to="200,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="150" cy="65" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Upper Breakout') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <path d="M 0,25 Q 50,22 100,25 T 200,22" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,45 Q 50,43 100,45 T 200,43" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          <path d="M 0,65 Q 50,68 100,65 T 200,68" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,25 Q 50,22 100,25 T 200,22 L 200,68 Q 150,65 100,65 T 0,68 Z" fill="currentColor" opacity="0.05" />
+          {/* Price breaking above upper */}
+          <path d="M 10,50 Q 60,40 100,28 T 180,8" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,250" to="250,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <polygon points="175,3 185,8 175,13" fill="#ef4444">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="0.8s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+    if (eventName === 'Lower Breakout') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <path d="M 0,15 Q 50,12 100,15 T 200,12" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,35 Q 50,33 100,35 T 200,33" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          <path d="M 0,55 Q 50,58 100,55 T 200,58" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,15 Q 50,12 100,15 T 200,12 L 200,58 Q 150,55 100,55 T 0,58 Z" fill="currentColor" opacity="0.05" />
+          {/* Price breaking below lower */}
+          <path d="M 10,30 Q 60,40 100,52 T 180,72" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,250" to="250,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <polygon points="175,67 185,72 175,77" fill="#22c55e">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="0.8s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+    if (eventName === 'Mean Reversion (Bullish)') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <path d="M 0,15 Q 50,12 100,15 T 200,12" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,40 Q 50,38 100,40 T 200,38" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          <path d="M 0,65 Q 50,68 100,65 T 200,68" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,15 Q 50,12 100,15 T 200,12 L 200,68 Q 150,65 100,65 T 0,68 Z" fill="currentColor" opacity="0.05" />
+          {/* Price reverting from lower to middle */}
+          <path d="M 10,65 Q 60,60 100,50 T 190,40" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,250" to="250,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="50" r="3" fill="#22c55e">
+            <animate attributeName="r" values="3;5;3" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Mean Reversion (Bearish)') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          <path d="M 0,15 Q 50,12 100,15 T 200,12" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,40 Q 50,38 100,40 T 200,38" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4" />
+          <path d="M 0,65 Q 50,68 100,65 T 200,68" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.6" />
+          <path d="M 0,15 Q 50,12 100,15 T 200,12 L 200,68 Q 150,65 100,65 T 0,68 Z" fill="currentColor" opacity="0.05" />
+          {/* Price reverting from upper to middle */}
+          <path d="M 10,15 Q 60,20 100,30 T 190,40" fill="none" stroke="#8b5cf6" strokeWidth="2">
+            <animate attributeName="stroke-dasharray" from="0,250" to="250,0" dur="2s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="30" r="3" fill="#ef4444">
+            <animate attributeName="r" values="3;5;3" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+  }
+
+  return null;
+}
+
 const indicatorSections: IndicatorSection[] = [
   {
     title: 'MACD (Moving Average Convergence Divergence)',
@@ -276,6 +715,7 @@ export default function IndicatorInfoModal({ isOpen, onClose }: IndicatorInfoMod
                     </div>
                     <p className="text-xs opacity-80 mb-2">{event.description}</p>
                     <p className="text-sm">{event.interpretation}</p>
+                    <EventVisualization sectionTitle={section.title} eventName={event.name} />
                   </div>
                 ))}
               </div>
