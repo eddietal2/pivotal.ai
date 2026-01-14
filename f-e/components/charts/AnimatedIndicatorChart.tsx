@@ -12,7 +12,7 @@ function TrendPulse({
   height = 24 
 }: { 
   trend: 'up' | 'down' | 'neutral' | 'overbought' | 'oversold';
-  indicator: 'MACD' | 'RSI' | 'STOCH' | 'BB';
+  indicator: 'MACD' | 'RSI' | 'STOCH' | 'BB' | 'VOL';
   dataPoints: number[];
   width?: number;
   height?: number;
@@ -172,11 +172,17 @@ export interface IndicatorData {
     percentB: number[];
     current: { upper: number | null; middle: number | null; lower: number | null; percentB: number; price: number | null };
   };
+  volume?: {
+    volumes: number[];
+    avgVolume: number;
+    current: { volume: number; avgVolume: number; ratio: number };
+    trend: string;
+  };
 }
 
 interface AnimatedIndicatorChartProps {
   data: IndicatorData | null;
-  indicator: 'MACD' | 'RSI' | 'STOCH' | 'BB';
+  indicator: 'MACD' | 'RSI' | 'STOCH' | 'BB' | 'VOL';
   height?: number;
   width?: number;
   animated?: boolean;
@@ -294,6 +300,8 @@ export default function AnimatedIndicatorChart({
       drawStochastic(ctx, data.stochastic, chartWidth, chartHeight, padding, progress);
     } else if (indicator === 'BB' && data.bollingerBands) {
       drawBollingerBands(ctx, data.bollingerBands, chartWidth, chartHeight, padding, progress);
+    } else if (indicator === 'VOL' && data.volume?.volumes?.length) {
+      drawVolume(ctx, data.volume, chartWidth, chartHeight, padding, progress);
     }
   }, [data, progress, dimensions, indicator, compact, isLoading]);
 
@@ -675,6 +683,79 @@ export default function AnimatedIndicatorChart({
     }
   };
 
+  // Draw Volume chart
+  const drawVolume = (
+    ctx: CanvasRenderingContext2D,
+    volumeData: NonNullable<IndicatorData['volume']>,
+    chartWidth: number,
+    chartHeight: number,
+    padding: number,
+    progress: number
+  ) => {
+    const { volumes, avgVolume } = volumeData;
+    
+    const visiblePoints = Math.floor(volumes.length * progress);
+    if (visiblePoints < 2) return;
+
+    const maxVol = Math.max(...volumes.slice(0, visiblePoints));
+    const minVol = 0;
+    const range = maxVol - minVol || 1;
+
+    const getX = (i: number) => padding + (i / (volumes.length - 1)) * chartWidth;
+    const getY = (val: number) => padding + chartHeight - ((val - minVol) / range) * chartHeight;
+
+    // Draw average volume line
+    const avgY = getY(avgVolume);
+    ctx.strokeStyle = '#f59e0b'; // Orange
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padding, avgY);
+    ctx.lineTo(padding + chartWidth * progress, avgY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw volume bars
+    const barWidth = Math.max(3, chartWidth / volumes.length - 2);
+    for (let i = 0; i < visiblePoints; i++) {
+      const x = getX(i) - barWidth / 2;
+      const vol = volumes[i];
+      const y = getY(vol);
+      const barHeight = chartHeight - (y - padding);
+      
+      // Color based on volume relative to average
+      const ratio = vol / avgVolume;
+      let color: string;
+      if (ratio >= 2) {
+        color = 'rgba(34, 197, 94, 0.7)'; // High volume - green
+      } else if (ratio >= 1.5) {
+        color = 'rgba(34, 197, 94, 0.5)'; // Above average - lighter green
+      } else if (ratio < 0.5) {
+        color = 'rgba(239, 68, 68, 0.5)'; // Low volume - red
+      } else {
+        color = 'rgba(107, 114, 128, 0.5)'; // Normal - gray
+      }
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Highlight current volume bar
+    if (visiblePoints > 0) {
+      const lastIdx = visiblePoints - 1;
+      const lastX = getX(lastIdx) - barWidth / 2;
+      const lastVol = volumes[lastIdx];
+      const lastY = getY(lastVol);
+      const lastBarHeight = chartHeight - (lastY - padding);
+      const ratio = lastVol / avgVolume;
+      
+      // Draw highlight border on current bar
+      ctx.strokeStyle = ratio >= 1.5 ? '#22c55e' : ratio < 0.5 ? '#ef4444' : '#f97316';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(lastX, lastY, barWidth, lastBarHeight);
+    }
+  };
+
   // Get current indicator value for display
   const getCurrentValue = () => {
     if (!data) return null;
@@ -710,6 +791,14 @@ export default function AnimatedIndicatorChart({
         primary: val.toFixed(1) + '%',
         trend: val >= 80 ? 'overbought' : val <= 20 ? 'oversold' : 'neutral',
         dataPoints: data.bollingerBands.percentB,
+      };
+    }
+    if (indicator === 'VOL' && data.volume) {
+      const ratio = data.volume.current.ratio;
+      return {
+        primary: ratio.toFixed(2) + 'x',
+        trend: ratio >= 1.5 ? 'up' : ratio < 0.5 ? 'down' : 'neutral',
+        dataPoints: data.volume.volumes,
       };
     }
     return null;

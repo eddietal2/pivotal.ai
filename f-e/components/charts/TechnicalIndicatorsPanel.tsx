@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw, Zap, AlertTriangle, TrendingDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw, Zap, AlertTriangle, TrendingDown, ArrowUpCircle, ArrowDownCircle, BarChart } from 'lucide-react';
 import AnimatedIndicatorChart, { IndicatorData } from './AnimatedIndicatorChart';
 
-type IndicatorType = 'MACD' | 'RSI' | 'STOCH' | 'BB';
+type IndicatorType = 'MACD' | 'RSI' | 'STOCH' | 'BB' | 'VOL';
 type TimeframeType = 'D' | 'W' | 'M' | 'Y';
 
 interface EventBadge {
@@ -101,6 +101,23 @@ function IndicatorCard({
         <div className="flex items-center gap-2">
           <span className={`text-sm font-bold ${val >= 80 ? 'text-red-500' : val <= 20 ? 'text-green-500' : 'text-purple-500'}`}>
             {val.toFixed(1)}%
+          </span>
+          {badge}
+        </div>
+      );
+    }
+
+    if (indicator === 'VOL' && data.volume?.current) {
+      const ratio = data.volume.current.ratio;
+      const badge = ratio >= 2 
+        ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">High Volume</span>
+        : ratio < 0.5 
+          ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">Low Volume</span>
+          : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Normal</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${ratio >= 2 ? 'text-green-500' : ratio < 0.5 ? 'text-amber-500' : 'text-orange-500'}`}>
+            {ratio.toFixed(1)}x
           </span>
           {badge}
         </div>
@@ -249,6 +266,40 @@ function IndicatorCard({
       }
     }
 
+    // Volume Analysis Events
+    if (indicator === 'VOL' && data.volume?.current) {
+      const { volume, avgVolume, ratio } = data.volume.current;
+      const trend = data.volume.trend;
+      
+      // High Volume Surge (2x+ average)
+      if (ratio >= 2) {
+        events.push({ label: 'High Volume Surge', type: 'bullish', icon: <ArrowUpCircle className="w-3 h-3" /> });
+      }
+      
+      // Volume Spike (3x+ average)
+      if (ratio >= 3) {
+        events.push({ label: 'Volume Spike', type: 'neutral', icon: <Zap className="w-3 h-3" /> });
+      }
+      
+      // Low Volume Warning (below 50% average)
+      if (ratio < 0.5) {
+        events.push({ label: 'Low Volume Warning', type: 'warning', icon: <AlertTriangle className="w-3 h-3" /> });
+      }
+      
+      // Volume Dry Up (below 30% average)
+      if (ratio < 0.3) {
+        events.push({ label: 'Volume Dry Up', type: 'neutral' });
+      }
+      
+      // Trend-based signals
+      if (trend === 'increasing' && ratio > 1) {
+        events.push({ label: 'Accumulation', type: 'bullish', icon: <TrendingUp className="w-3 h-3" /> });
+      }
+      if (trend === 'decreasing' && ratio > 1) {
+        events.push({ label: 'Distribution', type: 'bearish', icon: <TrendingDown className="w-3 h-3" /> });
+      }
+    }
+
     return events;
   };
 
@@ -336,6 +387,34 @@ function IndicatorCard({
       );
     }
 
+    if (indicator === 'VOL' && data.volume?.current) {
+      const vol = data.volume.current;
+      const formatVolume = (v: number) => {
+        if (v >= 1000000000) return `${(v / 1000000000).toFixed(1)}B`;
+        if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+        if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+        return v.toString();
+      };
+      return (
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="text-center">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Current</p>
+            <p className="text-sm font-semibold text-orange-500">{formatVolume(vol.volume)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Average</p>
+            <p className="text-sm font-semibold text-gray-500">{formatVolume(vol.avgVolume)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Ratio</p>
+            <p className={`text-sm font-semibold ${vol.ratio >= 1.5 ? 'text-green-500' : vol.ratio < 0.5 ? 'text-amber-500' : 'text-gray-500'}`}>
+              {vol.ratio.toFixed(2)}x
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -410,14 +489,6 @@ export interface ExtendedIndicatorData extends IndicatorData {
     ema26?: MovingAverageItem;
     currentPrice?: number | null;
     [key: string]: MovingAverageItem | number | null | undefined;
-  };
-  volume?: {
-    current: {
-      volume: number;
-      avgVolume: number;
-      ratio: number;
-    };
-    trend: string;
   };
 }
 
@@ -607,6 +678,19 @@ export default function TechnicalIndicatorsPanel({ symbol, className = '', onDat
             isLoading={isLoading}
             timeframe={timeframe}
             height={130}
+          />
+
+          {/* Volume Analysis */}
+          <IndicatorCard
+            symbol={symbol}
+            indicator="VOL"
+            title="Volume Analysis"
+            icon={<BarChart className="w-5 h-5" />}
+            iconColor="text-orange-500"
+            data={data}
+            isLoading={isLoading}
+            timeframe={timeframe}
+            height={120}
           />
         </div>
       )}

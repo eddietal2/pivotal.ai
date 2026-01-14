@@ -30,6 +30,236 @@ function EventVisualization({ sectionTitle, eventName }: { sectionTitle: string;
   const isRSI = sectionTitle.includes('RSI');
   const isStochastic = sectionTitle.includes('Stochastic');
   const isBB = sectionTitle.includes('Bollinger');
+  const isVolume = sectionTitle.includes('Volume');
+
+  // Volume Visualizations
+  if (isVolume) {
+    if (eventName === 'High Volume Surge') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Average volume line */}
+          <line x1="0" y1="50" x2="200" y2="50" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+          <text x="3" y="47" fontSize="7" fill="#f59e0b" opacity="0.7">Avg</text>
+          {/* Volume bars with surge */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [25, 20, 28, 22, 30, 35, 55, 65, 70];
+            const h = heights[i];
+            const isHigh = h > 50;
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={70 - h}
+                width="16"
+                height={h}
+                fill={isHigh ? '#22c55e' : '#6b7280'}
+                opacity={isHigh ? 0.9 : 0.5}
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="70" to={70 - h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          {/* Surge indicator */}
+          <circle cx="180" cy="5" r="4" fill="#22c55e">
+            <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          </circle>
+          <text x="165" y="8" fontSize="7" fill="#22c55e" fontWeight="bold">2x+</text>
+        </svg>
+      );
+    }
+    if (eventName === 'Low Volume Warning') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Average volume line */}
+          <line x1="0" y1="35" x2="200" y2="35" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+          <text x="3" y="32" fontSize="7" fill="#f59e0b" opacity="0.7">Avg</text>
+          {/* Low volume bars */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [30, 28, 25, 20, 18, 15, 12, 10, 8];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={70 - h}
+                width="16"
+                height={h}
+                fill="#6b7280"
+                opacity="0.4"
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="70" to={70 - h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          {/* Warning indicator */}
+          <polygon points="180,2 185,10 175,10" fill="#f59e0b">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+          </polygon>
+        </svg>
+      );
+    }
+    if (eventName === 'Volume Spike') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Average volume line */}
+          <line x1="0" y1="55" x2="200" y2="55" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+          <text x="3" y="52" fontSize="7" fill="#f59e0b" opacity="0.7">Avg</text>
+          {/* Volume bars with sudden spike */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [20, 18, 22, 19, 75, 25, 20, 18, 22];
+            const h = heights[i];
+            const isSpike = i === 4;
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={70 - h}
+                width="16"
+                height={h}
+                fill={isSpike ? '#8b5cf6' : '#6b7280'}
+                opacity={isSpike ? 0.9 : 0.5}
+              >
+                <animate attributeName="height" from="0" to={h} dur={isSpike ? "0.5s" : "0.3s"} begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="70" to={70 - h} dur={isSpike ? "0.5s" : "0.3s"} begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          {/* Spike callout */}
+          <path d="M 100,0 L 100,15" stroke="#8b5cf6" strokeWidth="1" strokeDasharray="2">
+            <animate attributeName="stroke-dashoffset" from="4" to="0" dur="0.5s" repeatCount="indefinite" />
+          </path>
+          <circle cx="100" cy="0" r="3" fill="#8b5cf6">
+            <animate attributeName="r" values="3;5;3" dur="0.8s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      );
+    }
+    if (eventName === 'Volume Climax') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Average volume line */}
+          <line x1="0" y1="60" x2="200" y2="60" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+          {/* Building volume to climax */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [15, 22, 30, 40, 55, 70, 50, 35, 20];
+            const h = heights[i];
+            const isClimax = i === 5;
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={75 - h}
+                width="16"
+                height={h}
+                fill={isClimax ? '#ef4444' : i < 5 ? '#22c55e' : '#ef4444'}
+                opacity={isClimax ? 0.9 : 0.6}
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.12}s`} fill="freeze" />
+                <animate attributeName="y" from="75" to={75 - h} dur="0.3s" begin={`${i * 0.12}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          {/* Climax marker */}
+          <text x="115" y="8" fontSize="7" fill="#ef4444" fontWeight="bold">Climax</text>
+          <path d="M 120,10 L 120,20" stroke="#ef4444" strokeWidth="1">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="0.8s" repeatCount="indefinite" />
+          </path>
+        </svg>
+      );
+    }
+    if (eventName === 'Volume Dry Up') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Average volume line */}
+          <line x1="0" y1="40" x2="200" y2="40" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+          <text x="3" y="37" fontSize="7" fill="#f59e0b" opacity="0.7">Avg</text>
+          {/* Decreasing volume bars */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [45, 40, 35, 28, 20, 12, 8, 5, 3];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={70 - h}
+                width="16"
+                height={h}
+                fill="#6b7280"
+                opacity={0.7 - i * 0.06}
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="70" to={70 - h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          {/* Dry up indicator */}
+          <text x="165" y="75" fontSize="7" fill="#6b7280" opacity="0.7">Low</text>
+        </svg>
+      );
+    }
+    if (eventName === 'Accumulation') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Price line (flat/slightly up) */}
+          <path d="M 10,25 Q 60,27 100,24 T 190,20" fill="none" stroke="#8b5cf6" strokeWidth="1.5" opacity="0.7" />
+          {/* Average volume line */}
+          <line x1="0" y1="50" x2="200" y2="50" stroke="#f59e0b" strokeWidth="1" strokeDasharray="4" opacity="0.5" />
+          {/* Increasing volume bars */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [20, 25, 28, 32, 38, 42, 48, 52, 55];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={75 - h}
+                width="16"
+                height={h}
+                fill="#22c55e"
+                opacity="0.6"
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="75" to={75 - h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          <text x="155" y="12" fontSize="7" fill="#22c55e" fontWeight="bold">Buying</text>
+        </svg>
+      );
+    }
+    if (eventName === 'Distribution') {
+      return (
+        <svg viewBox="0 0 200 80" className="w-full h-16 mt-3">
+          {/* Price line (flat/slightly down) */}
+          <path d="M 10,20 Q 60,18 100,21 T 190,25" fill="none" stroke="#8b5cf6" strokeWidth="1.5" opacity="0.7" />
+          {/* Average volume line */}
+          <line x1="0" y1="50" x2="200" y2="50" stroke="#f59e0b" strokeWidth="1" strokeDasharray="4" opacity="0.5" />
+          {/* High volume bars */}
+          {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x, i) => {
+            const heights = [55, 52, 48, 50, 45, 42, 38, 35, 30];
+            const h = heights[i];
+            return (
+              <rect
+                key={x}
+                x={x - 8}
+                y={75 - h}
+                width="16"
+                height={h}
+                fill="#ef4444"
+                opacity="0.6"
+              >
+                <animate attributeName="height" from="0" to={h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+                <animate attributeName="y" from="75" to={75 - h} dur="0.3s" begin={`${i * 0.1}s`} fill="freeze" />
+              </rect>
+            );
+          })}
+          <text x="155" y="12" fontSize="7" fill="#ef4444" fontWeight="bold">Selling</text>
+        </svg>
+      );
+    }
+  }
 
   // MACD Visualizations
   if (isMACD) {
@@ -625,6 +855,56 @@ const indicatorSections: IndicatorSection[] = [
         type: 'bearish',
         description: '%B falls back below 80 after being above',
         interpretation: 'Price is reverting toward the middle band from overbought conditions. This often signals the start of a pullback.',
+      },
+    ],
+  },
+  {
+    title: 'Volume Analysis',
+    icon: <BarChart3 className="w-5 h-5" />,
+    iconColor: 'text-orange-500',
+    description: 'Volume measures the number of shares or contracts traded. It confirms price movements and reveals the strength of market conviction.',
+    events: [
+      {
+        name: 'High Volume Surge',
+        type: 'bullish',
+        description: 'Current volume exceeds 2x the average volume',
+        interpretation: 'Strong institutional interest or significant news event. High volume confirms price direction and suggests the move has conviction behind it.',
+      },
+      {
+        name: 'Low Volume Warning',
+        type: 'warning',
+        description: 'Current volume is less than 50% of average',
+        interpretation: 'Lack of conviction in the current price movement. Breakouts on low volume are more likely to fail. Consider waiting for volume confirmation.',
+      },
+      {
+        name: 'Volume Spike',
+        type: 'neutral',
+        description: 'Sudden sharp increase in volume (3x+ average)',
+        interpretation: 'Major market event or institutional activity. Can signal the start of a new trend, a reversal, or panic selling/buying. Analyze with price action.',
+      },
+      {
+        name: 'Volume Climax',
+        type: 'warning',
+        description: 'Extremely high volume after extended move',
+        interpretation: 'Potential exhaustion of the current trend. Often marks major tops or bottoms. Watch for reversal patterns following the climax.',
+      },
+      {
+        name: 'Volume Dry Up',
+        type: 'neutral',
+        description: 'Volume steadily decreasing over time',
+        interpretation: 'Decreasing interest in the asset. Often precedes a consolidation period. Can signal that a breakout is approaching as volatility contracts.',
+      },
+      {
+        name: 'Accumulation',
+        type: 'bullish',
+        description: 'Rising volume with stable or rising price',
+        interpretation: 'Smart money is accumulating shares. Bullish sign especially after a downtrend. Suggests institutional buying at current levels.',
+      },
+      {
+        name: 'Distribution',
+        type: 'bearish',
+        description: 'Rising volume with stable or falling price',
+        interpretation: 'Smart money is distributing shares. Bearish sign especially after an uptrend. Suggests institutional selling at current levels.',
       },
     ],
   },
