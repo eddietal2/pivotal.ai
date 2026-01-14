@@ -96,10 +96,19 @@ const defaultProps = {
   recentlyAddedToScreens: new Set<string>(),
 };
 
+// Suppress expected console errors during tests
+const originalConsoleError = console.error;
+
 describe('LiveScreensContainer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetch.mockReset();
+    // Suppress expected error messages
+    console.error = jest.fn();
+  });
+
+  afterEach(() => {
+    console.error = originalConsoleError;
   });
 
   describe('LS-101: Loading State', () => {
