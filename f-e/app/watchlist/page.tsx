@@ -1014,30 +1014,62 @@ export default function WatchlistPage() {
 
       {/* Fixed Header and Tab Navigation */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="lg:px-64 px-4 sm:px-8">
+        <div className="lg:px-64 px-3 sm:px-8">
           {/* Header Section with CandleStick Animation and Search */}
-          <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <span className="h-6 w-6 relative bottom-6.5">
+          <div className="flex items-center justify-between py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 relative bottom-6.5">
                 <CandleStickAnim />
               </span>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
+              <h1 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
+              {/* Top Market Indicators - hidden on very small screens */}
+              {loading ? (
+                <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
+                  <span className="flex items-center gap-1">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    <div className="w-6 sm:w-8 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    <div className="w-8 sm:w-10 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                  </span>
+                  <span className="hidden sm:flex items-center gap-1">
+                    <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    <div className="w-8 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                  </span>
+                </div>
+              ) : (topIndicators.bullish || topIndicators.bearish) && (
+                <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
+                  {topIndicators.bullish && (
+                    <span className="flex items-center gap-0.5 sm:gap-1 text-green-500">
+                      <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                      <span className="font-semibold">+{topIndicators.bullish.change.toFixed(1)}%</span>
+                    </span>
+                  )}
+                  {topIndicators.bearish && (
+                    <span className="hidden sm:flex items-center gap-1 text-red-500">
+                      <TrendingDown className="w-3 h-3" />
+                      <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                      <span className="font-semibold">{topIndicators.bearish.change.toFixed(1)}%</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             {!isRearrangeMode && (
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
                 aria-label="Search stocks"
               >
-                <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400" />
               </button>
             )}
           </div>
 
           {/* Horizontal Text-Based Tab Navigation */}
-          <div className="relative flex items-center py-4">
+          <div className="relative flex items-center py-2 sm:py-4">
             {/* Scrollable Nav Links */}
-            <div ref={navContainerRef} className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <div ref={navContainerRef} className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
               {[
                 { id: 0, label: 'Market Pulse' },
                 { id: 1, label: 'Live Screens' },
@@ -1050,7 +1082,7 @@ export default function WatchlistPage() {
                     key={`tab-${tab.id}`}
                     data-tab={String(tab.id)}
                     onClick={() => handleTabChange(tab.id)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -1066,7 +1098,7 @@ export default function WatchlistPage() {
       </div>
 
       {/* Main Content Area - with top padding for fixed header */}
-      <div className="flex-1 overflow-y-auto lg:px-64 pt-[9em] md:pt-[140px]">
+      <div className="flex-1 overflow-y-auto lg:px-64 pt-[7em] sm:pt-[9em] md:pt-[140px]">
         <div className="space-y-4 p-4 sm:p-8">
 
           {/* Swipeable Content Container */}
