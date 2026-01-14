@@ -437,6 +437,7 @@ function IndicatorCard({
         isLoading={isLoading}
         animated={true}
         showLabels={true}
+        interactive={true}
       />
 
       {/* Event Badges */}

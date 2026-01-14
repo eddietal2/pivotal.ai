@@ -191,6 +191,8 @@ interface AnimatedIndicatorChartProps {
   compact?: boolean;
   isLoading?: boolean;
   className?: string;
+  interactive?: boolean;
+  onScrubChange?: (value: { index: number; values: Record<string, number> } | null) => void;
 }
 
 export default function AnimatedIndicatorChart({
@@ -204,12 +206,100 @@ export default function AnimatedIndicatorChart({
   compact = false,
   isLoading = false,
   className = '',
+  interactive = false,
+  onScrubChange,
 }: AnimatedIndicatorChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
   const animationRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width, height });
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  // Get data array length for scrubbing calculations
+  const getDataLength = useCallback(() => {
+    if (!data) return 0;
+    if (indicator === 'MACD' && data.macd) return data.macd.macd.length;
+    if (indicator === 'RSI' && data.rsi) return data.rsi.rsi.length;
+    if (indicator === 'STOCH' && data.stochastic) return data.stochastic.k.length;
+    if (indicator === 'BB' && data.bollingerBands) return data.bollingerBands.percentB.length;
+    if (indicator === 'VOL' && data.volume?.volumes) return data.volume.volumes.length;
+    return 0;
+  }, [data, indicator]);
+
+  // Get values at scrub index
+  const getScrubValues = useCallback((index: number): Record<string, number> | null => {
+    if (!data || index < 0) return null;
+    
+    if (indicator === 'MACD' && data.macd) {
+      const { macd, signal, histogram } = data.macd;
+      if (index >= macd.length) return null;
+      return { macd: macd[index], signal: signal[index], histogram: histogram[index] };
+    }
+    if (indicator === 'RSI' && data.rsi) {
+      if (index >= data.rsi.rsi.length) return null;
+      return { rsi: data.rsi.rsi[index] };
+    }
+    if (indicator === 'STOCH' && data.stochastic) {
+      const { k, d } = data.stochastic;
+      if (index >= k.length) return null;
+      return { k: k[index], d: d[index] };
+    }
+    if (indicator === 'BB' && data.bollingerBands) {
+      const { upper, middle, lower, percentB } = data.bollingerBands;
+      if (index >= percentB.length) return null;
+      return { 
+        upper: upper[index] ?? 0, 
+        middle: middle[index] ?? 0, 
+        lower: lower[index] ?? 0, 
+        percentB: percentB[index] 
+      };
+    }
+    if (indicator === 'VOL' && data.volume?.volumes) {
+      const { volumes, avgVolume } = data.volume;
+      if (index >= volumes.length) return null;
+      return { volume: volumes[index], avgVolume, ratio: volumes[index] / avgVolume };
+    }
+    return null;
+  }, [data, indicator]);
+
+  // Handle scrubbing
+  const handleScrub = useCallback((clientX: number) => {
+    if (!interactive || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    const dataLength = getDataLength();
+    if (dataLength === 0) return;
+    const index = Math.round(percent * (dataLength - 1));
+    setScrubIndex(index);
+    
+    if (onScrubChange) {
+      const values = getScrubValues(index);
+      onScrubChange(values ? { index, values } : null);
+    }
+  }, [interactive, getDataLength, getScrubValues, onScrubChange]);
+
+  const handleScrubStart = useCallback((e: React.PointerEvent) => {
+    if (!interactive) return;
+    setIsScrubbing(true);
+    handleScrub(e.clientX);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [interactive, handleScrub]);
+
+  const handleScrubMove = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbing) return;
+    handleScrub(e.clientX);
+  }, [isScrubbing, handleScrub]);
+
+  const handleScrubEnd = useCallback(() => {
+    setIsScrubbing(false);
+    setScrubIndex(null);
+    if (onScrubChange) {
+      onScrubChange(null);
+    }
+  }, [onScrubChange]);
 
   // Responsive sizing
   useEffect(() => {
@@ -830,17 +920,86 @@ export default function AnimatedIndicatorChart({
     );
   }
 
+  // Calculate scrub indicator position
+  const getScrubPosition = () => {
+    if (scrubIndex === null || !containerRef.current) return null;
+    const dataLength = getDataLength();
+    if (dataLength === 0) return null;
+    const x = (scrubIndex / (dataLength - 1)) * dimensions.width;
+    return x;
+  };
+
+  const scrubX = getScrubPosition();
+  const scrubValues = scrubIndex !== null ? getScrubValues(scrubIndex) : null;
+
+  // Format scrub value for display
+  const formatScrubDisplay = () => {
+    if (!scrubValues) return null;
+    
+    if (indicator === 'MACD') {
+      return `MACD: ${scrubValues.macd?.toFixed(3)} | Signal: ${scrubValues.signal?.toFixed(3)}`;
+    }
+    if (indicator === 'RSI') {
+      return `RSI: ${scrubValues.rsi?.toFixed(1)}`;
+    }
+    if (indicator === 'STOCH') {
+      return `%K: ${scrubValues.k?.toFixed(1)} | %D: ${scrubValues.d?.toFixed(1)}`;
+    }
+    if (indicator === 'BB') {
+      return `%B: ${scrubValues.percentB?.toFixed(1)}%`;
+    }
+    if (indicator === 'VOL') {
+      const vol = scrubValues.volume ?? 0;
+      const formatted = vol >= 1000000 ? `${(vol / 1000000).toFixed(1)}M` : vol >= 1000 ? `${(vol / 1000).toFixed(1)}K` : vol.toFixed(0);
+      return `Vol: ${formatted} (${scrubValues.ratio?.toFixed(2)}x avg)`;
+    }
+    return null;
+  };
+
   return (
-    <div ref={containerRef} className={`relative ${className}`} style={{ height }}>
+    <div 
+      ref={containerRef} 
+      className={`relative ${className} ${interactive ? 'touch-none cursor-crosshair' : ''}`} 
+      style={{ height }}
+      onPointerDown={interactive ? handleScrubStart : undefined}
+      onPointerMove={interactive ? handleScrubMove : undefined}
+      onPointerUp={interactive ? handleScrubEnd : undefined}
+      onPointerLeave={interactive ? handleScrubEnd : undefined}
+      onPointerCancel={interactive ? handleScrubEnd : undefined}
+    >
       {/* Canvas */}
       <canvas
         ref={canvasRef}
-        style={{ width: '100%', height }}
+        style={{ width: '100%', height, pointerEvents: 'none' }}
         className="rounded-xl bg-white dark:bg-gray-900"
       />
 
+      {/* Scrub indicator */}
+      {interactive && isScrubbing && scrubX !== null && (
+        <>
+          {/* Vertical line */}
+          <div 
+            className="absolute top-0 bottom-0 w-px bg-gray-500/50 dark:bg-gray-400/50 pointer-events-none"
+            style={{ left: scrubX }}
+          />
+          {/* Scrub dot */}
+          <div 
+            className="absolute w-3 h-3 rounded-full bg-blue-500 border-2 border-white dark:border-gray-900 shadow-md pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
+            style={{ left: scrubX, top: height / 2 }}
+          />
+          {/* Value display */}
+          {scrubValues && (
+            <div 
+              className="absolute top-1 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900/80 dark:bg-gray-100/90 text-white dark:text-gray-900 text-[10px] font-medium rounded shadow-lg whitespace-nowrap pointer-events-none z-10"
+            >
+              {formatScrubDisplay()}
+            </div>
+          )}
+        </>
+      )}
+
       {/* Legend for MACD */}
-      {showLabels && !compact && indicator === 'MACD' && (
+      {showLabels && !compact && indicator === 'MACD' && !isScrubbing && (
         <div className="absolute bottom-2 left-3 flex items-center gap-4 text-[10px]">
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 bg-blue-500 rounded" />
@@ -854,7 +1013,7 @@ export default function AnimatedIndicatorChart({
       )}
 
       {/* Legend for Stochastic */}
-      {showLabels && !compact && indicator === 'STOCH' && (
+      {showLabels && !compact && indicator === 'STOCH' && !isScrubbing && (
         <div className="absolute bottom-2 left-3 flex items-center gap-4 text-[10px]">
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 bg-blue-500 rounded" />
@@ -868,7 +1027,7 @@ export default function AnimatedIndicatorChart({
       )}
 
       {/* Legend for Bollinger Bands */}
-      {showLabels && !compact && indicator === 'BB' && (
+      {showLabels && !compact && indicator === 'BB' && !isScrubbing && (
         <div className="absolute bottom-2 left-3 flex items-center gap-4 text-[10px]">
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 bg-purple-500 rounded" />
@@ -878,7 +1037,7 @@ export default function AnimatedIndicatorChart({
       )}
 
       {/* Trend Pulse Animation */}
-      {showLabels && !compact && currentValue && currentValue.dataPoints && progress >= 1 && (
+      {showLabels && !compact && currentValue && currentValue.dataPoints && progress >= 1 && !isScrubbing && (
         <div className="absolute bottom-2 right-3 flex items-center gap-2">
           <span className="text-[9px] text-gray-400 uppercase tracking-wide">Trend</span>
           <TrendPulse 
@@ -888,6 +1047,13 @@ export default function AnimatedIndicatorChart({
             width={70}
             height={22}
           />
+        </div>
+      )}
+
+      {/* Touch hint for interactive charts */}
+      {interactive && !isScrubbing && !compact && (
+        <div className="absolute top-1.5 right-2 text-[9px] text-gray-400 dark:text-gray-500 pointer-events-none opacity-60">
+          Touch to scrub
         </div>
       )}
     </div>
