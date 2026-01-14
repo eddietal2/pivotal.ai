@@ -9,7 +9,7 @@ Demo Link: https://pivotal-ai-web-app.vercel.app/
 > [!WARNING]
 > Currently Under Construction - Video Last Updated @ 1/11/2026 ~ In Development
 
-![Pivotal.ai Demo](https://raw.githubusercontent.com/eddietal2/pivotal.ai/main/design/demo_gifs/Pivotal_Demo_03.gif)
+![Pivotal.ai Demo](demo/gifs/Pivotal_Demo_05_GIF.gif)
 ---
 
 ## 💡 Core Value Proposition
