@@ -743,21 +743,6 @@ export default function AnimatedIndicatorChart({
 
   return (
     <div ref={containerRef} className={`relative ${className}`} style={{ height }}>
-      {/* Labels */}
-      {showLabels && !compact && currentValue && (
-        <div className="absolute top-2 right-3 z-10 flex items-center gap-2">
-          <span className={`text-sm font-bold ${
-            currentValue.trend === 'up' || currentValue.trend === 'oversold' 
-              ? 'text-green-500' 
-              : currentValue.trend === 'down' || currentValue.trend === 'overbought'
-                ? 'text-red-500'
-                : 'text-gray-500 dark:text-gray-400'
-          }`}>
-            {currentValue.primary}
-          </span>
-        </div>
-      )}
-
       {/* Canvas */}
       <canvas
         ref={canvasRef}

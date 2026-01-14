@@ -36,34 +36,69 @@ function IndicatorCard({
     if (indicator === 'MACD' && data.macd) {
       const hist = data.macd.current.histogram;
       return (
-        <span className={`text-xs px-2 py-0.5 rounded-full ${
-          hist > 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
-                   : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-        }`}>
-          {hist > 0 ? 'Bullish' : 'Bearish'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${hist >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {hist.toFixed(3)}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            hist > 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                     : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+          }`}>
+            {hist > 0 ? 'Bullish' : 'Bearish'}
+          </span>
+        </div>
       );
     }
 
     if (indicator === 'RSI' && data.rsi) {
       const val = data.rsi.current;
-      if (val >= 70) return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Overbought</span>;
-      if (val <= 30) return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Oversold</span>;
-      return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Neutral</span>;
+      const badge = val >= 70 
+        ? <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Overbought</span>
+        : val <= 30 
+          ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Oversold</span>
+          : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Neutral</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${val >= 70 ? 'text-red-500' : val <= 30 ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            {val.toFixed(1)}
+          </span>
+          {badge}
+        </div>
+      );
     }
 
     if (indicator === 'STOCH' && data.stochastic) {
       const val = data.stochastic.current.k;
-      if (val >= 80) return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Overbought</span>;
-      if (val <= 20) return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Oversold</span>;
-      return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Neutral</span>;
+      const badge = val >= 80 
+        ? <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Overbought</span>
+        : val <= 20 
+          ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Oversold</span>
+          : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Neutral</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${val >= 80 ? 'text-red-500' : val <= 20 ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            {val.toFixed(1)}
+          </span>
+          {badge}
+        </div>
+      );
     }
 
     if (indicator === 'BB' && data.bollingerBands) {
       const val = data.bollingerBands.current.percentB;
-      if (val >= 80) return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Near Upper</span>;
-      if (val <= 20) return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Near Lower</span>;
-      return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Mid Band</span>;
+      const badge = val >= 80 
+        ? <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">Near Upper</span>
+        : val <= 20 
+          ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Near Lower</span>
+          : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Mid Band</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${val >= 80 ? 'text-red-500' : val <= 20 ? 'text-green-500' : 'text-purple-500'}`}>
+            {val.toFixed(1)}%
+          </span>
+          {badge}
+        </div>
+      );
     }
 
     return null;
