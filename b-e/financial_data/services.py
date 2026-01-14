@@ -1344,6 +1344,7 @@ def main():
 # MVP/Beta	            100-300 (current is fine)
 # Production Launch	    500-1,000
 # Competitive Product	2,000-3,000
+# Robinhood Scale	    11,000+
 # ----------------------------------------------------------------------------
 # Universe of stocks to scan - liquid, tradeable stocks across sectors
 SCAN_UNIVERSE = [

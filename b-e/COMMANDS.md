@@ -12,6 +12,9 @@ python -m venv venv
 python manage.py runserver
 
 * Unit Testing Commands:
+# Run all Unit Test
+python manage.py test
+
 # Run Unit Test (entire file - Python)
 python manage.py test authentication --keepdb
 
