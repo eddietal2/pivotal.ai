@@ -1098,8 +1098,8 @@ export default function WatchlistPage() {
       </div>
 
       {/* Main Content Area - with top padding for fixed header */}
-      <div className="flex-1 overflow-y-auto lg:px-64 pt-[7em] sm:pt-[9em] md:pt-[140px]">
-        <div className="space-y-4 p-4 sm:p-8">
+      <div className="flex-1 overflow-y-auto lg:px-64 pt-[5em] sm:pt-[7em] md:pt-[120px]">
+        <div className="p-4 sm:p-8 pt-2 sm:pt-4">
 
           {/* Swipeable Content Container */}
           <div 
@@ -1120,7 +1120,7 @@ export default function WatchlistPage() {
           {/* Getting Started Alert */}
           {isAlertVisible && (
             <div 
-              className={`mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-96 p-4'}`}
+              className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-96 p-4'}`}
               style={{ overflow: 'hidden' }}
             >
               <div className="flex items-start gap-3">
