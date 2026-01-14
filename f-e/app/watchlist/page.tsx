@@ -110,32 +110,24 @@ export default function WatchlistPage() {
     position: { x: number; y: number };
   } | null>(null);
   // Track active tab for swipeable navigation (0: Market Pulse, 1: Live Screens, 2: My Watchlist, 3: My Screens, 4: Paper Trading)
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('watchlistActiveTab');
-      if (saved !== null) {
-        const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
-          return parsed;
-        }
-      }
-    }
-    return 0;
-  });
+  // Initialize with default value to avoid hydration mismatch, then restore from localStorage after mount
+  const [activeTab, setActiveTab] = useState(0);
   // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | 'paperTrading' | null>(() => {
-    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening' | 'paperTrading')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening', 'paperTrading'];
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('watchlistActiveTab');
-      if (saved !== null) {
-        const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
-          return sections[parsed];
-        }
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | 'paperTrading' | null>('marketPulse');
+  
+  // Restore tab from localStorage after hydration to avoid SSR mismatch
+  useEffect(() => {
+    const saved = localStorage.getItem('watchlistActiveTab');
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
+        const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening' | 'paperTrading')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening', 'paperTrading'];
+        setActiveTab(parsed);
+        setActiveSection(sections[parsed]);
       }
     }
-    return 'marketPulse';
-  });
+  }, []);
+  
   // Ref for nav container to auto-scroll
   const navContainerRef = useRef<HTMLDivElement>(null);
   
@@ -263,6 +255,7 @@ export default function WatchlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [backendReady, setBackendReady] = useState(false);
 
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const retryCountRef = React.useRef(0); // Internal ref for callback access
@@ -270,6 +263,7 @@ export default function WatchlistPage() {
   const isMountedRef = React.useRef(true);
   const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const secondsSinceCallRef = React.useRef(0);
+  const fetchInProgressRef = React.useRef(false);
 
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
@@ -284,6 +278,18 @@ export default function WatchlistPage() {
     return 'D';
   };
 
+  // Quick health check to verify backend is ready
+  const checkBackendHealth = React.useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/market-data/health/', {
+        signal: AbortSignal.timeout(3000), // 3 second timeout for health check
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Fetch market data directly from Python server
   const fetchMarketData = React.useCallback(async (isRetry = false) => {
     // Skip in test environment
@@ -291,7 +297,22 @@ export default function WatchlistPage() {
       return;
     }
     
-    if (DEBUG_LOGS) console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ''}`);
+    // Prevent concurrent fetches - if one is in progress, skip
+    if (fetchInProgressRef.current && isRetry) {
+      console.log('⏸️ Fetch already in progress, skipping retry');
+      return;
+    }
+    
+    // Clear any pending retry timeout to prevent duplicate calls
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
+    console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ' (fresh)'}`);
+    
+    // Mark fetch as in progress
+    fetchInProgressRef.current = true;
     
     // Abort any in-flight request
     if (abortControllerRef.current) {
@@ -310,14 +331,30 @@ export default function WatchlistPage() {
         setRetryCount(0);
       }
 
+      // Always check backend health on retries to detect when server comes back up
+      console.log('🔍 Checking backend health...');
+      const isHealthy = await checkBackendHealth();
+      console.log(`🔍 Health check result: ${isHealthy ? '✅ healthy' : '❌ not available'}`)
+      if (!isHealthy) {
+        setBackendReady(false);
+        throw new Error('Backend server is not available');
+      }
+      setBackendReady(true);
+
       const tickers = Object.keys(tickerNames).join(',');
+      
+      // Use longer timeout on initial load (cold start) vs polling
+      // Cold start can take 30-60s due to yfinance rate limits and external API calls
+      const timeoutMs = isRetry ? 30000 : 60000; // 30s for retries, 60s for fresh
+      console.log(`⏱️ Using ${timeoutMs/1000}s timeout (${isRetry ? 'retry' : 'fresh'})`);
       
       // Set up timeout that will abort the request
       const timeoutId = setTimeout(() => {
         if (!controller.signal.aborted) {
+          console.log(`⏱️ Request timed out after ${timeoutMs/1000}s`);
           controller.abort();
         }
-      }, 60000); // 60 second timeout
+      }, timeoutMs);
       
       const res = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
@@ -336,7 +373,7 @@ export default function WatchlistPage() {
       
       const data = await res.json();
       
-      if (DEBUG_LOGS) console.log('📦 Market data response:', data);
+      console.log(`✅ Market data received: ${Object.keys(data).length} tickers`);
       
       setMarketData(data);
       setError(null);
@@ -353,57 +390,79 @@ export default function WatchlistPage() {
         if (DEBUG_LOGS) console.log(`⏱️ ${secondsSinceCallRef.current}s since last API call`);
       }, 1000);
     } catch (err: any) {
-      // Ignore abort errors from intentional cancellation (new request started)
-      if (err.name === 'AbortError') {
-        // Only log timeout aborts, not cancellation aborts
-        if (controller === abortControllerRef.current) {
-          setError('Request timed out. The server may be busy fetching data. Please try again.');
-        }
-        return; // Don't retry on abort
+      // Check if this was an intentional cancellation (new request started)
+      const wasIntentionalCancel = err.name === 'AbortError' && controller !== abortControllerRef.current;
+      if (wasIntentionalCancel) {
+        console.log('🔄 Request cancelled by newer request, ignoring');
+        return; // Don't retry, a newer request took over
       }
       
-      console.error('Error fetching market data:', err);
+      // Timeout aborts should trigger retry
+      const wasTimeout = err.name === 'AbortError' && controller === abortControllerRef.current;
+      if (wasTimeout) {
+        console.log('⏱️ Request timed out, will retry...');
+        setError('Request timed out. The server is processing market data. Retrying...');
+      }
       
-      let errorMessage = 'Failed to load market data';
+      // Mark backend as not ready on connection errors so next retry checks health
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_CONNECTION_REFUSED') || err.message?.includes('not available')) {
+        setBackendReady(false);
+      }
       
-      if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
-        errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
-      } else if (err.message.includes('Server responded with status')) {
-        errorMessage = `Server error: ${err.message}`;
-      } else {
-        errorMessage = `Network error: ${err.message}`;
+      if (!wasTimeout) {
+        console.error('Error fetching market data:', err);
+      }
+      
+      let errorMessage = wasTimeout 
+        ? 'Request timed out. The server is fetching market data. Please wait...'
+        : 'Unable to load market data';
+      
+      if (!wasTimeout) {
+        if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_CONNECTION_REFUSED') || err.message?.includes('not available')) {
+          errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
+        } else if (err.message?.includes('Server responded with status')) {
+          errorMessage = `Server error: ${err.message}`;
+        } else if (err.message) {
+          errorMessage = `Network error: ${err.message}`;
+        }
       }
       
       setError(errorMessage);
       
-      // Auto-retry up to 5 times with exponential backoff (only if still mounted)
+      // Auto-retry up to 10 times with exponential backoff (increased from 5)
       // This helps when the backend server just started and needs time to warm up
-      if (retryCountRef.current < 5 && isMountedRef.current) {
-        // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-        const delay = Math.min(2000 * Math.pow(2, retryCountRef.current), 32000);
+      if (retryCountRef.current < 10 && isMountedRef.current) {
+        // Exponential backoff: 2s, 4s, 6s, 8s, 10s, 12s... (capped at 15s)
+        const delay = Math.min(2000 + (retryCountRef.current * 2000), 15000);
         retryCountRef.current++;
         setRetryCount(retryCountRef.current);
-        if (DEBUG_LOGS) console.log(`⏳ Will retry in ${delay / 1000}s (attempt ${retryCountRef.current}/5)`);
+        console.log(`⏳ Will retry in ${delay / 1000}s (attempt ${retryCountRef.current}/10)`);
         retryTimeoutRef.current = setTimeout(() => {
           if (isMountedRef.current) {
+            console.log(`🔄 Executing retry #${retryCountRef.current}...`);
             // Keep loading state during retries for better UX on cold starts
             setLoading(true);
             fetchMarketData(true);
           }
         }, delay);
+      } else if (retryCountRef.current >= 10) {
+        console.log('❌ Max retries (10) reached. Giving up.');
       }
     } finally {
+      fetchInProgressRef.current = false;
       setLoading(false);
     }
-  }, [tickerNames]);
+  }, [tickerNames, checkBackendHealth]);
 
+  // Initial fetch on mount only (empty dependency array to run once)
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'test') {
       fetchMarketData();
     } else {
       setLoading(false);
     }
-  }, [fetchMarketData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount, not when fetchMarketData changes
 
   // Poll for real-time updates every 5 seconds (only after initial data is loaded)
   React.useEffect(() => {
@@ -414,14 +473,15 @@ export default function WatchlistPage() {
       if (!hasData) return;
       
       const interval = setInterval(() => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && !fetchInProgressRef.current) {
           fetchMarketData(true); // Don't show loading for polling
         }
       }, 5000); // 5 seconds
 
       return () => clearInterval(interval);
     }
-  }, [fetchMarketData, marketData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Object.keys(marketData).length > 0]); // Only re-run when hasData changes
 
   // Cleanup abort controller and retry timeout on unmount
   React.useEffect(() => {
@@ -1242,7 +1302,7 @@ export default function WatchlistPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                         </svg>
-                        <span>Connecting to market data server... (attempt {retryCount}/5)</span>
+                        <span>Connecting to market data server... (attempt {retryCount}/10)</span>
                       </div>
                     )}
                     {assetClassOrder.map((classKey) => {

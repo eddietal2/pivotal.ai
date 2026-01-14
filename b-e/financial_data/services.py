@@ -2,6 +2,7 @@
 # import yfinance as yf  # Moved inside functions to avoid server startup issues
 import pytz  # For timezone handling
 import os
+import sys
 import threading
 import logging
 import locale
@@ -9,7 +10,12 @@ import time
 import random
 from functools import lru_cache
 from datetime import datetime, timedelta
+from io import StringIO
 # from alpha_vantage.timeseries import TimeSeries  # Removed Alpha Vantage as it doesn't support indices intraday
+
+# Suppress yfinance verbose output and warnings
+logging.getLogger('yfinance').setLevel(logging.CRITICAL)
+logging.getLogger('peewee').setLevel(logging.CRITICAL)
 
 # Set locale for number formatting
 try:
@@ -134,32 +140,38 @@ def fetch_all_tickers_batch(tickers):
                 yf_rate_limit_delay()  # Add delay between requests
                 
                 with yf_lock:
-                    # Download 1 year of daily data for all tickers at once
-                    df_year = yf.download(
-                        yf_tickers, 
-                        period='1y', 
-                        interval='1d', 
-                        progress=False,
-                        group_by='ticker',
-                        threads=True  # Use threading for faster download
-                    )
-                    
-                    # Check if we got data or hit rate limit
-                    if df_year is None or df_year.empty:
-                        raise Exception("Empty response - possible rate limit")
-                    
-                    yf_rate_limit_delay()  # Add delay before next request
-                    
-                    # Also download intraday data (5-min intervals, last 2 days) for day sparklines
-                    df_intraday = yf.download(
-                        yf_tickers,
-                        period='2d',
-                        interval='5m',
-                        progress=False,
-                        group_by='ticker',
-                        threads=True,
-                        prepost=True  # Include pre/post market
-                    )
+                    # Suppress yfinance stdout/stderr warnings (e.g., "possibly delisted")
+                    old_stdout, old_stderr = sys.stdout, sys.stderr
+                    sys.stdout, sys.stderr = StringIO(), StringIO()
+                    try:
+                        # Download 1 year of daily data for all tickers at once
+                        df_year = yf.download(
+                            yf_tickers, 
+                            period='1y', 
+                            interval='1d', 
+                            progress=False,
+                            group_by='ticker',
+                            threads=True  # Use threading for faster download
+                        )
+                        
+                        # Check if we got data or hit rate limit
+                        if df_year is None or df_year.empty:
+                            raise Exception("Empty response - possible rate limit")
+                        
+                        yf_rate_limit_delay()  # Add delay before next request
+                        
+                        # Also download intraday data (5-min intervals, last 2 days) for day sparklines
+                        df_intraday = yf.download(
+                            yf_tickers,
+                            period='2d',
+                            interval='5m',
+                            progress=False,
+                            group_by='ticker',
+                            threads=True,
+                            prepost=True  # Include pre/post market
+                        )
+                    finally:
+                        sys.stdout, sys.stderr = old_stdout, old_stderr
                 
                 print(f"Batch download completed in {time.time() - start_time:.2f}s")
                 break  # Success, exit retry loop
@@ -1355,9 +1367,9 @@ SCAN_UNIVERSE = [
     'ADBE', 'CRM', 'AMD', 'INTC', 'QCOM', 'TXN', 'AMAT', 'MU', 'LRCX', 'KLAC',
     
     # ==========================================================================
-    # GROWTH TECH / SOFTWARE (30)
+    # GROWTH TECH / SOFTWARE (28)
     # ==========================================================================
-    'NFLX', 'PYPL', 'SQ', 'SHOP', 'SNOW', 'DDOG', 'CRWD', 'NET', 'ZS', 'PANW',
+    'NFLX', 'PYPL', 'SHOP', 'SNOW', 'DDOG', 'CRWD', 'NET', 'ZS', 'PANW',
     'PLTR', 'COIN', 'HOOD', 'SOFI', 'AFRM', 'UPST', 'RBLX', 'U', 'ROKU', 'TTD',
     'SNAP', 'PINS', 'TWLO', 'OKTA', 'MDB', 'ESTC', 'DOCN', 'PATH', 'S', 'GTLB',
     
@@ -1369,25 +1381,25 @@ SCAN_UNIVERSE = [
     'LSCC', 'RMBS', 'POWI', 'DIOD', 'AMBA',
     
     # ==========================================================================
-    # EV / CLEAN ENERGY (20)
+    # EV / CLEAN ENERGY (19)
     # ==========================================================================
     'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'PLUG', 'FCEL', 'CHPT', 'BLNK', 'QS',
-    'ENPH', 'SEDG', 'FSLR', 'RUN', 'NOVA', 'ARRY', 'STEM', 'EVGO', 'BLDP', 'BE',
+    'ENPH', 'SEDG', 'FSLR', 'RUN', 'ARRY', 'STEM', 'EVGO', 'BLDP', 'BE',
     
     # ==========================================================================
-    # FINANCE / BANKS (30)
+    # FINANCE / BANKS (26)
     # ==========================================================================
     'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'USB', 'PNC', 'SCHW', 'BLK',
-    'V', 'MA', 'AXP', 'COF', 'DFS', 'SYF', 'ALLY', 'MTB', 'FITB', 'KEY',
-    'CFG', 'HBAN', 'RF', 'ZION', 'CMA', 'FRC', 'SIVB', 'WAL', 'PACW', 'FHN',
+    'V', 'MA', 'AXP', 'COF', 'SYF', 'ALLY', 'MTB', 'FITB', 'KEY',
+    'CFG', 'HBAN', 'RF', 'ZION', 'CMA', 'WAL', 'FHN',
     
     # ==========================================================================
-    # HEALTHCARE / BIOTECH (35)
+    # HEALTHCARE / BIOTECH (34)
     # ==========================================================================
     'JNJ', 'UNH', 'PFE', 'MRK', 'ABBV', 'LLY', 'TMO', 'ABT', 'BMY', 'AMGN',
     'GILD', 'MRNA', 'BNTX', 'REGN', 'VRTX', 'BIIB', 'ILMN', 'DXCM', 'ISRG', 'ZTS',
     'CI', 'HUM', 'ELV', 'CVS', 'MCK', 'CAH', 'CNC', 'MOH', 'HCA', 'DHR',
-    'SGEN', 'EXAS', 'INCY', 'ALNY', 'SRPT',
+    'EXAS', 'INCY', 'ALNY', 'SRPT',
     
     # ==========================================================================
     # CONSUMER / RETAIL (30)
@@ -1404,35 +1416,34 @@ SCAN_UNIVERSE = [
     'TXT', 'HII', 'LHX', 'AXON', 'TDG',
     
     # ==========================================================================
-    # ENERGY / OIL & GAS (20)
+    # ENERGY / OIL & GAS (17)
     # ==========================================================================
-    'XOM', 'CVX', 'COP', 'SLB', 'OXY', 'DVN', 'MRO', 'HAL', 'BKR', 'EOG',
-    'PXD', 'FANG', 'HES', 'VLO', 'MPC', 'PSX', 'KMI', 'WMB', 'OKE', 'TRGP',
+    'XOM', 'CVX', 'COP', 'SLB', 'OXY', 'DVN', 'HAL', 'BKR', 'EOG',
+    'FANG', 'VLO', 'MPC', 'PSX', 'KMI', 'WMB', 'OKE', 'TRGP',
     
     # ==========================================================================
-    # TELECOM / MEDIA (15)
+    # TELECOM / MEDIA (12)
     # ==========================================================================
-    'T', 'VZ', 'TMUS', 'CHTR', 'PARA', 'WBD', 'FOX', 'FOXA', 'DISH', 'LUMN',
-    'SIRI', 'MTCH', 'IAC', 'ZG', 'RDFN',
+    'T', 'VZ', 'TMUS', 'CHTR', 'WBD', 'FOX', 'FOXA', 'LUMN',
+    'SIRI', 'MTCH', 'IAC', 'ZG',
     
     # ==========================================================================
-    # MEME / HIGH SHORT INTEREST / SPECULATIVE (15)
+    # MEME / HIGH SHORT INTEREST / SPECULATIVE (9)
     # ==========================================================================
-    'GME', 'AMC', 'BBBY', 'CVNA', 'MARA', 'RIOT', 'BITF', 'HUT', 'CLSK', 'WKHS',
-    'GOEV', 'MULN', 'FFIE', 'NKLA', 'RIDE',
+    'GME', 'AMC', 'CVNA', 'MARA', 'RIOT', 'BITF', 'HUT', 'CLSK', 'WKHS',
     
     # ==========================================================================
-    # QUANTUM / SPACE / EVTOL / SPECULATIVE TECH (15)
+    # QUANTUM / SPACE / EVTOL / SPECULATIVE TECH (13)
     # ==========================================================================
-    'IONQ', 'RGTI', 'QUBT', 'ARQQ', 'JOBY', 'ACHR', 'LILM', 'SPCE', 'RDW', 'ASTR',
+    'IONQ', 'RGTI', 'QUBT', 'ARQQ', 'JOBY', 'ACHR', 'SPCE', 'RDW',
     'RKLB', 'LUNR', 'ASTS', 'SATL', 'BKSY',
     
     # ==========================================================================
-    # VALUE / DIVIDEND / DEFENSIVE (25)
+    # VALUE / DIVIDEND / DEFENSIVE (22)
     # ==========================================================================
-    'WBA', 'F', 'GM', 'IBM', 'KO', 'PEP', 'PG', 'CL', 'KMB', 'GIS',
-    'K', 'SJM', 'CPB', 'HRL', 'MKC', 'CLX', 'CHD', 'EL', 'KHC', 'MDLZ',
-    'HSY', 'TAP', 'STZ', 'BF.B', 'DEO',
+    'F', 'GM', 'IBM', 'KO', 'PEP', 'PG', 'CL', 'KMB', 'GIS',
+    'SJM', 'CPB', 'HRL', 'MKC', 'CLX', 'CHD', 'EL', 'KHC', 'MDLZ',
+    'HSY', 'TAP', 'STZ', 'DEO',
     
     # ==========================================================================
     # REITS (15)

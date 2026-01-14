@@ -2,7 +2,31 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 import json
+import time
 from .services import FinancialDataService, fetch_all_tickers_batch, fetch_stock_detail
+
+
+@require_http_methods(["GET", "OPTIONS"])
+def health_check(request):
+    """
+    Fast health check endpoint for frontend to verify backend is ready.
+    Returns immediately without fetching any market data.
+    """
+    if request.method == 'OPTIONS':
+        response = JsonResponse({})
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    response = JsonResponse({
+        'status': 'ok',
+        'timestamp': time.time(),
+    })
+    response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+    response['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 
 @require_http_methods(["GET", "OPTIONS"])
