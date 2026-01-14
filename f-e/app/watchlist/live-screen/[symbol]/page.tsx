@@ -50,11 +50,18 @@ export default function LiveScreenDetailPage() {
   
   const [additionalData, setAdditionalData] = useState<IndicatorResponse | null>(null);
   const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
 
   // Callback to receive data from TechnicalIndicatorsPanel (avoids duplicate API calls)
   const handleIndicatorDataLoaded = useCallback((data: ExtendedIndicatorData | null, isLoading: boolean) => {
     setIsLoadingAdditional(isLoading);
     if (data) {
+      // Extract current price from moving averages data
+      const price = (data.movingAverages as Record<string, unknown>)?.currentPrice as number | undefined;
+      if (price != null) {
+        setCurrentPrice(price);
+      }
+      
       // Map the extended data to our local interface
       setAdditionalData({
         symbol: decodedSymbol,
@@ -70,7 +77,7 @@ export default function LiveScreenDetailPage() {
           sma200: { current: data.movingAverages.SMA200?.value ?? null, status: (data.movingAverages.SMA200?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
           ema12: { current: data.movingAverages.EMA12?.value ?? null, status: (data.movingAverages.EMA12?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
           ema26: { current: data.movingAverages.EMA26?.value ?? null, status: (data.movingAverages.EMA26?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
-          currentPrice: null,
+          currentPrice: price ?? null,
         } : undefined,
         volume: data.volume ? {
           current: {
@@ -126,9 +133,19 @@ export default function LiveScreenDetailPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-purple-500" />
-              <h1 className="text-lg font-semibold">{decodedSymbol}</h1>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-purple-500" />
+                <h1 className="text-lg font-semibold">{decodedSymbol}</h1>
+              </div>
+              {currentPrice != null && (
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                  ${currentPrice.toFixed(2)}
+                </span>
+              )}
+              {isLoadingAdditional && currentPrice == null && (
+                <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
