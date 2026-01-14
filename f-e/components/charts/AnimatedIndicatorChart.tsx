@@ -54,7 +54,7 @@ function TrendPulse({
 
     // We'll show a window of points that scrolls through the data
     const pointsToShow = Math.min(30, normalizedPoints.length);
-    const scrollSpeed = 0.3; // pixels per frame
+    const scrollSpeed = 0.5; // pixels per frame
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
