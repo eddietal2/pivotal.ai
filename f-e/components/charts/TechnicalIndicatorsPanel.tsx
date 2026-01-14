@@ -422,8 +422,51 @@ function IndicatorCard({
 
   const eventBadges = getEventBadges();
 
+  // Skeleton loading state
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3 animate-skeleton-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+            <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          </div>
+        </div>
+        
+        {/* Chart skeleton */}
+        <div 
+          className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl relative overflow-hidden"
+          style={{ height }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200/50 dark:via-gray-600/30 to-transparent animate-shimmer" />
+        </div>
+        
+        {/* Badge skeleton */}
+        <div className="flex gap-2">
+          <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+        </div>
+        
+        {/* Values grid skeleton */}
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="text-center space-y-1">
+              <div className="h-2.5 w-12 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
+              <div className="h-4 w-14 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3">
+    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3 animate-content-reveal">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={iconColor}>{icon}</span>

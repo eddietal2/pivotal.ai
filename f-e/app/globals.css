@@ -276,4 +276,50 @@
   border: 2px solid rgba(168, 85, 247, 0.6);
 }
 
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Skeleton fade-in animation */
+@keyframes skeleton-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-skeleton-in {
+  animation: skeleton-fade-in 0.2s ease-out forwards;
+}
+
+/* Content reveal animation (when data loads) */
+@keyframes content-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-content-reveal {
+  animation: content-reveal 0.3s ease-out forwards;
+}
+
 

@@ -283,35 +283,55 @@ export default function LiveScreenDetailPage() {
         </div>
 
         {/* Overall Signal Card */}
-        <div className={`bg-gradient-to-r ${getSignalBgColor(additionalData?.overallSignal?.signal)} rounded-2xl p-4 border`}>
+        {isLoadingAdditional ? (
+          <div className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-800/30 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 animate-skeleton-in">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  <div className="h-3.5 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+                <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="text-right space-y-2">
+                <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+              </div>
+            </div>
+            
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between">
+                <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-2.5 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-300/50 dark:via-gray-600/30 to-transparent animate-shimmer" />
+              </div>
+            </div>
+          </div>
+        ) : (
+        <div className={`bg-gradient-to-r ${getSignalBgColor(additionalData?.overallSignal?.signal)} rounded-2xl p-4 border animate-content-reveal`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Zap className="w-4 h-4 text-purple-500" />
                 <p className="text-sm text-gray-500 dark:text-gray-400">Overall Technical Signal</p>
               </div>
-              {isLoadingAdditional ? (
-                <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              ) : (
-                <p className={`text-2xl font-bold ${getSignalColor(additionalData?.overallSignal?.signal)}`}>
-                  {additionalData?.overallSignal?.signal || 'HOLD'}
-                </p>
-              )}
+              <p className={`text-2xl font-bold ${getSignalColor(additionalData?.overallSignal?.signal)}`}>
+                {additionalData?.overallSignal?.signal || 'HOLD'}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500 dark:text-gray-400">Confidence</p>
-              {isLoadingAdditional ? (
-                <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
-              ) : (
-                <p className="text-lg font-semibold">
-                  {Math.round(additionalData?.overallSignal?.confidence || 0)}%
-                </p>
-              )}
+              <p className="text-lg font-semibold">
+                {Math.round(additionalData?.overallSignal?.confidence || 0)}%
+              </p>
             </div>
           </div>
           
           {/* Signal Score Bar */}
-          {!isLoadingAdditional && additionalData?.overallSignal && (
+          {additionalData?.overallSignal && (
             <div className="mt-4">
               <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
                 <span>Strong Sell</span>
@@ -330,6 +350,7 @@ export default function LiveScreenDetailPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Technical Indicators Panel (Animated Charts) */}
         <TechnicalIndicatorsPanel 
@@ -344,55 +365,69 @@ export default function LiveScreenDetailPage() {
 
         {/* Moving Averages Section */}
         {settings.showMovingAverages && (
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4">
+          isLoadingAdditional ? (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4 animate-skeleton-in">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                    <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      <div className="h-5 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              </div>
+            </div>
+          ) : (
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4 animate-content-reveal">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-green-500" />
             <h2 className="font-semibold">Moving Averages</h2>
           </div>
           
           <div className="space-y-3">
-            {isLoadingAdditional ? (
-              // Loading skeleton
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-5 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-                  </div>
+            {[
+              { label: 'SMA 20', data: additionalData?.movingAverages?.sma20 },
+              { label: 'SMA 50', data: additionalData?.movingAverages?.sma50 },
+              { label: 'SMA 200', data: additionalData?.movingAverages?.sma200 },
+              { label: 'EMA 12', data: additionalData?.movingAverages?.ema12 },
+              { label: 'EMA 26', data: additionalData?.movingAverages?.ema26 },
+            ].map((ma) => (
+              <div key={ma.label} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                <span className="text-sm text-gray-600 dark:text-gray-400">{ma.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {ma.data?.current != null ? ma.data.current.toFixed(2) : '--'}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    ma.data?.status === 'bullish' 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                      : ma.data?.status === 'bearish'
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                  }`}>
+                    {ma.data?.status || 'neutral'}
+                  </span>
                 </div>
-              ))
-            ) : (
-              [
-                { label: 'SMA 20', data: additionalData?.movingAverages?.sma20 },
-                { label: 'SMA 50', data: additionalData?.movingAverages?.sma50 },
-                { label: 'SMA 200', data: additionalData?.movingAverages?.sma200 },
-                { label: 'EMA 12', data: additionalData?.movingAverages?.ema12 },
-                { label: 'EMA 26', data: additionalData?.movingAverages?.ema26 },
-              ].map((ma) => (
-                <div key={ma.label} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{ma.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {ma.data?.current != null ? ma.data.current.toFixed(2) : '--'}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      ma.data?.status === 'bullish' 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                        : ma.data?.status === 'bearish'
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                    }`}>
-                      {ma.data?.status || 'neutral'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
           
           {/* Current Price Reference */}
-          {!isLoadingAdditional && additionalData?.movingAverages?.currentPrice && (
+          {additionalData?.movingAverages?.currentPrice && (
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500 dark:text-gray-400">Current Price</span>
@@ -403,17 +438,43 @@ export default function LiveScreenDetailPage() {
             </div>
           )}
         </div>
+          )
         )}
 
         {/* Volume Section */}
         {settings.showVolume && (
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4">
+          isLoadingAdditional ? (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4 animate-skeleton-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  <div className="h-5 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+                <div className="h-5 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
+                  <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-2" />
+                  <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
+                  <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-2" />
+                  <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                </div>
+              </div>
+              
+              <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+              <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+            </div>
+          ) : (
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4 animate-content-reveal">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-yellow-500" />
               <h2 className="font-semibold">Volume Analysis</h2>
             </div>
-            {!isLoadingAdditional && additionalData?.volume && (
+            {additionalData?.volume && (
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 additionalData.volume.trend === 'bullish'
                   ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
@@ -426,58 +487,44 @@ export default function LiveScreenDetailPage() {
             )}
           </div>
           
-          {isLoadingAdditional ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
-                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-2" />
-                <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
-              </div>
-              <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
-                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-2" />
-                <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Current Volume</p>
+              <p className="text-lg font-semibold">
+                {additionalData?.volume?.current.volume 
+                  ? formatVolume(additionalData.volume.current.volume) 
+                  : '--'}
+              </p>
             </div>
-          ) : (
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Avg Volume (20)</p>
+              <p className="text-lg font-semibold">
+                {additionalData?.volume?.current.avgVolume 
+                  ? formatVolume(additionalData.volume.current.avgVolume) 
+                  : '--'}
+              </p>
+            </div>
+          </div>
+          
+          {additionalData?.volume && (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Current Volume</p>
-                  <p className="text-lg font-semibold">
-                    {additionalData?.volume?.current.volume 
-                      ? formatVolume(additionalData.volume.current.volume) 
-                      : '--'}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Volume (20)</p>
-                  <p className="text-lg font-semibold">
-                    {additionalData?.volume?.current.avgVolume 
-                      ? formatVolume(additionalData.volume.current.avgVolume) 
-                      : '--'}
-                  </p>
-                </div>
+              <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    additionalData.volume.current.ratio > 100 
+                      ? 'bg-green-500' 
+                      : 'bg-yellow-500'
+                  }`}
+                  style={{ width: `${Math.min(additionalData.volume.current.ratio, 200)}%` }}
+                />
               </div>
-              
-              {additionalData?.volume && (
-                <>
-                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        additionalData.volume.current.ratio > 100 
-                          ? 'bg-green-500' 
-                          : 'bg-yellow-500'
-                      }`}
-                      style={{ width: `${Math.min(additionalData.volume.current.ratio, 200)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                    Volume vs Average: <span className="font-medium">{additionalData.volume.current.ratio != null ? additionalData.volume.current.ratio.toFixed(1) : '--'}%</span>
-                  </p>
-                </>
-              )}
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                Volume vs Average: <span className="font-medium">{additionalData.volume.current.ratio != null ? additionalData.volume.current.ratio.toFixed(1) : '--'}%</span>
+              </p>
             </>
           )}
         </div>
+          )
         )}
 
       </div>
