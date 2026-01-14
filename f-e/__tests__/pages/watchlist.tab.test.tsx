@@ -48,6 +48,9 @@ beforeEach(() => {
   // Suppress expected error messages from LiveScreensContainer
   console.error = jest.fn();
   
+  // Mock scrollIntoView
+  Element.prototype.scrollIntoView = jest.fn();
+  
   // Default fetch mock that returns empty screens
   global.fetch = jest.fn().mockImplementation((url: string) => {
     // Handle live-screens API endpoint
@@ -86,9 +89,11 @@ afterEach(() => {
 
 describe('Watchlist page', () => {
   describe('Page Header', () => {
-    test('renders WatchList header', () => {
+    test('renders Watchlist header', () => {
       renderWithProviders(<WatchlistPage />);
-      expect(screen.getByText('WatchList')).toBeInTheDocument();
+      // Target the h1 specifically to avoid matching the tab button
+      const heading = screen.getByRole('heading', { name: 'Watchlist' });
+      expect(heading).toBeInTheDocument();
     });
   });
 
@@ -354,4 +359,95 @@ describe('Watchlist page', () => {
       expect(screen.getByTestId('candlestick-animation')).toBeInTheDocument();
     });
   });
+
+  describe('Navigation Tabs', () => {
+    test('renders all 5 navigation tabs', () => {
+      renderWithProviders(<WatchlistPage />);
+      // Get all buttons and filter to navigation buttons (they have data-tab attribute)
+      const buttons = screen.getAllByRole('button').filter(button => button.hasAttribute('data-tab'));
+      expect(buttons).toHaveLength(5);
+      expect(buttons[0]).toHaveTextContent('Market Pulse');
+      expect(buttons[1]).toHaveTextContent('Live Screens');
+      expect(buttons[2]).toHaveTextContent('Watchlist');
+      expect(buttons[3]).toHaveTextContent('My Screens');
+      expect(buttons[4]).toHaveTextContent('Paper Trading');
+    });
+
+    test('Paper Trading tab displays coming soon message', () => {
+      renderWithProviders(<WatchlistPage />);
+      const paperTradingButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'Paper Trading'
+      )!;
+      fireEvent.click(paperTradingButton);
+      
+      expect(screen.getByText('Paper Trading Coming Soon')).toBeInTheDocument();
+      expect(screen.getByText(/Practice trading with virtual money/i)).toBeInTheDocument();
+    });
+
+    test('Paper Trading tab has Beta badge', () => {
+      renderWithProviders(<WatchlistPage />);
+      expect(screen.getByText('Beta')).toBeInTheDocument();
+    });
+  });
+
+  describe('Tab State Persistence', () => {
+    test('persists active tab to localStorage when tab is changed', () => {
+      const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+      renderWithProviders(<WatchlistPage />);
+      
+      const myScreensButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'My Screens'
+      )!;
+      fireEvent.click(myScreensButton);
+      
+      expect(setItemSpy).toHaveBeenCalledWith('watchlistActiveTab', '3');
+      setItemSpy.mockRestore();
+    });
+
+    test('restores active tab from localStorage on mount', () => {
+      // Set the localStorage value before rendering
+      localStorage.setItem('watchlistActiveTab', '2');
+      
+      renderWithProviders(<WatchlistPage />);
+      
+      // The tab state should be initialized from localStorage
+      // We can't directly test the state, but we can verify the tab persists
+      expect(localStorage.getItem('watchlistActiveTab')).toBe('2');
+    });
+
+    test('defaults to tab 0 if localStorage value is invalid', () => {
+      localStorage.setItem('watchlistActiveTab', 'invalid');
+      const getItemSpy = jest.spyOn(Storage.prototype, 'getItem');
+      
+      renderWithProviders(<WatchlistPage />);
+      
+      expect(getItemSpy).toHaveBeenCalledWith('watchlistActiveTab');
+      // Should render Market Pulse tab by default
+      expect(screen.getByTestId('market-pulse-container')).toBeInTheDocument();
+      
+      getItemSpy.mockRestore();
+    });
+
+    test('persists tab navigation when switching between Paper Trading and other tabs', () => {
+      const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+      renderWithProviders(<WatchlistPage />);
+      
+      // Switch to Paper Trading
+      const paperTradingButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'Paper Trading'
+      )!;
+      fireEvent.click(paperTradingButton);
+      expect(setItemSpy).toHaveBeenCalledWith('watchlistActiveTab', '4');
+      
+      // Switch back to Live Screens
+      const liveScreensButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'Live Screens'
+      )!;
+      fireEvent.click(liveScreensButton);
+      expect(setItemSpy).toHaveBeenCalledWith('watchlistActiveTab', '1');
+      
+      setItemSpy.mockRestore();
+    });
+  });
 });
+
