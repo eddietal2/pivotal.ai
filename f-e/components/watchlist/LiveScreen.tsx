@@ -2,11 +2,58 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ChevronRight, Star, TrendingUp, Trash2 } from 'lucide-react';
+import { Activity, ChevronRight, Star, TrendingUp, TrendingDown, Trash2, Zap, Gauge, ArrowUpCircle, ArrowDownCircle, Minus, RefreshCw } from 'lucide-react';
+
+// Period and interval types
+type PeriodType = '1D' | '1W' | '1M' | '1Y';
+type IntervalType = '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
+
+// Valid intervals for each period
+const PERIOD_INTERVALS: Record<PeriodType, IntervalType[]> = {
+  '1D': ['5m', '15m', '1h'],
+  '1W': ['15m', '1h', '4h'],
+  '1M': ['1h', '4h', '1d'],
+  '1Y': ['1d', '1w'],
+};
+
+const PERIOD_LABELS: Record<PeriodType, string> = {
+  '1D': '1D',
+  '1W': '1W',
+  '1M': '1M',
+  '1Y': '1Y',
+};
+
+const INTERVAL_LABELS: Record<IntervalType, string> = {
+  '5m': '5m',
+  '15m': '15m',
+  '1h': '1h',
+  '4h': '4h',
+  '1d': '1D',
+  '1w': '1W',
+};
 
 interface Favorite {
   symbol: string;
   name: string;
+}
+
+// Technical indicator summary for each stock
+interface StockIndicatorData {
+  symbol: string;
+  price?: number;
+  overallSignal?: {
+    signal: 'BUY' | 'SELL' | 'HOLD';
+    score: number;
+    confidence: number;
+  };
+  rsi?: {
+    current: number;
+    status: 'overbought' | 'oversold' | 'neutral';
+  };
+  macdHistogram?: number[];
+  trend?: 'bullish' | 'bearish' | 'neutral';
+  isLoading: boolean;
+  error?: string;
 }
 
 interface LiveScreenProps {
@@ -18,12 +65,124 @@ interface LiveScreenProps {
   enableSwipe?: boolean;
 }
 
+// Mini TrendPulse component for My Screens items
+function MiniTrendPulse({ 
+  dataPoints, 
+  trend,
+  width = 48,
+  height = 20 
+}: { 
+  dataPoints: number[];
+  trend: 'bullish' | 'bearish' | 'neutral';
+  width?: number;
+  height?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
+  const offsetRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !dataPoints || dataPoints.length < 2) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const getColor = () => {
+      if (trend === 'bullish') return { main: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' };
+      if (trend === 'bearish') return { main: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' };
+      return { main: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' };
+    };
+
+    const colors = getColor();
+    const padding = 2;
+    const chartHeight = height - padding * 2;
+    
+    // Normalize data
+    const minVal = Math.min(...dataPoints);
+    const maxVal = Math.max(...dataPoints);
+    const range = maxVal - minVal || 1;
+    const normalizedPoints = dataPoints.map(v => 
+      padding + chartHeight - ((v - minVal) / range) * chartHeight
+    );
+
+    const pointsToShow = Math.min(15, normalizedPoints.length);
+    const scrollSpeed = 0.8;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+      
+      // Draw scrolling line
+      ctx.beginPath();
+      ctx.strokeStyle = colors.main;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const pointSpacing = width / (pointsToShow - 1);
+      let lastY = height / 2;
+      
+      for (let i = 0; i < pointsToShow; i++) {
+        const dataOffset = Math.floor(offsetRef.current / 3);
+        const dataIndex = (dataOffset + i) % normalizedPoints.length;
+        const y = normalizedPoints[dataIndex];
+        const x = i * pointSpacing;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        
+        if (i === pointsToShow - 1) lastY = y;
+      }
+      ctx.stroke();
+
+      // Glowing dot at end
+      const pulseSize = 2.5 + Math.sin(offsetRef.current * 0.15) * 1;
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, pulseSize, 0, Math.PI * 2);
+      ctx.fillStyle = colors.glow;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, pulseSize * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = colors.main;
+      ctx.fill();
+
+      offsetRef.current += scrollSpeed;
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    animationRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [dataPoints, trend, width, height]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      style={{ width, height }}
+      className="rounded"
+    />
+  );
+}
+
 export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist, onSwipeRemove, enableSwipe = false }: LiveScreenProps) {
   const router = useRouter();
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'1m' | '5m' | '15m' | '1h' | '1d'>('5m');
   
-  // Placeholder for MACD histogram animation data
-  const [macdHistory, setMacdHistory] = useState<Record<string, number[]>>({});
+  // Period and interval state
+  const [period, setPeriod] = useState<PeriodType>('1D');
+  const [interval, setInterval] = useState<IntervalType>('15m');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Real indicator data for each stock
+  const [indicatorData, setIndicatorData] = useState<Record<string, StockIndicatorData>>({});
 
   // Long-press detection refs
   const longPressRefs = useRef<Record<string, NodeJS.Timeout | null>>({});
@@ -142,14 +301,112 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
     onSwipeRemove?.(symbol, name);
   }, [onSwipeRemove]);
 
-  // Initialize with demo data for each favorite
+  // Handle period change - auto-adjust interval if needed
+  const handlePeriodChange = useCallback((newPeriod: PeriodType) => {
+    setPeriod(newPeriod);
+    const validIntervals = PERIOD_INTERVALS[newPeriod];
+    if (!validIntervals.includes(interval)) {
+      setInterval(validIntervals[0]);
+    }
+  }, [interval]);
+
+  // Fetch indicator data for all favorites
+  const fetchAllIndicatorData = useCallback(async () => {
+    if (favorites.length === 0) return;
+    
+    setIsRefreshing(true);
+    
+    const fetchIndicatorData = async (symbol: string) => {
+      // Set loading state
+      setIndicatorData(prev => ({
+        ...prev,
+        [symbol]: { ...prev[symbol], symbol, isLoading: true }
+      }));
+
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(
+          `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${period}&interval=${interval}&indicator=ALL`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch');
+        }
+
+        const data = await response.json();
+        
+        // Extract useful data
+        const price = data.movingAverages?.currentPrice;
+        const rsiCurrent = data.rsi?.current;
+        const macdHistogram = data.macd?.histogram || [];
+        const overallSignal = data.overallSignal;
+        
+        // Determine RSI status
+        let rsiStatus: 'overbought' | 'oversold' | 'neutral' = 'neutral';
+        if (rsiCurrent >= 70) rsiStatus = 'overbought';
+        else if (rsiCurrent <= 30) rsiStatus = 'oversold';
+
+        // Determine overall trend from MACD histogram
+        let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        if (macdHistogram.length > 0) {
+          const lastHist = macdHistogram[macdHistogram.length - 1];
+          trend = lastHist > 0 ? 'bullish' : lastHist < 0 ? 'bearish' : 'neutral';
+        }
+
+        setIndicatorData(prev => ({
+          ...prev,
+          [symbol]: {
+            symbol,
+            price: price ?? undefined,
+            overallSignal: overallSignal ? {
+              signal: overallSignal.signal as 'BUY' | 'SELL' | 'HOLD',
+              score: overallSignal.score,
+              confidence: Math.round(Math.abs(overallSignal.score) * 100),
+            } : undefined,
+            rsi: rsiCurrent != null ? {
+              current: rsiCurrent,
+              status: rsiStatus,
+            } : undefined,
+            macdHistogram,
+            trend,
+            isLoading: false,
+          }
+        }));
+      } catch (err) {
+        // On error, generate placeholder data
+        const placeholderHistogram = Array.from({ length: 20 }, () => (Math.random() - 0.5) * 0.3);
+        setIndicatorData(prev => ({
+          ...prev,
+          [symbol]: {
+            symbol,
+            macdHistogram: placeholderHistogram,
+            trend: 'neutral',
+            isLoading: false,
+            error: 'Failed to load',
+          }
+        }));
+      }
+    };
+
+    // Fetch data for all favorites (with slight stagger to avoid rate limiting)
+    await Promise.all(
+      favorites.map((fav, index) => 
+        new Promise<void>(resolve => {
+          setTimeout(async () => {
+            await fetchIndicatorData(fav.symbol);
+            resolve();
+          }, index * 200);
+        })
+      )
+    );
+    
+    setIsRefreshing(false);
+  }, [favorites, period, interval]);
+
+  // Fetch data on mount and when period/interval changes
   useEffect(() => {
-    const history: Record<string, number[]> = {};
-    favorites.forEach(fav => {
-      history[fav.symbol] = Array.from({ length: 20 }, () => (Math.random() - 0.5) * 0.3);
-    });
-    setMacdHistory(history);
-  }, [favorites]);
+    fetchAllIndicatorData();
+  }, [fetchAllIndicatorData]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, symbol: string, name: string) => {
     if (!onLongPress) return;
@@ -228,35 +485,101 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
     }
   }, [onDoubleTap, router]);
 
+  // Get available intervals for current period
+  const availableIntervals = PERIOD_INTERVALS[period];
+
   return (
     <div className="space-y-3">
-      {/* Timeframe selector */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400">Technical Indicators</span>
-        <select
-          value={selectedTimeframe}
-          onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-          className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 outline-none"
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5 text-purple-500" />
+          Live Technical Analysis
+        </span>
+        <button
+          onClick={() => fetchAllIndicatorData()}
+          disabled={isRefreshing}
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh data"
         >
-          <option value="1m">1m</option>
-          <option value="5m">5m</option>
-          <option value="15m">15m</option>
-          <option value="1h">1h</option>
-          <option value="1d">1D</option>
-        </select>
+          <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Period & Interval Selectors */}
+      <div className="flex flex-col gap-2">
+        {/* Period Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 w-10">Period</span>
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 flex-1">
+            {(['1D', '1W', '1M', '1Y'] as PeriodType[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => handlePeriodChange(p)}
+                disabled={isRefreshing}
+                className={`flex-1 px-2 py-1 text-xs font-medium rounded-md transition-all ${
+                  period === p
+                    ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                } disabled:opacity-50`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Interval Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 w-10">Interval</span>
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 flex-1">
+            {availableIntervals.map((i) => (
+              <button
+                key={i}
+                onClick={() => setInterval(i)}
+                disabled={isRefreshing}
+                className={`flex-1 px-2 py-1 text-xs font-medium rounded-md transition-all ${
+                  interval === i
+                    ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                } disabled:opacity-50`}
+              >
+                {INTERVAL_LABELS[i]}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Hint for gestures */}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-        Long-press for options • Double-tap to remove{enableSwipe ? ' • Swipe left to delete' : ''}
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        Tap to view • Long-press for options • Double-tap to remove{enableSwipe ? ' • Swipe left to delete' : ''}
       </p>
 
       {/* List of favorited stocks with indicators */}
       {favorites.map((fav) => {
-        const history = macdHistory[fav.symbol] || [];
+        const data = indicatorData[fav.symbol];
         const inWatchlist = isInWatchlist?.(fav.symbol) ?? false;
         const currentSwipeX = swipeX[fav.symbol] || 0;
         const isSwiping = swipingSymbol === fav.symbol;
+        const isLoading = data?.isLoading ?? true;
+        
+        // Get signal colors
+        const getSignalColor = (signal?: string) => {
+          switch (signal) {
+            case 'BUY': return 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700';
+            case 'SELL': return 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700';
+            default: return 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700';
+          }
+        };
+
+        const getSignalIcon = (signal?: string) => {
+          switch (signal) {
+            case 'BUY': return <ArrowUpCircle className="w-3 h-3" />;
+            case 'SELL': return <ArrowDownCircle className="w-3 h-3" />;
+            default: return <Minus className="w-3 h-3" />;
+          }
+        };
         
         return (
           <div
@@ -264,7 +587,7 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
             ref={(el) => { containerRefs.current[fav.symbol] = el; }}
             className="relative overflow-hidden rounded-xl"
           >
-            {/* Remove button (revealed on swipe) - only show when swiping or revealed */}
+            {/* Remove button (revealed on swipe) */}
             {enableSwipe && (currentSwipeX < 0 || showRemoveButton[fav.symbol]) && (
               <button
                 type="button"
@@ -297,44 +620,102 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
                 zIndex: 10,
               }}
             >
-              <div className="flex items-center justify-between px-4 py-3 gap-3">
-                {/* Left: Icon + Info */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="relative flex-shrink-0">
-                    <Activity className="w-4 h-4 text-purple-400" />
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  </div>
-                  <div className="flex flex-col items-start min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
-                      {/* Status indicators */}
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
-                        {inWatchlist && (
-                          <span title="In Watchlist">
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                          </span>
-                        )}
-                        <span title="In My Screens">
-                          <TrendingUp className="w-3 h-3 text-purple-500" />
-                        </span>
-                      </div>
+              <div className="p-3 space-y-2">
+                {/* Top row: Symbol, name, signal badge */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="relative flex-shrink-0">
+                      <Activity className="w-4 h-4 text-purple-400" />
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px] sm:max-w-none">{fav.name}</span>
+                    <div className="flex flex-col items-start min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{fav.symbol}</span>
+                        {inWatchlist && (
+                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                        )}
+                        {/* Price */}
+                        {isLoading ? (
+                          <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                        ) : data?.price != null ? (
+                          <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                            ${data.price.toFixed(2)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[100px] sm:max-w-[140px]">{fav.name}</span>
+                    </div>
                   </div>
+                  
+                  {/* Signal Badge */}
+                  {isLoading ? (
+                    <div className="h-6 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  ) : data?.overallSignal ? (
+                    <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full border ${getSignalColor(data.overallSignal.signal)}`}>
+                      {getSignalIcon(data.overallSignal.signal)}
+                      {data.overallSignal.signal}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                      --
+                    </span>
+                  )}
                 </div>
-                
-                {/* Right: Mini MACD preview + Chevron */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="h-6 w-12 sm:w-16 flex items-end justify-between gap-px">
-                    {history.slice(-10).map((value, index) => (
-                      <div
-                        key={index}
-                        className={`flex-1 rounded-t-sm ${value >= 0 ? 'bg-green-500/60' : 'bg-red-500/60'}`}
-                        style={{ height: `${Math.abs(value) * 100}%` }}
+
+                {/* Bottom row: RSI, TrendPulse, Chevron */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* RSI Indicator */}
+                  {isLoading ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-4 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </div>
+                  ) : data?.rsi ? (
+                    <div className="flex items-center gap-1.5">
+                      <Gauge className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">RSI</span>
+                      <span className={`text-xs font-medium ${
+                        data.rsi.status === 'overbought' ? 'text-red-500' :
+                        data.rsi.status === 'oversold' ? 'text-green-500' :
+                        'text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {data.rsi.current.toFixed(1)}
+                      </span>
+                      {data.rsi.status !== 'neutral' && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                          data.rsi.status === 'overbought' 
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                        }`}>
+                          {data.rsi.status === 'overbought' ? 'OB' : 'OS'}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <Gauge className="w-3.5 h-3.5" />
+                      <span>RSI --</span>
+                    </div>
+                  )}
+
+                  {/* TrendPulse + Chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {isLoading ? (
+                      <div className="h-5 w-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                    ) : data?.macdHistogram && data.macdHistogram.length > 0 ? (
+                      <MiniTrendPulse 
+                        dataPoints={data.macdHistogram}
+                        trend={data.trend || 'neutral'}
+                        width={48}
+                        height={20}
                       />
-                    ))}
+                    ) : (
+                      <div className="h-5 w-12 flex items-center justify-center">
+                        <span className="text-[10px] text-gray-400">--</span>
+                      </div>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </div>
               </div>
             </button>
