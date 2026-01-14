@@ -1,10 +1,37 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
 import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
+import LiveScreenSettingsDrawer from '@/components/modals/LiveScreenSettingsDrawer';
+import { useToast } from '@/components/context/ToastContext';
+
+// Settings interface
+interface LiveScreenSettings {
+  autoRefresh: boolean;
+  refreshInterval: number;
+  showMACD: boolean;
+  showRSI: boolean;
+  showStochastic: boolean;
+  showBB: boolean;
+  showVolume: boolean;
+  showMovingAverages: boolean;
+}
+
+const DEFAULT_SETTINGS: LiveScreenSettings = {
+  autoRefresh: true,
+  refreshInterval: 30,
+  showMACD: true,
+  showRSI: true,
+  showStochastic: true,
+  showBB: true,
+  showVolume: true,
+  showMovingAverages: true,
+};
+
+const SETTINGS_KEY = 'livescreen_settings';
 
 interface OverallSignal {
   signal: 'BUY' | 'SELL' | 'HOLD';
@@ -46,6 +73,7 @@ interface IndicatorResponse {
 export default function LiveScreenDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const symbol = (params.symbol as string) || '';
   const decodedSymbol = decodeURIComponent(symbol);
   
@@ -53,6 +81,77 @@ export default function LiveScreenDetailPage() {
   const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Settings state - initialized from localStorage
+  const [settings, setSettings] = useState<LiveScreenSettings>(DEFAULT_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+      }
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+    setSettingsLoaded(true);
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    if (settingsLoaded) {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+  }, [settings, settingsLoaded]);
+
+  // Settings handlers
+  const handleAutoRefreshChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, autoRefresh: value }));
+    showToast(value ? 'Auto-refresh enabled' : 'Auto-refresh disabled', 'info', 2000);
+  };
+
+  const handleRefreshIntervalChange = (value: number) => {
+    setSettings(prev => ({ ...prev, refreshInterval: value }));
+    showToast(`Refresh interval set to ${value}s`, 'info', 2000);
+  };
+
+  const handleShowMACDChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showMACD: value }));
+    showToast(value ? 'MACD enabled' : 'MACD hidden', 'info', 1500);
+  };
+
+  const handleShowRSIChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showRSI: value }));
+    showToast(value ? 'RSI enabled' : 'RSI hidden', 'info', 1500);
+  };
+
+  const handleShowStochasticChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showStochastic: value }));
+    showToast(value ? 'Stochastic enabled' : 'Stochastic hidden', 'info', 1500);
+  };
+
+  const handleShowBBChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showBB: value }));
+    showToast(value ? 'Bollinger Bands enabled' : 'Bollinger Bands hidden', 'info', 1500);
+  };
+
+  const handleShowVolumeChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showVolume: value }));
+    showToast(value ? 'Volume enabled' : 'Volume hidden', 'info', 1500);
+  };
+
+  const handleShowMovingAveragesChange = (value: boolean) => {
+    setSettings(prev => ({ ...prev, showMovingAverages: value }));
+    showToast(value ? 'Moving Averages enabled' : 'Moving Averages hidden', 'info', 1500);
+  };
 
   // Callback to receive data from TechnicalIndicatorsPanel (avoids duplicate API calls)
   const handleIndicatorDataLoaded = useCallback((data: ExtendedIndicatorData | null, isLoading: boolean) => {
@@ -158,7 +257,11 @@ export default function LiveScreenDetailPage() {
             >
               <Info className="w-5 h-5 text-gray-500" />
             </button>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              title="Live Screen Settings"
+            >
               <Settings className="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -229,9 +332,18 @@ export default function LiveScreenDetailPage() {
         </div>
 
         {/* Technical Indicators Panel (Animated Charts) */}
-        <TechnicalIndicatorsPanel symbol={decodedSymbol} onDataLoaded={handleIndicatorDataLoaded} />
+        <TechnicalIndicatorsPanel 
+          symbol={decodedSymbol} 
+          onDataLoaded={handleIndicatorDataLoaded}
+          showMACD={settings.showMACD}
+          showRSI={settings.showRSI}
+          showStochastic={settings.showStochastic}
+          showBB={settings.showBB}
+          showVolume={settings.showVolume}
+        />
 
         {/* Moving Averages Section */}
+        {settings.showMovingAverages && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-green-500" />
@@ -291,8 +403,10 @@ export default function LiveScreenDetailPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Volume Section */}
+        {settings.showVolume && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -364,6 +478,7 @@ export default function LiveScreenDetailPage() {
             </>
           )}
         </div>
+        )}
 
       </div>
 
@@ -380,6 +495,28 @@ export default function LiveScreenDetailPage() {
       <IndicatorInfoModal 
         isOpen={isInfoModalOpen} 
         onClose={() => setIsInfoModalOpen(false)} 
+      />
+
+      {/* Live Screen Settings Drawer */}
+      <LiveScreenSettingsDrawer
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        autoRefresh={settings.autoRefresh}
+        onAutoRefreshChange={handleAutoRefreshChange}
+        refreshInterval={settings.refreshInterval}
+        onRefreshIntervalChange={handleRefreshIntervalChange}
+        showMACD={settings.showMACD}
+        onShowMACDChange={handleShowMACDChange}
+        showRSI={settings.showRSI}
+        onShowRSIChange={handleShowRSIChange}
+        showStochastic={settings.showStochastic}
+        onShowStochasticChange={handleShowStochasticChange}
+        showBB={settings.showBB}
+        onShowBBChange={handleShowBBChange}
+        showVolume={settings.showVolume}
+        onShowVolumeChange={handleShowVolumeChange}
+        showMovingAverages={settings.showMovingAverages}
+        onShowMovingAveragesChange={handleShowMovingAveragesChange}
       />
     </div>
   );

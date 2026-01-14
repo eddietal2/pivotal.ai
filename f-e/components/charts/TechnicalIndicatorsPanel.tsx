@@ -497,9 +497,24 @@ interface TechnicalIndicatorsPanelProps {
   symbol: string;
   className?: string;
   onDataLoaded?: (data: ExtendedIndicatorData | null, isLoading: boolean) => void;
+  // Visibility settings
+  showMACD?: boolean;
+  showRSI?: boolean;
+  showStochastic?: boolean;
+  showBB?: boolean;
+  showVolume?: boolean;
 }
 
-export default function TechnicalIndicatorsPanel({ symbol, className = '', onDataLoaded }: TechnicalIndicatorsPanelProps) {
+export default function TechnicalIndicatorsPanel({ 
+  symbol, 
+  className = '', 
+  onDataLoaded,
+  showMACD = true,
+  showRSI = true,
+  showStochastic = true,
+  showBB = true,
+  showVolume = true,
+}: TechnicalIndicatorsPanelProps) {
   const [timeframe, setTimeframe] = useState<TimeframeType>('D');
   const [data, setData] = useState<ExtendedIndicatorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -630,69 +645,89 @@ export default function TechnicalIndicatorsPanel({ symbol, className = '', onDat
       {!error && (
         <div className="space-y-4">
           {/* MACD */}
-          <IndicatorCard
-            symbol={symbol}
-            indicator="MACD"
-            title="MACD (12, 26, 9)"
-            icon={<BarChart3 className="w-5 h-5" />}
-            iconColor="text-purple-500"
-            data={data}
-            isLoading={isLoading}
-            timeframe={timeframe}
-            height={150}
-          />
+          {showMACD && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="MACD"
+              title="MACD (12, 26, 9)"
+              icon={<BarChart3 className="w-5 h-5" />}
+              iconColor="text-purple-500"
+              data={data}
+              isLoading={isLoading}
+              timeframe={timeframe}
+              height={150}
+            />
+          )}
 
           {/* RSI */}
-          <IndicatorCard
-            symbol={symbol}
-            indicator="RSI"
-            title="RSI (14)"
-            icon={<Gauge className="w-5 h-5" />}
-            iconColor="text-blue-500"
-            data={data}
-            isLoading={isLoading}
-            timeframe={timeframe}
-            height={120}
-          />
+          {showRSI && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="RSI"
+              title="RSI (14)"
+              icon={<Gauge className="w-5 h-5" />}
+              iconColor="text-blue-500"
+              data={data}
+              isLoading={isLoading}
+              timeframe={timeframe}
+              height={120}
+            />
+          )}
 
           {/* Stochastic */}
-          <IndicatorCard
-            symbol={symbol}
-            indicator="STOCH"
-            title="Stochastic (14, 3)"
-            icon={<TrendingUp className="w-5 h-5" />}
-            iconColor="text-green-500"
-            data={data}
-            isLoading={isLoading}
-            timeframe={timeframe}
-            height={130}
-          />
+          {showStochastic && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="STOCH"
+              title="Stochastic (14, 3)"
+              icon={<TrendingUp className="w-5 h-5" />}
+              iconColor="text-green-500"
+              data={data}
+              isLoading={isLoading}
+              timeframe={timeframe}
+              height={130}
+            />
+          )}
 
           {/* Bollinger Bands */}
-          <IndicatorCard
-            symbol={symbol}
-            indicator="BB"
-            title="Bollinger Bands (20, 2)"
-            icon={<Activity className="w-5 h-5" />}
-            iconColor="text-cyan-500"
-            data={data}
-            isLoading={isLoading}
-            timeframe={timeframe}
-            height={130}
-          />
+          {showBB && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="BB"
+              title="Bollinger Bands (20, 2)"
+              icon={<Activity className="w-5 h-5" />}
+              iconColor="text-cyan-500"
+              data={data}
+              isLoading={isLoading}
+              timeframe={timeframe}
+              height={130}
+            />
+          )}
 
           {/* Volume Analysis */}
-          <IndicatorCard
-            symbol={symbol}
-            indicator="VOL"
-            title="Volume Analysis"
-            icon={<BarChart className="w-5 h-5" />}
-            iconColor="text-orange-500"
-            data={data}
-            isLoading={isLoading}
-            timeframe={timeframe}
-            height={120}
-          />
+          {showVolume && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="VOL"
+              title="Volume Analysis"
+              icon={<BarChart className="w-5 h-5" />}
+              iconColor="text-orange-500"
+              data={data}
+              isLoading={isLoading}
+              timeframe={timeframe}
+              height={120}
+            />
+          )}
+
+          {/* No indicators selected message */}
+          {!showMACD && !showRSI && !showStochastic && !showBB && !showVolume && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">No indicators selected</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                Enable indicators in Settings to view technical analysis
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
