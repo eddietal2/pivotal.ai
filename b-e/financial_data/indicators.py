@@ -12,7 +12,7 @@ import time
 
 # Simple in-memory cache for rate limiting
 _cache = {}
-CACHE_DURATION = 60  # Cache for 60 seconds
+CACHE_DURATION = 300  # Cache for 5 minutes to avoid rate limiting
 
 
 def calculate_macd(df, fast=12, slow=26, signal=9):

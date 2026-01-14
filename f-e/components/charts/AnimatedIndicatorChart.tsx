@@ -3,6 +3,144 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Activity } from 'lucide-react';
 
+// Trend Pulse Animation Component - Shows actual indicator pattern scrolling
+function TrendPulse({ 
+  trend, 
+  indicator,
+  dataPoints,
+  width = 100,
+  height = 24 
+}: { 
+  trend: 'up' | 'down' | 'neutral' | 'overbought' | 'oversold';
+  indicator: 'MACD' | 'RSI' | 'STOCH' | 'BB';
+  dataPoints: number[];
+  width?: number;
+  height?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
+  const offsetRef = useRef(0);
+
+  const getColor = () => {
+    if (trend === 'up' || trend === 'oversold') return { main: '#22c55e', glow: 'rgba(34, 197, 94, 0.3)' };
+    if (trend === 'down' || trend === 'overbought') return { main: '#ef4444', glow: 'rgba(239, 68, 68, 0.3)' };
+    return { main: '#6b7280', glow: 'rgba(107, 114, 128, 0.3)' };
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !dataPoints || dataPoints.length < 2) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const colors = getColor();
+    const padding = 2;
+    const chartHeight = height - padding * 2;
+    
+    // Normalize data points
+    const minVal = Math.min(...dataPoints);
+    const maxVal = Math.max(...dataPoints);
+    const range = maxVal - minVal || 1;
+    
+    const normalizedPoints = dataPoints.map(v => 
+      padding + chartHeight - ((v - minVal) / range) * chartHeight
+    );
+
+    // We'll show a window of points that scrolls through the data
+    const pointsToShow = Math.min(30, normalizedPoints.length);
+    const scrollSpeed = 0.3; // pixels per frame
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+      
+      // Calculate which points are visible based on offset
+      const totalDataWidth = normalizedPoints.length * 3; // 3px per point
+      const currentOffset = offsetRef.current % totalDataWidth;
+      
+      // Draw the scrolling line
+      ctx.beginPath();
+      ctx.strokeStyle = colors.main;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const pointSpacing = width / (pointsToShow - 1);
+      let lastY = 0;
+      
+      for (let i = 0; i < pointsToShow; i++) {
+        // Calculate which data point to show (wrapping around)
+        const dataOffset = Math.floor(offsetRef.current / 2);
+        const dataIndex = (dataOffset + i) % normalizedPoints.length;
+        const y = normalizedPoints[dataIndex];
+        const x = i * pointSpacing;
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+        
+        if (i === pointsToShow - 1) {
+          lastY = y;
+        }
+      }
+      
+      ctx.stroke();
+
+      // Draw glowing dot at the end (right side)
+      const pulseSize = 4 + Math.sin(offsetRef.current * 0.1) * 1.5;
+      
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, pulseSize, 0, Math.PI * 2);
+      ctx.fillStyle = colors.glow;
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = colors.main;
+      ctx.fill();
+
+      // Draw trailing fade effect on left side
+      const isDark = document.documentElement.classList.contains('dark');
+      const fadeGradient = ctx.createLinearGradient(0, 0, width * 0.2, 0);
+      if (isDark) {
+        fadeGradient.addColorStop(0, 'rgba(17,24,39,1)');
+        fadeGradient.addColorStop(1, 'rgba(17,24,39,0)');
+      } else {
+        fadeGradient.addColorStop(0, 'rgba(255,255,255,1)');
+        fadeGradient.addColorStop(1, 'rgba(255,255,255,0)');
+      }
+      ctx.fillStyle = fadeGradient;
+      ctx.fillRect(0, 0, width * 0.15, height);
+
+      offsetRef.current += scrollSpeed;
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [dataPoints, trend, width, height]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width, height }}
+      className="rounded"
+    />
+  );
+}
+
 export interface IndicatorData {
   symbol: string;
   timeframe: string;
@@ -546,6 +684,7 @@ export default function AnimatedIndicatorChart({
         primary: data.macd.current.macd.toFixed(3),
         secondary: data.macd.current.histogram.toFixed(3),
         trend: data.macd.current.histogram >= 0 ? 'up' : 'down',
+        dataPoints: data.macd.macd, // Use MACD line for the pulse
       };
     }
     if (indicator === 'RSI' && data.rsi) {
@@ -553,6 +692,7 @@ export default function AnimatedIndicatorChart({
       return {
         primary: val.toFixed(1),
         trend: val >= 70 ? 'overbought' : val <= 30 ? 'oversold' : 'neutral',
+        dataPoints: data.rsi.rsi,
       };
     }
     if (indicator === 'STOCH' && data.stochastic) {
@@ -561,6 +701,7 @@ export default function AnimatedIndicatorChart({
         primary: val.toFixed(1),
         secondary: data.stochastic.current.d.toFixed(1),
         trend: val >= 80 ? 'overbought' : val <= 20 ? 'oversold' : 'neutral',
+        dataPoints: data.stochastic.k, // Use %K line for the pulse
       };
     }
     if (indicator === 'BB' && data.bollingerBands) {
@@ -568,6 +709,7 @@ export default function AnimatedIndicatorChart({
       return {
         primary: val.toFixed(1) + '%',
         trend: val >= 80 ? 'overbought' : val <= 20 ? 'oversold' : 'neutral',
+        dataPoints: data.bollingerBands.percentB,
       };
     }
     return null;
@@ -658,6 +800,20 @@ export default function AnimatedIndicatorChart({
             <span className="w-3 h-0.5 bg-purple-500 rounded" />
             <span className="text-gray-500 dark:text-gray-400">%B Position</span>
           </span>
+        </div>
+      )}
+
+      {/* Trend Pulse Animation */}
+      {showLabels && !compact && currentValue && currentValue.dataPoints && progress >= 1 && (
+        <div className="absolute bottom-2 right-3 flex items-center gap-2">
+          <span className="text-[9px] text-gray-400 uppercase tracking-wide">Trend</span>
+          <TrendPulse 
+            trend={currentValue.trend as 'up' | 'down' | 'neutral' | 'overbought' | 'oversold'} 
+            indicator={indicator}
+            dataPoints={currentValue.dataPoints}
+            width={70}
+            height={22}
+          />
         </div>
       )}
     </div>

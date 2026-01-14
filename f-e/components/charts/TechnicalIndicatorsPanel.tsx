@@ -263,13 +263,14 @@ export default function TechnicalIndicatorsPanel({ symbol, className = '', onDat
     fetchIndicators();
   }, [fetchIndicators]);
 
-  // Auto-refresh every 90 seconds for intraday timeframes (increased to reduce rate limiting)
-  useEffect(() => {
-    if (timeframe === 'D') {
-      const interval = setInterval(fetchIndicators, 90000);
-      return () => clearInterval(interval);
-    }
-  }, [timeframe, fetchIndicators]);
+  // Auto-refresh disabled to prevent rate limiting from yfinance
+  // Data is cached for 5 minutes on the backend
+  // useEffect(() => {
+  //   if (timeframe === 'D') {
+  //     const interval = setInterval(fetchIndicators, 90000);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [timeframe, fetchIndicators]);
 
   const handleTimeframeChange = (newTimeframe: TimeframeType) => {
     if (newTimeframe !== timeframe) {
