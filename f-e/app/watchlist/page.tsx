@@ -109,13 +109,13 @@ export default function WatchlistPage() {
     name: string;
     position: { x: number; y: number };
   } | null>(null);
-  // Track active tab for swipeable navigation (0: Market Pulse, 1: Live Screens, 2: My Watchlist, 3: My Screens)
+  // Track active tab for swipeable navigation (0: Market Pulse, 1: Live Screens, 2: My Watchlist, 3: My Screens, 4: Paper Trading)
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('watchlistActiveTab');
       if (saved !== null) {
         const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
           return parsed;
         }
       }
@@ -123,13 +123,13 @@ export default function WatchlistPage() {
     return 0;
   });
   // Track which section is open (accordion behavior - only one open at a time)
-  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | null>(() => {
-    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+  const [activeSection, setActiveSection] = useState<'marketPulse' | 'swingScreening' | 'myWatchlist' | 'liveScreens' | 'paperTrading' | null>(() => {
+    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening' | 'paperTrading')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening', 'paperTrading'];
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('watchlistActiveTab');
       if (saved !== null) {
         const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
           return sections[parsed];
         }
       }
@@ -732,7 +732,7 @@ export default function WatchlistPage() {
   // Tab change handler (syncs activeSection and persists to localStorage)
   const handleTabChange = (tabIndex: number) => {
     setActiveTab(tabIndex);
-    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening'];
+    const sections: ('marketPulse' | 'liveScreens' | 'myWatchlist' | 'swingScreening' | 'paperTrading')[] = ['marketPulse', 'liveScreens', 'myWatchlist', 'swingScreening', 'paperTrading'];
     setActiveSection(sections[tabIndex]);
     // Persist to localStorage
     localStorage.setItem('watchlistActiveTab', tabIndex.toString());
