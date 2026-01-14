@@ -32,7 +32,7 @@ yf_lock = threading.Lock()
 # Rate limit tracking
 _last_yf_request = None
 _yf_request_count = 0
-_YF_MIN_DELAY = 0.5  # Minimum delay between requests in seconds
+_YF_MIN_DELAY = 0.1  # Minimum delay between requests (reduced since we use batch downloads)
 _YF_RATE_LIMIT_DELAY = 30  # Delay when rate limited (seconds)
 
 def yf_rate_limit_delay():
@@ -157,8 +157,6 @@ def fetch_all_tickers_batch(tickers):
                         # Check if we got data or hit rate limit
                         if df_year is None or df_year.empty:
                             raise Exception("Empty response - possible rate limit")
-                        
-                        yf_rate_limit_delay()  # Add delay before next request
                         
                         # Also download intraday data (5-min intervals, last 2 days) for day sparklines
                         df_intraday = yf.download(
