@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 
 // Set to true to enable timer/fetch logging
 const DEBUG_LOGS = true;
+import CandleStickAnim from '../../components/ui/CandleStickAnim';
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
@@ -1014,10 +1015,29 @@ export default function WatchlistPage() {
       {/* Fixed Header and Tab Navigation */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="lg:px-64 px-4 sm:px-8">
+          {/* Header Section with CandleStick Animation and Search */}
+          <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <span className="h-6 w-6 relative bottom-6.5">
+                <CandleStickAnim />
+              </span>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
+            </div>
+            {!isRearrangeMode && (
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                aria-label="Search stocks"
+              >
+                <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            )}
+          </div>
+
           {/* Horizontal Text-Based Tab Navigation */}
           <div className="relative flex items-center py-4">
             {/* Scrollable Nav Links */}
-            <div ref={navContainerRef} className="flex items-center gap-2 overflow-x-auto scrollbar-hide pr-14">
+            <div ref={navContainerRef} className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
               {[
                 { id: 0, label: 'Market Pulse' },
                 { id: 1, label: 'Live Screens' },
@@ -1041,26 +1061,12 @@ export default function WatchlistPage() {
                 );
               })}
             </div>
-            
-            {/* Fixed Search Button with fade gradient */}
-            {!isRearrangeMode && (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center">
-                <div className="w-8 h-full bg-gradient-to-r from-transparent to-white dark:to-gray-900 pointer-events-none" />
-                <button
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-2 bg-white dark:bg-gray-900 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  aria-label="Search stocks"
-                >
-                  <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       {/* Main Content Area - with top padding for fixed header */}
-      <div className="flex-1 overflow-y-auto lg:px-64 pt-[4.5em] md:pt-[80px]">
+      <div className="flex-1 overflow-y-auto lg:px-64 pt-[9em] md:pt-[140px]">
         <div className="space-y-4 p-4 sm:p-8">
 
           {/* Swipeable Content Container */}
