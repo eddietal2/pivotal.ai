@@ -1,13 +1,3 @@
-// Mock MarketOverview to use real component but with instant generateAiOverview
-jest.mock('@/components/ui/MarketOverview', () => {
-  const actual = jest.requireActual('@/components/ui/MarketOverview');
-  actual.generateAiOverview = jest.fn().mockResolvedValue({
-    summary: 'Mock summary',
-    fullSentiment: 'Mock full sentiment'
-  });
-  return actual;
-});
-
 // Mock fetch to prevent network errors and act() warnings
 global.fetch = jest.fn(() =>
   Promise.resolve({

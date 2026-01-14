@@ -11,7 +11,6 @@ import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, Lis
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
-import MarketOverview from '@/components/ui/MarketOverview';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton, TopIndicatorsSkeleton } from '@/components/ui/skeletons';
 import Link from 'next/link';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';

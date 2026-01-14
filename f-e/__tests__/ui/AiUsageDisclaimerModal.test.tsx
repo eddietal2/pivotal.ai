@@ -21,13 +21,6 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({}),
 }));
 
-// Mock MarketOverview to render immediately without delay
-jest.mock('@/components/ui/MarketOverview', () => {
-  return function MockMarketOverview() {
-    return <div data-testid="market-overview">Market Pulse Overview</div>;
-  };
-});
-
 // Mock fetch to prevent network errors and act() warnings
 global.fetch = jest.fn(() =>
   Promise.resolve({

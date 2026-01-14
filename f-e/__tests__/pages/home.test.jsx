@@ -20,8 +20,7 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({}),
 }));
 
-// Mock MarketOverview and heavy animations/components to keep tests deterministic
-jest.mock('@/components/ui/MarketOverview', () => () => <div data-testid="market-overview">Market Overview</div>);
+// Mock heavy animations/components to keep tests deterministic
 jest.mock('@/components/ui/CandleStickAnim', () => () => <div data-testid="candlestick">CandleStick</div>);
 jest.mock('@/components/home/PivyChatCard', () => (props) => <div data-testid="pivy-chat-card">Pivy Chat - {props.title || ''}</div>);
 
