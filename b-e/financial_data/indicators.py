@@ -289,34 +289,80 @@ def technical_indicators(request, symbol):
     """
     GET /api/market-data/indicators/{symbol}/
     
-    Query params:
-    - timeframe: D (1 day), W (1 week), M (1 month), Y (1 year)
+    Query params (new format):
+    - period: 1D, 1W, 1M, 1Y (data range to fetch)
+    - interval: 5m, 15m, 1h, 4h, 1d, 1w (candle/bar interval)
     - indicator: MACD, RSI, STOCH, MA, BB, VOLUME, ALL (default: ALL)
+    
+    Legacy format (still supported):
+    - timeframe: D, W, M, Y (maps to period+interval automatically)
     
     Returns technical indicator data for animated charts.
     """
-    timeframe = request.GET.get('timeframe', 'D')
+    # Support both new (period/interval) and legacy (timeframe) formats
+    period = request.GET.get('period')
+    interval = request.GET.get('interval')
+    timeframe = request.GET.get('timeframe')  # Legacy support
     indicator = request.GET.get('indicator', 'ALL').upper()
     
-    # Check cache first
-    cache_key = f"indicators_{symbol.upper()}_{timeframe}_{indicator}"
-    cached_data = _cache.get(cache_key)
-    if cached_data and time.time() - cached_data['timestamp'] < CACHE_DURATION:
-        return JsonResponse(cached_data['data'])
+    # Map period to yfinance period string
+    period_map = {
+        '1D': '5d',      # 5 days of data for intraday
+        '1W': '1mo',     # 1 month of data
+        '1M': '3mo',     # 3 months of data
+        '1Y': '1y',      # 1 year of data
+    }
     
-    # Map timeframe to yfinance period/interval
-    timeframe_map = {
+    # Map interval to yfinance interval string
+    interval_map = {
+        '5m': '5m',
+        '15m': '15m',
+        '1h': '1h',
+        '4h': '4h',      # Note: yfinance might not support this directly
+        '1d': '1d',
+        '1w': '1wk',
+    }
+    
+    # Legacy timeframe mapping (for backwards compatibility)
+    legacy_timeframe_map = {
         'D': {'period': '5d', 'interval': '15m'},
         'W': {'period': '1mo', 'interval': '1h'},
         'M': {'period': '3mo', 'interval': '1d'},
         'Y': {'period': '1y', 'interval': '1wk'},
     }
     
-    config = timeframe_map.get(timeframe, timeframe_map['D'])
+    # Determine yfinance parameters
+    if period and interval:
+        # New format: explicit period and interval
+        yf_period = period_map.get(period, '5d')
+        yf_interval = interval_map.get(interval, '15m')
+        
+        # Handle 4h interval (yfinance limitation - use 1h and aggregate or fall back)
+        if interval == '4h':
+            yf_interval = '1h'  # We'll use 1h as fallback since yfinance doesn't have 4h
+    elif timeframe:
+        # Legacy format: map timeframe to period+interval
+        config = legacy_timeframe_map.get(timeframe, legacy_timeframe_map['D'])
+        yf_period = config['period']
+        yf_interval = config['interval']
+        period = {'D': '1D', 'W': '1W', 'M': '1M', 'Y': '1Y'}.get(timeframe, '1D')
+        interval = {'D': '15m', 'W': '1h', 'M': '1d', 'Y': '1w'}.get(timeframe, '15m')
+    else:
+        # Default: 1D with 15m intervals
+        yf_period = '5d'
+        yf_interval = '15m'
+        period = '1D'
+        interval = '15m'
+    
+    # Check cache first
+    cache_key = f"indicators_{symbol.upper()}_{period}_{interval}_{indicator}"
+    cached_data = _cache.get(cache_key)
+    if cached_data and time.time() - cached_data['timestamp'] < CACHE_DURATION:
+        return JsonResponse(cached_data['data'])
     
     try:
         ticker = yf.Ticker(symbol.upper())
-        df = ticker.history(period=config['period'], interval=config['interval'])
+        df = ticker.history(period=yf_period, interval=yf_interval)
         
         if df.empty:
             return JsonResponse({
@@ -330,7 +376,9 @@ def technical_indicators(request, symbol):
         
         response_data = {
             'symbol': symbol.upper(),
-            'timeframe': timeframe,
+            'period': period,
+            'interval': interval,
+            'timeframe': period,  # Legacy support
             'timestamps': timestamps,
             'dataPoints': len(timestamps),
         }

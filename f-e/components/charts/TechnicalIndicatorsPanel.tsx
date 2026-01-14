@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw, Zap, AlertTriangle, TrendingDown, ArrowUpCircle, ArrowDownCircle, BarChart } from 'lucide-react';
 import AnimatedIndicatorChart, { IndicatorData } from './AnimatedIndicatorChart';
+import TimeframeSelector, { type PeriodType, type IntervalType, getDefaultInterval } from './TimeframeSelector';
 
 type IndicatorType = 'MACD' | 'RSI' | 'STOCH' | 'BB' | 'VOL';
-type TimeframeType = 'D' | 'W' | 'M' | 'Y';
 
 interface EventBadge {
   label: string;
@@ -21,7 +21,8 @@ interface IndicatorCardProps {
   iconColor: string;
   data: IndicatorData | null;
   isLoading: boolean;
-  timeframe: TimeframeType;
+  period: PeriodType;
+  interval: IntervalType;
   height?: number;
 }
 
@@ -33,7 +34,8 @@ function IndicatorCard({
   iconColor, 
   data, 
   isLoading, 
-  timeframe,
+  period,
+  interval,
   height = 140 
 }: IndicatorCardProps) {
   const getStatusBadge = () => {
@@ -515,18 +517,12 @@ export default function TechnicalIndicatorsPanel({
   showBB = true,
   showVolume = true,
 }: TechnicalIndicatorsPanelProps) {
-  const [timeframe, setTimeframe] = useState<TimeframeType>('D');
+  const [period, setPeriod] = useState<PeriodType>('1D');
+  const [interval, setInterval] = useState<IntervalType>('15m');
   const [data, setData] = useState<ExtendedIndicatorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  const timeframes: { id: TimeframeType; label: string }[] = [
-    { id: 'D', label: '1D' },
-    { id: 'W', label: '1W' },
-    { id: 'M', label: '1M' },
-    { id: 'Y', label: '1Y' },
-  ];
 
   const fetchIndicators = useCallback(async () => {
     setIsLoading(true);
@@ -536,7 +532,7 @@ export default function TechnicalIndicatorsPanel({
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const response = await fetch(
-        `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?timeframe=${timeframe}&indicator=ALL`
+        `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${period}&interval=${interval}&indicator=ALL`
       );
       
       if (!response.ok) {
@@ -561,7 +557,7 @@ export default function TechnicalIndicatorsPanel({
     } finally {
       setIsLoading(false);
     }
-  }, [symbol, timeframe, onDataLoaded]);
+  }, [symbol, period, interval, onDataLoaded]);
 
   useEffect(() => {
     fetchIndicators();
@@ -570,17 +566,24 @@ export default function TechnicalIndicatorsPanel({
   // Auto-refresh disabled to prevent rate limiting from yfinance
   // Data is cached for 5 minutes on the backend
   // useEffect(() => {
-  //   if (timeframe === 'D') {
+  //   if (period === '1D') {
   //     const interval = setInterval(fetchIndicators, 90000);
   //     return () => clearInterval(interval);
   //   }
-  // }, [timeframe, fetchIndicators]);
+  // }, [period, fetchIndicators]);
 
-  const handleTimeframeChange = (newTimeframe: TimeframeType) => {
-    if (newTimeframe !== timeframe) {
-      setTimeframe(newTimeframe);
+  const handlePeriodChange = useCallback((newPeriod: PeriodType) => {
+    if (newPeriod !== period) {
+      setPeriod(newPeriod);
+      // Interval will be auto-corrected by TimeframeSelector
     }
-  };
+  }, [period]);
+
+  const handleIntervalChange = useCallback((newInterval: IntervalType) => {
+    if (newInterval !== interval) {
+      setInterval(newInterval);
+    }
+  }, [interval]);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -591,35 +594,26 @@ export default function TechnicalIndicatorsPanel({
           <h2 className="font-semibold">Technical Indicators</h2>
         </div>
         
-        <div className="flex items-center gap-2">
-          {/* Refresh Button */}
-          <button
-            onClick={fetchIndicators}
-            disabled={isLoading}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh data"
-          >
-            <RefreshCw className={`w-4 h-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
-          
-          {/* Timeframe Pills */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            {timeframes.map((tf) => (
-              <button
-                key={tf.id}
-                onClick={() => handleTimeframeChange(tf.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  timeframe === tf.id
-                    ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                {tf.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Refresh Button */}
+        <button
+          onClick={fetchIndicators}
+          disabled={isLoading}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh data"
+        >
+          <RefreshCw className={`w-4 h-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
+
+      {/* Timeframe Selector */}
+      <TimeframeSelector
+        selectedPeriod={period}
+        selectedInterval={interval}
+        onPeriodChange={handlePeriodChange}
+        onIntervalChange={handleIntervalChange}
+        disabled={isLoading}
+        compact={false}
+      />
 
       {/* Last Updated */}
       {lastUpdated && !isLoading && (
@@ -654,7 +648,8 @@ export default function TechnicalIndicatorsPanel({
               iconColor="text-purple-500"
               data={data}
               isLoading={isLoading}
-              timeframe={timeframe}
+              period={period}
+              interval={interval}
               height={150}
             />
           )}
@@ -669,7 +664,8 @@ export default function TechnicalIndicatorsPanel({
               iconColor="text-blue-500"
               data={data}
               isLoading={isLoading}
-              timeframe={timeframe}
+              period={period}
+              interval={interval}
               height={120}
             />
           )}
@@ -684,7 +680,8 @@ export default function TechnicalIndicatorsPanel({
               iconColor="text-green-500"
               data={data}
               isLoading={isLoading}
-              timeframe={timeframe}
+              period={period}
+              interval={interval}
               height={130}
             />
           )}
@@ -699,7 +696,8 @@ export default function TechnicalIndicatorsPanel({
               iconColor="text-cyan-500"
               data={data}
               isLoading={isLoading}
-              timeframe={timeframe}
+              period={period}
+              interval={interval}
               height={130}
             />
           )}
@@ -714,7 +712,8 @@ export default function TechnicalIndicatorsPanel({
               iconColor="text-orange-500"
               data={data}
               isLoading={isLoading}
-              timeframe={timeframe}
+              period={period}
+              interval={interval}
               height={120}
             />
           )}
