@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Set to true to enable timer/fetch logging
@@ -14,7 +14,6 @@ import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, Tren
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
-import CandleStickAnim from '@/components/ui/CandleStickAnim';
 import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
 import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
 
@@ -136,6 +135,23 @@ export default function WatchlistPage() {
     }
     return 'marketPulse';
   });
+  // Ref for nav container to auto-scroll
+  const navContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll nav to active tab
+  useEffect(() => {
+    if (navContainerRef.current) {
+      const container = navContainerRef.current;
+      const activeButton = container.querySelector(`button[data-tab="${String(activeTab)}"]`);
+      if (activeButton) {
+        // Scroll to the active button with a small delay for smooth animation
+        setTimeout(() => {
+          activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+        }, 0);
+      }
+    }
+  }, [activeTab]);
+  
   // Track swipe gesture
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -998,79 +1014,53 @@ export default function WatchlistPage() {
       {/* Fixed Header and Tab Navigation */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="lg:px-64 px-4 sm:px-8">
-          {/* Header with Search */}
-          <div className='flex items-center justify-between gap-3 py-3 md:pt-6'>
-            <div className='flex items-center gap-2'>
-              <div className='w-[30px] h-[30px] flex items-center justify-center'>
-                <CandleStickAnim></CandleStickAnim>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white relative top-1.5 left-1.5">
-                WatchList
-              </h1>
+          {/* Horizontal Text-Based Tab Navigation */}
+          <div className="relative flex items-center py-4">
+            {/* Scrollable Nav Links */}
+            <div ref={navContainerRef} className="flex items-center gap-2 overflow-x-auto scrollbar-hide pr-14">
+              {[
+                { id: 0, label: 'Market Pulse' },
+                { id: 1, label: 'Live Screens' },
+                { id: 2, label: 'Watchlist' },
+                { id: 3, label: 'My Screens' },
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={`tab-${tab.id}`}
+                    data-tab={String(tab.id)}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
             
-            {/* Search Button */}
+            {/* Fixed Search Button with fade gradient */}
             {!isRearrangeMode && (
-              <button
-                onClick={() => setIsSearchOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/50 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
-                aria-label="Search stocks"
-              >
-                <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Search</span>
-              </button>
-            )}
-          </div>
-
-          {/* Tab Navigation Bar - Robinhood Style */}
-          <div className="flex items-center justify-between overflow-x-auto scrollbar-hide">
-            {[
-              { id: 0, label: 'Market Pulse', icon: Activity, color: 'green' },
-              { id: 1, label: 'Live Screens', icon: Zap, color: 'cyan' },
-              { id: 2, label: 'My Watchlist', icon: Star, color: 'yellow' },
-              { id: 3, label: 'My Screens', icon: TrendingUp, color: 'purple' },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center">
+                <div className="w-8 h-full bg-gradient-to-r from-transparent to-white dark:to-gray-900 pointer-events-none" />
                 <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex-1 min-w-0 py-3 px-2 text-center font-medium text-sm transition-colors relative whitespace-nowrap ${
-                    isActive
-                      ? 'text-gray-900 dark:text-white'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-2 bg-white dark:bg-gray-900 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Search stocks"
                 >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Icon className={`w-4 h-4 ${
-                      isActive
-                        ? tab.color === 'green' ? 'text-green-500' :
-                          tab.color === 'cyan' ? 'text-cyan-500' :
-                          tab.color === 'yellow' ? 'text-yellow-500 fill-yellow-500' :
-                          'text-purple-500'
-                        : ''
-                    }`} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </div>
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
-                      tab.color === 'green' ? 'bg-green-500' :
-                      tab.color === 'cyan' ? 'bg-cyan-500' :
-                      tab.color === 'yellow' ? 'bg-yellow-500' :
-                      'bg-purple-500'
-                    }`} />
-                  )}
+                  <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content Area - with top padding for fixed header */}
-      <div className="flex-1 overflow-y-auto lg:px-64 pt-[5em] md:pt-[140px]">
+      <div className="flex-1 overflow-y-auto lg:px-64 pt-[4.5em] md:pt-[80px]">
         <div className="space-y-4 p-4 sm:p-8">
 
           {/* Swipeable Content Container */}

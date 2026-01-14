@@ -647,3 +647,516 @@ class LiveScreensServiceTests(TestCase):
         
         print(f"{custom_console.COLOR_GREEN}✅ FD-604: Test for score calculation passed.{custom_console.RESET_COLOR}")
         print("----------------------------------\n")
+
+
+class TechnicalIndicatorsTests(TestCase):
+    """
+    Tests for the technical_indicators API endpoint.
+    Tests the new period/interval parameters and indicator calculations.
+    """
+
+    def setUp(self):
+        """Set up test environment."""
+        self.base_url = '/api/market-data/indicators/'
+        print(f"{custom_console.COLOR_CYAN}--- Starting TechnicalIndicatorsTest ---{custom_console.RESET_COLOR}")
+
+    # // ----------------------------------
+    # // Technical Indicators Endpoint Tests
+    # // ----------------------------------
+    # FD-701: Test for valid symbol with default params
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_valid_symbol(self, mock_ticker):
+        """
+        GIVEN a valid symbol
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return indicator data with default period/interval.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe with OHLCV data
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify response structure
+        response_json = response.json()
+        self.assertEqual(response_json['symbol'], 'AAPL')
+        self.assertIn('period', response_json)
+        self.assertIn('interval', response_json)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-701: Test for valid symbol with default params passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-702: Test for period/interval parameters
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_period_interval_params(self, mock_ticker):
+        """
+        GIVEN valid period and interval parameters
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return data for the specified timeframe.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='1h')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request with period and interval
+        response = self.client.get(f"{self.base_url}AAPL/?period=1W&interval=1h")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify response includes specified params
+        response_json = response.json()
+        self.assertEqual(response_json['period'], '1W')
+        self.assertEqual(response_json['interval'], '1h')
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-702: Test for period/interval parameters passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-703: Test for different periods (1D, 1W, 1M, 1Y)
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_all_periods(self, mock_ticker):
+        """
+        GIVEN different period values
+        WHEN GET requests are made to the indicators endpoint
+        THEN each should return valid data for that period.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        periods = ['1D', '1W', '1M', '1Y']
+        intervals = ['15m', '1h', '1d', '1w']
+        
+        for period, interval in zip(periods, intervals):
+            # ARRANGE: Create mock dataframe
+            dates = pd.date_range(start='2026-01-01', periods=100, freq='1h')
+            mock_df = pd.DataFrame({
+                'Open': np.random.uniform(100, 110, 100),
+                'High': np.random.uniform(105, 115, 100),
+                'Low': np.random.uniform(95, 105, 100),
+                'Close': np.random.uniform(100, 110, 100),
+                'Volume': np.random.randint(1000000, 5000000, 100)
+            }, index=dates)
+            
+            mock_ticker_instance = MagicMock()
+            mock_ticker_instance.history.return_value = mock_df
+            mock_ticker.return_value = mock_ticker_instance
+
+            # ACT: Make the GET request
+            response = self.client.get(f"{self.base_url}AAPL/?period={period}&interval={interval}")
+
+            # ASSERT: Check the HTTP status code
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            response_json = response.json()
+            self.assertEqual(response_json['period'], period)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-703: Test for all period values passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-704: Test for legacy timeframe parameter
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_legacy_timeframe(self, mock_ticker):
+        """
+        GIVEN a legacy timeframe parameter
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should map correctly and return valid data.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request with legacy timeframe
+        response = self.client.get(f"{self.base_url}AAPL/?timeframe=D")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Response should have period mapped from timeframe
+        response_json = response.json()
+        self.assertIn('period', response_json)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-704: Test for legacy timeframe parameter passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-705: Test for ALL indicator type
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_all_type(self, mock_ticker):
+        """
+        GIVEN indicator=ALL parameter
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return all technical indicators.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=ALL")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify all indicators are present
+        response_json = response.json()
+        self.assertIn('macd', response_json)
+        self.assertIn('rsi', response_json)
+        self.assertIn('stochastic', response_json)
+        self.assertIn('movingAverages', response_json)
+        self.assertIn('bollingerBands', response_json)
+        self.assertIn('volume', response_json)
+        self.assertIn('overallSignal', response_json)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-705: Test for ALL indicator type passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-706: Test for single indicator (MACD)
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_macd_only(self, mock_ticker):
+        """
+        GIVEN indicator=MACD parameter
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return only MACD data.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=MACD")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify only MACD is present
+        response_json = response.json()
+        self.assertIn('macd', response_json)
+        self.assertNotIn('rsi', response_json)
+        
+        # ASSERT: Verify MACD structure
+        macd = response_json['macd']
+        self.assertIn('macd', macd)
+        self.assertIn('signal', macd)
+        self.assertIn('histogram', macd)
+        self.assertIn('current', macd)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-706: Test for MACD only indicator passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-707: Test for RSI indicator
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_rsi_only(self, mock_ticker):
+        """
+        GIVEN indicator=RSI parameter
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return only RSI data.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=RSI")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify only RSI is present
+        response_json = response.json()
+        self.assertIn('rsi', response_json)
+        self.assertNotIn('macd', response_json)
+        
+        # ASSERT: Verify RSI structure
+        rsi = response_json['rsi']
+        self.assertIn('rsi', rsi)
+        self.assertIn('current', rsi)
+        self.assertIn('overbought', rsi)
+        self.assertIn('oversold', rsi)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-707: Test for RSI only indicator passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-708: Test for overall signal calculation
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_overall_signal(self, mock_ticker):
+        """
+        GIVEN a valid request
+        WHEN a GET request is made to the indicators endpoint
+        THEN the overallSignal should contain BUY/SELL/HOLD with confidence.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=ALL")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify overall signal structure
+        response_json = response.json()
+        overall = response_json['overallSignal']
+        self.assertIn('signal', overall)
+        self.assertIn('score', overall)
+        self.assertIn('confidence', overall)
+        
+        # Signal should be BUY, SELL, or HOLD
+        self.assertIn(overall['signal'], ['BUY', 'SELL', 'HOLD'])
+        
+        # Confidence should be between 50 and 95
+        self.assertGreaterEqual(overall['confidence'], 50)
+        self.assertLessEqual(overall['confidence'], 95)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-708: Test for overall signal calculation passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-709: Test for moving averages with current price
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_moving_averages_price(self, mock_ticker):
+        """
+        GIVEN a valid request
+        WHEN a GET request is made to the indicators endpoint
+        THEN movingAverages should include currentPrice.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=250, freq='1d')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 250),
+            'High': np.random.uniform(105, 115, 250),
+            'Low': np.random.uniform(95, 105, 250),
+            'Close': np.random.uniform(100, 110, 250),
+            'Volume': np.random.randint(1000000, 5000000, 250)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=MA")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Verify movingAverages structure with currentPrice
+        response_json = response.json()
+        ma = response_json['movingAverages']
+        self.assertIn('currentPrice', ma)
+        self.assertIn('sma20', ma)
+        self.assertIn('sma50', ma)
+        self.assertIn('sma200', ma)
+        self.assertIn('ema12', ma)
+        self.assertIn('ema26', ma)
+        
+        # Each MA should have status
+        self.assertIn('status', ma['sma20'])
+        self.assertIn(ma['sma20']['status'], ['bullish', 'bearish', 'neutral'])
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-709: Test for moving averages with price passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-710: Test for invalid symbol
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_invalid_symbol(self, mock_ticker):
+        """
+        GIVEN an invalid symbol
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return a 404 error.
+        """
+        import pandas as pd
+        
+        # ARRANGE: Return empty dataframe for invalid symbol
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = pd.DataFrame()
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request with invalid symbol
+        response = self.client.get(f"{self.base_url}INVALIDSYMBOL123/")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+        # ASSERT: Verify error message
+        response_json = response.json()
+        self.assertIn('error', response_json)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-710: Test for invalid symbol passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-711: Test for invalid indicator type
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_invalid_type(self, mock_ticker):
+        """
+        GIVEN an invalid indicator type
+        WHEN a GET request is made to the indicators endpoint
+        THEN it should return a 400 error.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make the GET request with invalid indicator
+        response = self.client.get(f"{self.base_url}AAPL/?indicator=INVALID")
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # ASSERT: Verify error message
+        response_json = response.json()
+        self.assertIn('error', response_json)
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-711: Test for invalid indicator type passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-712: Test for response caching
+    @patch('financial_data.indicators.yf.Ticker')
+    def test_indicators_caching(self, mock_ticker):
+        """
+        GIVEN multiple requests for the same symbol/period/interval
+        WHEN GET requests are made to the indicators endpoint
+        THEN both requests should return successful responses.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # ARRANGE: Create mock dataframe
+        dates = pd.date_range(start='2026-01-01', periods=100, freq='15min')
+        mock_df = pd.DataFrame({
+            'Open': np.random.uniform(100, 110, 100),
+            'High': np.random.uniform(105, 115, 100),
+            'Low': np.random.uniform(95, 105, 100),
+            'Close': np.random.uniform(100, 110, 100),
+            'Volume': np.random.randint(1000000, 5000000, 100)
+        }, index=dates)
+        
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker.return_value = mock_ticker_instance
+
+        # ACT: Make two GET requests for the same symbol
+        response1 = self.client.get(f"{self.base_url}AAPL/?period=1D&interval=15m")
+        response2 = self.client.get(f"{self.base_url}AAPL/?period=1D&interval=15m")
+
+        # ASSERT: Both should return 200
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        
+        # ASSERT: Both responses should have the same structure
+        data1 = response1.json()
+        data2 = response2.json()
+        self.assertEqual(data1['symbol'], data2['symbol'])
+        self.assertEqual(data1['period'], data2['period'])
+        self.assertEqual(data1['interval'], data2['interval'])
+        
+        print(f"{custom_console.COLOR_GREEN}✅ FD-712: Test for response caching passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
