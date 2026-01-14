@@ -69,14 +69,14 @@ export default function LiveScreenDetailPage() {
         overallSignal: data.overallSignal ? {
           signal: data.overallSignal.signal as 'BUY' | 'SELL' | 'HOLD',
           score: data.overallSignal.score,
-          confidence: Math.abs(data.overallSignal.score) * 100,
+          confidence: Math.round(Math.abs(data.overallSignal.score) * 100),
         } : undefined,
         movingAverages: data.movingAverages ? {
-          sma20: { current: data.movingAverages.SMA20?.value ?? null, status: (data.movingAverages.SMA20?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
-          sma50: { current: data.movingAverages.SMA50?.value ?? null, status: (data.movingAverages.SMA50?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
-          sma200: { current: data.movingAverages.SMA200?.value ?? null, status: (data.movingAverages.SMA200?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
-          ema12: { current: data.movingAverages.EMA12?.value ?? null, status: (data.movingAverages.EMA12?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
-          ema26: { current: data.movingAverages.EMA26?.value ?? null, status: (data.movingAverages.EMA26?.signal?.toLowerCase() ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
+          sma20: { current: data.movingAverages.sma20?.current ?? null, status: (data.movingAverages.sma20?.status ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
+          sma50: { current: data.movingAverages.sma50?.current ?? null, status: (data.movingAverages.sma50?.status ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
+          sma200: { current: data.movingAverages.sma200?.current ?? null, status: (data.movingAverages.sma200?.status ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
+          ema12: { current: data.movingAverages.ema12?.current ?? null, status: (data.movingAverages.ema12?.status ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
+          ema26: { current: data.movingAverages.ema26?.current ?? null, status: (data.movingAverages.ema26?.status ?? 'neutral') as 'bullish' | 'bearish' | 'neutral' },
           currentPrice: price ?? null,
         } : undefined,
         volume: data.volume ? {
@@ -199,7 +199,7 @@ export default function LiveScreenDetailPage() {
                 <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
               ) : (
                 <p className="text-lg font-semibold">
-                  {additionalData?.overallSignal?.confidence || 0}%
+                  {Math.round(additionalData?.overallSignal?.confidence || 0)}%
                 </p>
               )}
             </div>

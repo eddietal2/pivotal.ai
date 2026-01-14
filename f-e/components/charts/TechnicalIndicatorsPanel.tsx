@@ -215,6 +215,13 @@ function IndicatorCard({
   );
 }
 
+// Moving average item interface
+interface MovingAverageItem {
+  values?: (number | null)[];
+  current: number | null;
+  status: string;
+}
+
 // Extended data interface for parent components
 export interface ExtendedIndicatorData extends IndicatorData {
   overallSignal?: {
@@ -223,11 +230,13 @@ export interface ExtendedIndicatorData extends IndicatorData {
     summary: string;
   };
   movingAverages?: {
-    [key: string]: {
-      value: number;
-      signal: string;
-      priceRelation: string;
-    };
+    sma20?: MovingAverageItem;
+    sma50?: MovingAverageItem;
+    sma200?: MovingAverageItem;
+    ema12?: MovingAverageItem;
+    ema26?: MovingAverageItem;
+    currentPrice?: number | null;
+    [key: string]: MovingAverageItem | number | null | undefined;
   };
   volume?: {
     current: {

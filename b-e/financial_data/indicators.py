@@ -84,9 +84,22 @@ def calculate_stochastic(df, k_period=14, d_period=3):
     }
 
 
-def calculate_moving_averages(df):
-    """Calculate various moving averages"""
+def calculate_moving_averages(df, ticker_symbol=None):
+    """Calculate various moving averages. 
+    If ticker_symbol is provided and df doesn't have enough data for SMA200,
+    fetches additional daily data.
+    """
     close = df['Close']
+    
+    # If we don't have enough data for SMA 200 and ticker_symbol is provided, fetch daily data
+    if len(close) < 200 and ticker_symbol:
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            daily_df = ticker.history(period='1y', interval='1d')
+            if not daily_df.empty and len(daily_df) >= 200:
+                close = daily_df['Close']
+        except Exception as e:
+            print(f"Error fetching daily data for MA: {e}")
     
     sma_20 = close.rolling(window=20).mean()
     sma_50 = close.rolling(window=50).mean()
@@ -107,27 +120,27 @@ def calculate_moving_averages(df):
     
     return {
         'sma20': {
-            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_20.tolist()],
+            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_20.tolist()[-50:]],  # Limit values for response size
             'current': round(sma_20.iloc[-1], 2) if not pd.isna(sma_20.iloc[-1]) else None,
             'status': get_status(sma_20.iloc[-1]),
         },
         'sma50': {
-            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_50.tolist()],
+            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_50.tolist()[-50:]],
             'current': round(sma_50.iloc[-1], 2) if not pd.isna(sma_50.iloc[-1]) else None,
             'status': get_status(sma_50.iloc[-1]),
         },
         'sma200': {
-            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_200.tolist()],
+            'values': [round(v, 2) if not pd.isna(v) else None for v in sma_200.tolist()[-50:]],
             'current': round(sma_200.iloc[-1], 2) if not pd.isna(sma_200.iloc[-1]) else None,
             'status': get_status(sma_200.iloc[-1]),
         },
         'ema12': {
-            'values': [round(v, 2) if not pd.isna(v) else None for v in ema_12.tolist()],
+            'values': [round(v, 2) if not pd.isna(v) else None for v in ema_12.tolist()[-50:]],
             'current': round(ema_12.iloc[-1], 2) if not pd.isna(ema_12.iloc[-1]) else None,
             'status': get_status(ema_12.iloc[-1]),
         },
         'ema26': {
-            'values': [round(v, 2) if not pd.isna(v) else None for v in ema_26.tolist()],
+            'values': [round(v, 2) if not pd.isna(v) else None for v in ema_26.tolist()[-50:]],
             'current': round(ema_26.iloc[-1], 2) if not pd.isna(ema_26.iloc[-1]) else None,
             'status': get_status(ema_26.iloc[-1]),
         },
@@ -327,7 +340,7 @@ def technical_indicators(request, symbol):
             response_data['macd'] = calculate_macd(df)
             response_data['rsi'] = calculate_rsi(df)
             response_data['stochastic'] = calculate_stochastic(df)
-            response_data['movingAverages'] = calculate_moving_averages(df)
+            response_data['movingAverages'] = calculate_moving_averages(df, symbol.upper())
             response_data['bollingerBands'] = calculate_bollinger_bands(df)
             response_data['volume'] = calculate_volume_analysis(df)
             response_data['overallSignal'] = calculate_overall_signal(
@@ -343,7 +356,7 @@ def technical_indicators(request, symbol):
         elif indicator == 'STOCH':
             response_data['stochastic'] = calculate_stochastic(df)
         elif indicator == 'MA':
-            response_data['movingAverages'] = calculate_moving_averages(df)
+            response_data['movingAverages'] = calculate_moving_averages(df, symbol.upper())
         elif indicator == 'BB':
             response_data['bollingerBands'] = calculate_bollinger_bands(df)
         elif indicator == 'VOLUME':
