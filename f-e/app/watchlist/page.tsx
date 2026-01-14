@@ -11,7 +11,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
-import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers } from 'lucide-react';
+import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -1075,6 +1075,7 @@ export default function WatchlistPage() {
                 { id: 1, label: 'Live Screens' },
                 { id: 2, label: 'Watchlist' },
                 { id: 3, label: 'My Screens' },
+                { id: 4, label: 'Paper Trading' },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -1928,6 +1929,57 @@ export default function WatchlistPage() {
           )}
               </div>
               {/* End Tab 3: My Screens */}
+
+              {/* Tab 4: Paper Trading */}
+              <div className="w-full flex-shrink-0 px-4 sm:px-8">
+
+          {/* Paper Trading - hidden during rearrange mode */}
+          {!isRearrangeMode && (
+          <div id="paper-trading" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+            <div>
+              {/* Section Header */}
+              <div className="flex items-center justify-between py-4">
+                <span className="flex items-center gap-2 text-lg font-semibold">
+                  <FileText className="w-5 h-5 text-orange-500" />
+                  <span>Paper Trading</span>
+                  <span className="px-2 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
+                    Beta
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  title="Learn more about Paper Trading"
+                  aria-label="More info about Paper Trading"
+                >
+                  <Info className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Practice trading with virtual money. Test your strategies risk-free before committing real capital.
+              </p>
+              
+              {/* Empty State */}
+              <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Paper Trading Coming Soon
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">
+                  Simulate trades, track your virtual portfolio performance, and refine your strategy without any financial risk.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span>In Development</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          )}
+              </div>
+              {/* End Tab 4: Paper Trading */}
 
             </div>
           </div>
