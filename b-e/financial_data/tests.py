@@ -6,6 +6,79 @@ from rest_framework import status
 import custom_console
 
 
+class HealthCheckTests(TestCase):
+    """
+    Tests for the health_check API endpoint.
+    """
+
+    def setUp(self):
+        """Set up test environment."""
+        self.health_url = reverse('health_check')
+        print(f"{custom_console.COLOR_CYAN}--- Starting HealthCheckTest ---{custom_console.RESET_COLOR}")
+
+    # // ----------------------------------
+    # // Health Check Endpoint Tests
+    # // ----------------------------------
+    # FD-001: Test for health check returns OK
+    def test_health_check_returns_ok(self):
+        """
+        GIVEN a request to the health endpoint
+        WHEN a GET request is made
+        THEN it should return a 200 OK status with status 'ok'.
+        """
+        # ACT: Make the GET request
+        response = self.client.get(self.health_url)
+
+        # ASSERT: Check the HTTP status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # ASSERT: Verify response contains expected data
+        response_json = response.json()
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertIn('timestamp', response_json)
+
+        print(f"{custom_console.COLOR_GREEN}✅ FD-001: Test for health check returns OK passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-002: Test for health check CORS headers
+    def test_health_check_cors_headers(self):
+        """
+        GIVEN a request to the health endpoint
+        WHEN a GET request is made
+        THEN it should include CORS headers for localhost:3000.
+        """
+        # ACT: Make the GET request
+        response = self.client.get(self.health_url)
+
+        # ASSERT: Check CORS header
+        self.assertIn('Access-Control-Allow-Origin', response)
+        self.assertEqual(response['Access-Control-Allow-Origin'], 'http://localhost:3000')
+
+        print(f"{custom_console.COLOR_GREEN}✅ FD-002: Test for health check CORS headers passed.{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+    # FD-003: Test for health check response time
+    def test_health_check_fast_response(self):
+        """
+        GIVEN a request to the health endpoint
+        WHEN a GET request is made
+        THEN it should respond quickly (used for frontend health checks).
+        """
+        import time
+        
+        # ACT: Time the request
+        start = time.time()
+        response = self.client.get(self.health_url)
+        elapsed = time.time() - start
+
+        # ASSERT: Response should be fast (under 100ms)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertLess(elapsed, 0.1, "Health check should respond in under 100ms")
+
+        print(f"{custom_console.COLOR_GREEN}✅ FD-003: Test for health check fast response passed ({elapsed*1000:.2f}ms).{custom_console.RESET_COLOR}")
+        print("----------------------------------\n")
+
+
 class MarketDataTests(TestCase):
     """
     Tests for the market_data API endpoint.
