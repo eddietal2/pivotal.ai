@@ -161,18 +161,38 @@ export default function App() {
   const [topBullish, setTopBullish] = React.useState<any>(null);
   const [topBearish, setTopBearish] = React.useState<any>(null);
   const [topIndicatorsLoading, setTopIndicatorsLoading] = React.useState(true);
+  const [topIndicatorsError, setTopIndicatorsError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const retryCountRef = React.useRef(0);
+  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = React.useRef(true);
 
   // Fetch market data for top indicators
-  const fetchMarketData = React.useCallback(async () => {
+  const fetchMarketData = React.useCallback(async (isRetry = false) => {
     // Skip in test environment
     if (process.env.NODE_ENV === 'test') {
       return;
     }
     
+    // Clear any pending retry timeout
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
+    if (!isRetry) {
+      setTopIndicatorsLoading(true);
+      setTopIndicatorsError(null);
+      retryCountRef.current = 0;
+      setRetryCount(0);
+    }
+    
     try {
       const tickers = Object.keys(tickerNames).join(',');
       console.log('Fetching market data for tickers:', tickers);
-      const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${tickers}`);
+      const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${tickers}`, {
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -181,6 +201,9 @@ export default function App() {
       const data = await response.json();
       console.log('Received market data:', data);
       setMarketData(data);
+      setTopIndicatorsError(null);
+      retryCountRef.current = 0;
+      setRetryCount(0);
 
       // Calculate top bullish and bearish indicators
       const entries = Object.entries(data);
@@ -224,37 +247,40 @@ export default function App() {
         setTopBullish(bullishItem);
         setTopBearish(bearishItem);
       } else {
-        // Fallback mock data if no real data
-        console.log('No market data received, using fallback mock data');
-        setTopBullish({
-          ticker: 'Bitcoin',
-          symbol: 'BTC-USD',
-          change: 3.45,
-          price: '43250.00'
-        });
-        setTopBearish({
-          ticker: 'VIX (Fear Index)',
-          symbol: '^VIX',
-          change: -2.15,
-          price: '18.45'
-        });
+        // No data received - set error
+        console.log('No market data received');
+        throw new Error('No market data received from server');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching market data:', error);
-      // Fallback mock data on error
-      console.log('Using fallback mock data due to error');
-      setTopBullish({
-        ticker: 'Bitcoin',
-        symbol: 'BTC-USD',
-        change: 3.45,
-        price: '43250.00'
-      });
-      setTopBearish({
-        ticker: 'VIX (Fear Index)',
-        symbol: '^VIX',
-        change: -2.15,
-        price: '18.45'
-      });
+      
+      let errorMessage = 'Unable to load market data';
+      if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+        errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
+      } else if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        errorMessage = 'Request timed out. The server is processing market data. Please wait...';
+      } else if (error.message?.includes('HTTP error')) {
+        errorMessage = `Server error: ${error.message}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setTopIndicatorsError(errorMessage);
+      setTopBullish(null);
+      setTopBearish(null);
+      
+      // Auto-retry up to 10 times with backoff
+      if (retryCountRef.current < 10 && isMountedRef.current) {
+        const delay = Math.min(2000 + (retryCountRef.current * 2000), 15000);
+        retryCountRef.current++;
+        setRetryCount(retryCountRef.current);
+        console.log(`Will retry in ${delay / 1000}s (attempt ${retryCountRef.current}/10)`);
+        retryTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            fetchMarketData(true);
+          }
+        }, delay);
+      }
     } finally {
       setTopIndicatorsLoading(false);
     }
@@ -262,12 +288,21 @@ export default function App() {
 
   // Fetch market data on mount (skip in test environment)
   React.useEffect(() => {
+    isMountedRef.current = true;
+    
     if (process.env.NODE_ENV !== 'test') {
       fetchMarketData();
     } else {
       // In test environment, set loading to false immediately
       setTopIndicatorsLoading(false);
     }
+    
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
   }, [fetchMarketData]);
 
   // Track open state of sections
@@ -421,7 +456,43 @@ export default function App() {
           </div>
 
           {/* Top Market Indicator at the Moment */}
-          {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : (topBullish || topBearish) && (
+          {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : topIndicatorsError ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-red-200 dark:border-red-800/30">
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{topIndicatorsError}</p>
+                {retryCount > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Retrying... (attempt {retryCount}/10)
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    retryCountRef.current = 0;
+                    setRetryCount(0);
+                    fetchMarketData();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  disabled={topIndicatorsLoading}
+                >
+                  {topIndicatorsLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Retrying...
+                    </>
+                  ) : 'Try Again'}
+                </button>
+              </div>
+            </div>
+          ) : (topBullish || topBearish) && (
             <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Today's Top Market Indicators</h2>
               <p>An AI generated impression of these two together</p>

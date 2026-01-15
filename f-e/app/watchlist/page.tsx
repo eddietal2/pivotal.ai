@@ -1685,29 +1685,74 @@ export default function WatchlistPage() {
           {!isRearrangeMode && (
           <div id="my-watchlist" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
             <div>
-              {/* Section Header */}
-              <div className="flex items-center justify-between py-4">
-                <span className="flex items-center gap-2 text-lg font-semibold">
-                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                  My Watchlist
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
-                </span>
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                  title="Learn more about My Watchlist"
-                  aria-label="More info about My Watchlist"
-                  onClick={() => setIsMyWatchlistInfoOpen(true)}
-                >
-                  <Info className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-              {/* Caption explaining limit */}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Track up to {MAX_WATCHLIST} assets. Double-tap to add to My Screens
-                <TrendingUp className="w-3.5 h-3.5 ml-1 inline text-purple-500" />
-              </p>
-              {watchlist.length === 0 ? (
+              {/* Section Header - hidden when error */}
+              {!error && (
+                <>
+                  <div className="flex items-center justify-between py-4">
+                    <span className="flex items-center gap-2 text-lg font-semibold">
+                      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      My Watchlist
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      title="Learn more about My Watchlist"
+                      aria-label="More info about My Watchlist"
+                      onClick={() => setIsMyWatchlistInfoOpen(true)}
+                    >
+                      <Info className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </div>
+                  {/* Caption explaining limit */}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Track up to {MAX_WATCHLIST} assets. Double-tap to add to My Screens
+                    <TrendingUp className="w-3.5 h-3.5 ml-1 inline text-purple-500" />
+                  </p>
+                </>
+              )}
+              {/* Error state for My Watchlist */}
+              {error ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800/30">
+                  <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{error}</p>
+                  {retryCount > 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        Retrying... (attempt {retryCount}/10)
+                      </span>
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      retryCountRef.current = 0;
+                      setRetryCount(0);
+                      fetchMarketData();
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        Retrying...
+                      </>
+                    ) : 'Try Again'}
+                  </button>
+                </div>
+              ) : watchlist.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <Star className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -1875,32 +1920,77 @@ export default function WatchlistPage() {
           {!isRearrangeMode && (
           <div id="my-screens" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
             <div>
-              {/* Section Header */}
-              <div className="flex items-center justify-between py-4">
-                <span className="flex items-center gap-2 text-lg font-semibold">
-                  <TrendingUp className="w-5 h-5 text-purple-500" />
-                  <span>My Screens</span>
-                  {favorites.length > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
-                      {favorites.length}/{MAX_FAVORITES}
+              {/* Section Header - hidden when error */}
+              {!error && (
+                <>
+                  <div className="flex items-center justify-between py-4">
+                    <span className="flex items-center gap-2 text-lg font-semibold">
+                      <TrendingUp className="w-5 h-5 text-purple-500" />
+                      <span>My Screens</span>
+                      {favorites.length > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
+                          {favorites.length}/{MAX_FAVORITES}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                  title="Learn more about My Screens"
-                  aria-label="More info about My Screens"
-                  onClick={() => setIsMyScreensInfoOpen(true)}
-                >
-                  <Info className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
-              </p>
+                    <button
+                      type="button"
+                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      title="Learn more about My Screens"
+                      aria-label="More info about My Screens"
+                      onClick={() => setIsMyScreensInfoOpen(true)}
+                    >
+                      <Info className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
+                  </p>
+                </>
+              )}
               
-              {favorites.length === 0 ? (
+              {/* Error state for My Screens */}
+              {error ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800/30">
+                  <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{error}</p>
+                  {retryCount > 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        Retrying... (attempt {retryCount}/10)
+                      </span>
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      retryCountRef.current = 0;
+                      setRetryCount(0);
+                      fetchMarketData();
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        Retrying...
+                      </>
+                    ) : 'Try Again'}
+                  </button>
+                </div>
+              ) : favorites.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <TrendingUp className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
