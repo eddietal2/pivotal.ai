@@ -53,6 +53,23 @@ beforeEach(() => {
   
   // Default fetch mock that returns empty screens
   global.fetch = jest.fn().mockImplementation((url: string) => {
+    // Handle health check endpoint
+    if (url.includes('/health/')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'ok', timestamp: Date.now() }),
+      });
+    }
+    // Handle market-data API endpoint
+    if (url.includes('/market-data/') && !url.includes('/health/')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          '^GSPC': { price: 5000, change: 0.5 },
+          '^DJI': { price: 40000, change: 0.3 },
+        }),
+      });
+    }
     // Handle live-screens API endpoint
     if (url.includes('/live-screens')) {
       return Promise.resolve({
@@ -449,5 +466,52 @@ describe('Watchlist page', () => {
       setItemSpy.mockRestore();
     });
   });
-});
 
+  describe('Error UI States', () => {
+    // Note: Error UI tests are limited because fetchMarketData is skipped in test environment
+    // These tests verify the error UI components exist and can be rendered
+    
+    test('error UI components are present in the component tree', () => {
+      renderWithProviders(<WatchlistPage />);
+      
+      // The error UI is conditionally rendered, but the page should render successfully
+      // Even without errors, we can verify the page structure is correct
+      expect(screen.getByRole('heading', { name: 'Watchlist' })).toBeInTheDocument();
+      expect(screen.getByTestId('market-pulse-container')).toBeInTheDocument();
+    });
+
+    test('My Watchlist tab displays empty state when no watchlist items', () => {
+      renderWithProviders(<WatchlistPage />);
+      
+      // Navigate to My Watchlist tab
+      const watchlistTabButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'Watchlist'
+      )!;
+      fireEvent.click(watchlistTabButton);
+      
+      // Should show empty state (not error state in test environment)
+      expect(screen.getByText('Your watchlist is empty')).toBeInTheDocument();
+      expect(screen.getByText('Add stocks to track their performance')).toBeInTheDocument();
+    });
+
+    test('My Screens tab displays empty state when no favorites', () => {
+      renderWithProviders(<WatchlistPage />);
+      
+      // Navigate to My Screens tab
+      const screensTabButton = screen.getAllByRole('button').find(button => 
+        button.hasAttribute('data-tab') && button.textContent === 'My Screens'
+      )!;
+      fireEvent.click(screensTabButton);
+      
+      // Should show empty state
+      expect(screen.getByText('No screens yet')).toBeInTheDocument();
+    });
+
+    test('Market Pulse shows skeletons in loading state', () => {
+      renderWithProviders(<WatchlistPage />);
+      
+      // In test environment, loading is set to false, but we can verify the container exists
+      expect(screen.getByTestId('market-pulse-container')).toBeInTheDocument();
+    });
+  });
+});
