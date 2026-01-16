@@ -141,7 +141,7 @@ export default function StockDetailPage() {
         };
         
         const res = await fetch(
-          `http://127.0.0.1:8000/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframeMap[selectedTimeframe]}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframeMap[selectedTimeframe]}`,
           { signal: controller.signal }
         );
         

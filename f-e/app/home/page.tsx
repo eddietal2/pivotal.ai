@@ -190,7 +190,7 @@ export default function App() {
     try {
       const tickers = Object.keys(tickerNames).join(',');
       console.log('Fetching market data for tickers:', tickers);
-      const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${tickers}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/?tickers=${tickers}`, {
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
       
@@ -369,7 +369,7 @@ export default function App() {
       for (const ticker of uniqueTickers) {
         try {
           // Fetch market data (includes both price and RV)
-          const response = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${ticker}`);
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/?tickers=${ticker}`);
           const marketData = await response.json();
           
           data[ticker] = marketData[ticker];

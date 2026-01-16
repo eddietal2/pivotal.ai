@@ -281,7 +281,7 @@ export default function WatchlistPage() {
   // Quick health check to verify backend is ready
   const checkBackendHealth = React.useCallback(async (): Promise<boolean> => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/market-data/health/', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/health/`, {
         signal: AbortSignal.timeout(3000), // 3 second timeout for health check
       });
       return res.ok;
@@ -356,7 +356,7 @@ export default function WatchlistPage() {
         }
       }, timeoutMs);
       
-      const res = await fetch(`http://127.0.0.1:8000/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
         signal: controller.signal,
       });
       
@@ -889,7 +889,7 @@ export default function WatchlistPage() {
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/market-data/search/?q=${encodeURIComponent(query)}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/search/?q=${encodeURIComponent(query)}`,
         { signal: controller.signal }
       );
 

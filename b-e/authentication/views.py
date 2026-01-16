@@ -340,7 +340,7 @@ def send_magic_link_email(request):
             token['user_id'] = user.id
             token['email'] = user.email
 
-            magic_link_url = f"http://127.0.0.1:8000/auth/magic-link?token={str(token)}"
+            magic_link_url = f"{settings.BACKEND_URL}/auth/magic-link?token={str(token)}"
             subject = "Your magic sign-in link"
             
             # Plain text version (fallback)

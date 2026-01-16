@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure--x!9!+14#yw^id_%zde!yh_k09nr^b*69u^ub3%@^m6veh79b2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['pivotalai-production.up.railway.app', 'localhost', '127.0.0.1', '192.168.1.68']
+ALLOWED_HOSTS = ['pivotalai-production.up.railway.app', 'localhost', '127.0.0.1', '192.168.1.68', '.ngrok-free.app']
 
 
 # Application definition
@@ -205,3 +205,6 @@ DEFAULT_FROM_EMAIL = getenv('DEFAULT_FROM_EMAIL', 'eddie@finalbossxr.com')
 
 # Frontend URL for redirects
 FRONTEND_URL = getenv('FRONTEND_URL', 'http://192.168.1.68:3000')
+
+# Backend URL for magic links (accessible from mobile devices)
+BACKEND_URL = getenv('BACKEND_URL', 'http://192.168.1.68:8000')

@@ -197,7 +197,7 @@ export default function SettingsPage() {
       }
       
       // Make API call to change username
-      const response = await fetch('http://127.0.0.1:8000/auth/settings/username', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/auth/settings/username`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ export default function SettingsPage() {
       }
       
       // Make API call to delete account
-      const response = await fetch('http://127.0.0.1:8000/auth/settings/account/delete', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/auth/settings/account/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +323,7 @@ export default function SettingsPage() {
     }
     
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/settings/theme', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/auth/settings/theme`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -372,7 +372,7 @@ export default function SettingsPage() {
       }
       
       // Make API call to change email
-      const response = await fetch('http://127.0.0.1:8000/auth/settings/email', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/auth/settings/email`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
