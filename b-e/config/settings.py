@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure--x!9!+14#yw^id_%zde!yh_k09nr^b*69u^ub3%@^m6veh79b2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['pivotalai-production.up.railway.app', 'localhost', '127.0.0.1', '192.168.1.68', '.ngrok-free.app']
+ALLOWED_HOSTS = ['pivotalai-production.up.railway.app', 'localhost', '127.0.0.1', '192.168.1.68', '.ngrok-free.app', '.ngrok-free.dev']
 
 
 # Application definition
