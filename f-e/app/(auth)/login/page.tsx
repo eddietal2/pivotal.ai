@@ -13,7 +13,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { redirectTo } from '@/lib/redirect';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://pivotalai-production.up.railway.app';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
+// Use window.location.origin in browser, fallback for SSR
+const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        return process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    }
+    return process.env.NEXT_PUBLIC_BASE_URL || 'https://pivotal-ai-web-app.vercel.app';
+};
 const MAGIC_LINK_API_ENDPOINT = `${BACKEND_URL}/auth/magic-link`;
 
 // Helper function (moved the regex outside for efficiency)
@@ -67,7 +73,7 @@ export default function LoginPage() {
                         } catch (e) { /* ignore in tests */ }
             
             log('Auth data stored, redirecting to home...');
-            redirectTo(`${BASE_URL}/home`);
+            redirectTo(`${getBaseUrl()}/home`);
             return;
         }
         
@@ -77,7 +83,7 @@ export default function LoginPage() {
         
         if (user && existingToken) {
             log('User already authenticated, redirecting to home...');
-            redirectTo(`${BASE_URL}/home`);
+            redirectTo(`${getBaseUrl()}/home`);
         }
     }, []); // Empty dependency array [] ensures this runs only once on mount
 
