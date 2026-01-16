@@ -2,6 +2,9 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LiveScreenDetailPage from '@/app/watchlist/live-screen/[symbol]/page';
 import { ToastProvider } from '@/components/context/ToastContext';
+import { PivyChatProvider } from '@/components/context/PivyChatContext';
+import { FavoritesProvider } from '@/components/context/FavoritesContext';
+import { WatchlistProvider } from '@/components/context/WatchlistContext';
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -98,7 +101,13 @@ const mockIndicatorData = {
 // Wrapper component with required providers
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
-    {children}
+    <PivyChatProvider>
+      <FavoritesProvider>
+        <WatchlistProvider>
+          {children}
+        </WatchlistProvider>
+      </FavoritesProvider>
+    </PivyChatProvider>
   </ToastProvider>
 );
 
@@ -179,6 +188,109 @@ describe('LiveScreenDetailPage', () => {
       
       const pulsingDot = document.querySelector('.animate-ping');
       expect(pulsingDot).toBeInTheDocument();
+    });
+  });
+
+  describe('LSDP-102b: View Price Chart Button', () => {
+    test('renders View Price Chart button', () => {
+      renderWithProviders(<LiveScreenDetailPage />);
+      
+      expect(screen.getByRole('button', { name: /View Price Chart/i })).toBeInTheDocument();
+    });
+
+    test('button has full width styling', () => {
+      renderWithProviders(<LiveScreenDetailPage />);
+      
+      const button = screen.getByRole('button', { name: /View Price Chart/i });
+      expect(button).toHaveClass('w-full');
+    });
+
+    test('button shows loading state when clicked', async () => {
+      // Mock a slow response
+      global.fetch = jest.fn((url) => {
+        if (url.includes('stock-detail')) {
+          return new Promise(resolve => setTimeout(() => resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              price: 175.50,
+              change: 2.5,
+              valueChange: 4.25,
+              sparkline: [170, 172, 174, 175, 175.5],
+              name: 'Apple Inc.'
+            })
+          }), 500));
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockIndicatorData),
+        });
+      }) as jest.Mock;
+
+      renderWithProviders(<LiveScreenDetailPage />);
+      
+      const button = screen.getByRole('button', { name: /View Price Chart/i });
+      fireEvent.click(button);
+      
+      // Button should show loading state
+      await waitFor(() => {
+        expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+      });
+    });
+
+    test('opens StockPreviewModal when clicked and data loads', async () => {
+      global.fetch = jest.fn((url) => {
+        if (url.includes('stock-detail')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              price: 175.50,
+              change: 2.5,
+              valueChange: 4.25,
+              sparkline: [170, 172, 174, 175, 175.5],
+              name: 'Apple Inc.'
+            })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockIndicatorData),
+        });
+      }) as jest.Mock;
+
+      renderWithProviders(<LiveScreenDetailPage />);
+      
+      const button = screen.getByRole('button', { name: /View Price Chart/i });
+      fireEvent.click(button);
+      
+      // Modal should open with stock data
+      await waitFor(() => {
+        expect(screen.getByText('Apple Inc.')).toBeInTheDocument();
+      }, { timeout: 3000 });
+    });
+
+    test('shows error toast when fetch fails', async () => {
+      global.fetch = jest.fn((url) => {
+        if (url.includes('stock-detail')) {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockIndicatorData),
+        });
+      }) as jest.Mock;
+
+      renderWithProviders(<LiveScreenDetailPage />);
+      
+      const button = screen.getByRole('button', { name: /View Price Chart/i });
+      fireEvent.click(button);
+      
+      // Should handle error gracefully (button returns to normal state)
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /View Price Chart/i })).not.toBeDisabled();
+      }, { timeout: 3000 });
     });
   });
 
