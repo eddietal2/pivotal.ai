@@ -2,10 +2,11 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap } from 'lucide-react';
+import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
 import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
 import LiveScreenSettingsDrawer from '@/components/modals/LiveScreenSettingsDrawer';
+import StockPreviewModal from '@/components/stock/StockPreviewModal';
 import { useToast } from '@/components/context/ToastContext';
 
 // Settings interface
@@ -82,6 +83,17 @@ export default function LiveScreenDetailPage() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  
+  // Stock preview data state
+  const [previewData, setPreviewData] = useState<{
+    price: number;
+    change: number;
+    valueChange: number;
+    sparkline: number[];
+    name: string;
+  } | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   
   // Settings state - initialized from localStorage
   const [settings, setSettings] = useState<LiveScreenSettings>(DEFAULT_SETTINGS);
@@ -192,6 +204,40 @@ export default function LiveScreenDetailPage() {
     }
   }, [decodedSymbol]);
 
+  // Fetch stock preview data when needed
+  const fetchPreviewData = useCallback(async () => {
+    if (previewData) {
+      setIsPreviewModalOpen(true);
+      return;
+    }
+    
+    setIsLoadingPreview(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(decodedSymbol)}&timeframe=day`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPreviewData({
+          price: data.price || currentPrice || 0,
+          change: data.change || 0,
+          valueChange: data.valueChange || 0,
+          sparkline: data.sparkline || [],
+          name: data.name || decodedSymbol,
+        });
+        setIsPreviewModalOpen(true);
+      } else {
+        showToast('Failed to load stock data', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching preview data:', error);
+      showToast('Failed to load stock data', 'error');
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, [decodedSymbol, currentPrice, previewData, showToast]);
+
   const formatVolume = (vol: number) => {
     if (vol >= 1_000_000_000) return (vol / 1_000_000_000).toFixed(2) + 'B';
     if (vol >= 1_000_000) return (vol / 1_000_000).toFixed(2) + 'M';
@@ -281,6 +327,25 @@ export default function LiveScreenDetailPage() {
             Live Technical Analysis
           </span>
         </div>
+
+        {/* View Price Chart Button */}
+        <button
+          onClick={fetchPreviewData}
+          disabled={isLoadingPreview}
+          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoadingPreview ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              <LineChart className="w-5 h-5" />
+              View Price Chart
+            </>
+          )}
+        </button>
 
         {/* Overall Signal Card */}
         {isLoadingAdditional ? (
@@ -564,6 +629,19 @@ export default function LiveScreenDetailPage() {
         onShowVolumeChange={handleShowVolumeChange}
         showMovingAverages={settings.showMovingAverages}
         onShowMovingAveragesChange={handleShowMovingAveragesChange}
+      />
+
+      {/* Stock Preview Modal */}
+      <StockPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        symbol={decodedSymbol}
+        name={previewData?.name || decodedSymbol}
+        price={previewData?.price || currentPrice || 0}
+        change={previewData?.change || 0}
+        valueChange={previewData?.valueChange || 0}
+        sparkline={previewData?.sparkline || []}
+        timeframe="day"
       />
     </div>
   );
