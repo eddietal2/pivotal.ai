@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Set to true to enable timer/fetch logging
@@ -75,7 +75,7 @@ const assetClasses: Record<string, { name: string; tickers: string[]; icon?: str
   }
 };
 
-export default function WatchlistPage() {
+function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
@@ -3347,5 +3347,18 @@ export default function WatchlistPage() {
         />
       )}
     </div>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function WatchlistPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="animate-pulse text-white">Loading...</div>
+      </div>
+    }>
+      <WatchlistPageContent />
+    </Suspense>
   );
 }
