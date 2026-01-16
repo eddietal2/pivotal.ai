@@ -11,6 +11,9 @@ python -m venv venv
 # Start Django Server
 python manage.py runserver
 
+# Start ngrok HTTPS server
+ngrok http 8000 --domain=jayla-streptococcal-aretha.ngrok-free.dev 
+
 * Unit Testing Commands:
 # Run all Unit Test
 python manage.py test
