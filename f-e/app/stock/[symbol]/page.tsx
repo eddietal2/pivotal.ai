@@ -7,6 +7,7 @@ import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtil
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
+import AnimatedPrice from '@/components/ui/AnimatedPrice';
 
 interface StockData {
   symbol: string;
@@ -612,7 +613,12 @@ export default function StockDetailPage() {
           <div className="flex items-baseline gap-3 mt-2">
             <span className="text-4xl font-bold text-gray-900 dark:text-white">
               {isScrubbing && scrubPrice !== null ? (
-                formatPrice(scrubPrice)
+                <AnimatedPrice 
+                  value={scrubPrice} 
+                  prefix={pricePrefix} 
+                  suffix={priceSuffix}
+                  duration={200}
+                />
               ) : (
                 formatPrice(stockData?.price)
               )}
