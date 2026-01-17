@@ -1,7 +1,7 @@
 from django.db import models
 from authentication.models import User
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 
 
 class PaperTradingAccount(models.Model):
@@ -179,12 +179,18 @@ class OptionContract(models.Model):
     @property
     def is_expired(self):
         """Check if the option has expired"""
-        return date.today() > self.expiration_date
+        exp_date = self.expiration_date
+        if isinstance(exp_date, str):
+            exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
+        return date.today() > exp_date
     
     @property
     def days_to_expiration(self):
         """Days until expiration"""
-        delta = self.expiration_date - date.today()
+        exp_date = self.expiration_date
+        if isinstance(exp_date, str):
+            exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
+        delta = exp_date - date.today()
         return max(0, delta.days)
     
     def __str__(self):
@@ -230,10 +236,15 @@ class OptionPosition(models.Model):
         """Unrealized profit/loss"""
         if self.position_type == 'long':
             # Long: profit when price goes up
+            # P&L = current_value - cost_paid
             return self.market_value - self.cost_basis
         else:
-            # Short: profit when price goes down (received premium - current liability)
-            return -self.cost_basis - self.market_value
+            # Short: profit when price goes down
+            # Received premium (positive), now have liability (negative market_value)
+            # P&L = premium_received - cost_to_close
+            # cost_basis is negative (credit), market_value is negative (liability)
+            # P&L = abs(cost_basis) - abs(market_value) = -cost_basis + market_value
+            return -self.cost_basis + self.market_value
     
     @property
     def unrealized_pl_percent(self):

@@ -450,13 +450,18 @@ def portfolio_summary(request):
 
 def serialize_option_contract(contract):
     """Serialize an OptionContract to dict"""
+    # Handle both date objects and string dates
+    exp_date = contract.expiration_date
+    if hasattr(exp_date, 'isoformat'):
+        exp_date = exp_date.isoformat()
+    
     return {
         'id': contract.id,
         'contract_symbol': contract.contract_symbol,
         'underlying_symbol': contract.underlying_symbol,
         'option_type': contract.option_type,
         'strike_price': str(contract.strike_price),
-        'expiration_date': contract.expiration_date.isoformat(),
+        'expiration_date': exp_date,
         'multiplier': contract.multiplier,
         'is_expired': contract.is_expired,
         'days_to_expiration': contract.days_to_expiration,
