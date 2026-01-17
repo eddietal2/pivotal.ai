@@ -913,3 +913,169 @@ def options_summary_view(request):
         'positions_by_underlying': underlyings,
         'recent_trades': [serialize_option_trade(t) for t in trades[:10]],
     })
+
+
+# ============================================
+# OPTIONS CHAIN - FETCH FROM YAHOO FINANCE
+# ============================================
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def options_chain_view(request):
+    """
+    Fetch real options chain data for a symbol from Yahoo Finance.
+    Auto-creates contracts in the database for paper trading.
+    
+    GET /api/paper-trading/options/chain/?symbol=IAU
+    GET /api/paper-trading/options/chain/?symbol=IAU&expiration=2026-02-21
+    
+    Returns available expirations and full options chain with bid/ask/volume.
+    """
+    if request.method == "OPTIONS":
+        return options_response()
+    
+    symbol = request.GET.get('symbol', '').upper()
+    if not symbol:
+        return cors_response({'error': 'Symbol parameter required'}, status=400)
+    
+    expiration = request.GET.get('expiration')  # Optional: specific expiration date
+    
+    try:
+        import yfinance as yf
+        import pandas as pd
+        
+        ticker = yf.Ticker(symbol)
+        
+        # Get available expiration dates
+        try:
+            expirations = ticker.options
+        except Exception:
+            expirations = []
+        
+        if not expirations:
+            return cors_response({
+                'error': f'No options available for {symbol}',
+                'symbol': symbol,
+                'expirations': [],
+                'contracts': []
+            }, status=404)
+        
+        # Use requested expiration or default to first available
+        selected_expiration = expiration if expiration in expirations else expirations[0]
+        
+        # Fetch options chain for selected expiration
+        try:
+            opt_chain = ticker.option_chain(selected_expiration)
+            calls_df = opt_chain.calls
+            puts_df = opt_chain.puts
+        except Exception as e:
+            return cors_response({
+                'error': f'Failed to fetch options chain: {str(e)}',
+                'symbol': symbol,
+                'expirations': list(expirations),
+            }, status=500)
+        
+        contracts = []
+        
+        # Process CALLS
+        for _, row in calls_df.iterrows():
+            contract_symbol = row.get('contractSymbol', '')
+            if not contract_symbol:
+                continue
+            
+            strike = float(row['strike']) if pd.notna(row.get('strike')) else 0
+            bid = float(row['bid']) if pd.notna(row.get('bid')) else 0
+            ask = float(row['ask']) if pd.notna(row.get('ask')) else 0
+            last = float(row['lastPrice']) if pd.notna(row.get('lastPrice')) else 0
+            volume = int(row['volume']) if pd.notna(row.get('volume')) else 0
+            open_interest = int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
+            iv = float(row['impliedVolatility']) if pd.notna(row.get('impliedVolatility')) else 0
+            
+            # Auto-create contract in database (get_or_create to avoid duplicates)
+            contract_obj, created = OptionContract.objects.get_or_create(
+                contract_symbol=contract_symbol,
+                defaults={
+                    'underlying_symbol': symbol,
+                    'option_type': 'call',
+                    'strike_price': strike,
+                    'expiration_date': selected_expiration,
+                    'multiplier': 100,
+                }
+            )
+            
+            contracts.append({
+                'contract_symbol': contract_symbol,
+                'underlying_symbol': symbol,
+                'option_type': 'call',
+                'strike': strike,
+                'expiration': selected_expiration,
+                'bid': bid,
+                'ask': ask,
+                'last': last,
+                'mark': round((bid + ask) / 2, 2) if bid and ask else last,
+                'volume': volume,
+                'open_interest': open_interest,
+                'implied_volatility': round(iv * 100, 2),  # Convert to percentage
+                'in_the_money': row.get('inTheMoney', False),
+                'created': created,
+            })
+        
+        # Process PUTS
+        for _, row in puts_df.iterrows():
+            contract_symbol = row.get('contractSymbol', '')
+            if not contract_symbol:
+                continue
+            
+            strike = float(row['strike']) if pd.notna(row.get('strike')) else 0
+            bid = float(row['bid']) if pd.notna(row.get('bid')) else 0
+            ask = float(row['ask']) if pd.notna(row.get('ask')) else 0
+            last = float(row['lastPrice']) if pd.notna(row.get('lastPrice')) else 0
+            volume = int(row['volume']) if pd.notna(row.get('volume')) else 0
+            open_interest = int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
+            iv = float(row['impliedVolatility']) if pd.notna(row.get('impliedVolatility')) else 0
+            
+            # Auto-create contract in database
+            contract_obj, created = OptionContract.objects.get_or_create(
+                contract_symbol=contract_symbol,
+                defaults={
+                    'underlying_symbol': symbol,
+                    'option_type': 'put',
+                    'strike_price': strike,
+                    'expiration_date': selected_expiration,
+                    'multiplier': 100,
+                }
+            )
+            
+            contracts.append({
+                'contract_symbol': contract_symbol,
+                'underlying_symbol': symbol,
+                'option_type': 'put',
+                'strike': strike,
+                'expiration': selected_expiration,
+                'bid': bid,
+                'ask': ask,
+                'last': last,
+                'mark': round((bid + ask) / 2, 2) if bid and ask else last,
+                'volume': volume,
+                'open_interest': open_interest,
+                'implied_volatility': round(iv * 100, 2),
+                'in_the_money': row.get('inTheMoney', False),
+                'created': created,
+            })
+        
+        # Sort contracts: calls first, then puts, both sorted by strike
+        calls = sorted([c for c in contracts if c['option_type'] == 'call'], key=lambda x: x['strike'])
+        puts = sorted([c for c in contracts if c['option_type'] == 'put'], key=lambda x: x['strike'])
+        
+        return cors_response({
+            'symbol': symbol,
+            'expirations': list(expirations),
+            'selected_expiration': selected_expiration,
+            'calls': calls,
+            'puts': puts,
+            'total_contracts': len(contracts),
+            'contracts_created': sum(1 for c in contracts if c.get('created', False)),
+        })
+        
+    except Exception as e:
+        return cors_response({'error': str(e)}, status=500)

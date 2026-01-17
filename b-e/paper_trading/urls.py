@@ -10,6 +10,7 @@ urlpatterns = [
     path('summary/', views.portfolio_summary, name='portfolio_summary'),
     
     # Options Trading
+    path('options/chain/', views.options_chain_view, name='options_chain'),  # Fetch real options data
     path('options/contracts/', views.option_contracts_view, name='option_contracts'),
     path('options/positions/', views.option_positions_view, name='option_positions'),
     path('options/positions/update-prices/', views.update_option_positions_prices, name='update_option_positions_prices'),
