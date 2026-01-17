@@ -1,0 +1,915 @@
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from decimal import Decimal, InvalidOperation
+import json
+
+from .models import (
+    PaperTradingAccount, Position, Trade, 
+    OptionContract, OptionPosition, OptionTrade, OptionStrategy
+)
+from authentication.models import User
+
+
+def get_cors_headers():
+    """Common CORS headers for all responses"""
+    return {
+        'Access-Control-Allow-Origin': 'http://localhost:3000',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+
+
+def cors_response(data, status=200):
+    """Create a JSON response with CORS headers"""
+    response = JsonResponse(data, status=status)
+    for key, value in get_cors_headers().items():
+        response[key] = value
+    return response
+
+
+def options_response():
+    """Handle OPTIONS preflight requests"""
+    response = JsonResponse({})
+    for key, value in get_cors_headers().items():
+        response[key] = value
+    return response
+
+
+def get_user_from_request(request):
+    """Extract user from request (using email from cookie or header)"""
+    # Try to get user email from cookie first
+    user_email = request.COOKIES.get('user_email')
+    
+    # Fall back to header if no cookie
+    if not user_email:
+        user_email = request.headers.get('X-User-Email')
+    
+    if not user_email:
+        return None
+    
+    try:
+        return User.objects.get(email=user_email, is_deleted=False)
+    except User.DoesNotExist:
+        return None
+
+
+def get_or_create_account(user):
+    """Get or create a paper trading account for a user"""
+    account, created = PaperTradingAccount.objects.get_or_create(user=user)
+    return account
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "OPTIONS"])
+def account_view(request):
+    """
+    GET: Get paper trading account details
+    POST: Create/reset paper trading account
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    if request.method == 'GET':
+        account = get_or_create_account(user)
+        positions = account.positions.all()
+        
+        return cors_response({
+            'account': {
+                'id': account.id,
+                'balance': str(account.balance),
+                'initial_balance': str(account.initial_balance),
+                'total_value': str(account.total_value),
+                'total_pl': str(account.total_pl),
+                'total_pl_percent': str(account.total_pl_percent),
+                'created_at': account.created_at.isoformat(),
+            },
+            'positions': [
+                {
+                    'symbol': p.symbol,
+                    'name': p.name,
+                    'quantity': str(p.quantity),
+                    'average_cost': str(p.average_cost),
+                    'current_price': str(p.current_price),
+                    'market_value': str(p.market_value),
+                    'cost_basis': str(p.cost_basis),
+                    'unrealized_pl': str(p.unrealized_pl),
+                    'unrealized_pl_percent': str(p.unrealized_pl_percent),
+                    'opened_at': p.opened_at.isoformat(),
+                }
+                for p in positions
+            ],
+        })
+    
+    elif request.method == 'POST':
+        # Reset account
+        try:
+            data = json.loads(request.body) if request.body else {}
+            initial_balance = Decimal(str(data.get('initial_balance', '100000')))
+        except (json.JSONDecodeError, InvalidOperation):
+            initial_balance = Decimal('100000')
+        
+        # Delete existing account and positions
+        PaperTradingAccount.objects.filter(user=user).delete()
+        
+        # Create new account
+        account = PaperTradingAccount.objects.create(
+            user=user,
+            balance=initial_balance,
+            initial_balance=initial_balance
+        )
+        
+        return cors_response({
+            'message': 'Account created/reset successfully',
+            'account': {
+                'id': account.id,
+                'balance': str(account.balance),
+                'initial_balance': str(account.initial_balance),
+            }
+        })
+
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def positions_view(request):
+    """Get all positions for the user's paper trading account"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    positions = account.positions.all()
+    
+    return cors_response({
+        'positions': [
+            {
+                'symbol': p.symbol,
+                'name': p.name,
+                'quantity': str(p.quantity),
+                'average_cost': str(p.average_cost),
+                'current_price': str(p.current_price),
+                'market_value': str(p.market_value),
+                'cost_basis': str(p.cost_basis),
+                'unrealized_pl': str(p.unrealized_pl),
+                'unrealized_pl_percent': str(p.unrealized_pl_percent),
+                'opened_at': p.opened_at.isoformat(),
+            }
+            for p in positions
+        ]
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST", "OPTIONS"])
+def update_positions_prices(request):
+    """Update current prices for all positions"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        prices = data.get('prices', {})  # {symbol: price}
+    except json.JSONDecodeError:
+        return cors_response({'error': 'Invalid JSON'}, status=400)
+    
+    account = get_or_create_account(user)
+    updated_count = 0
+    
+    for position in account.positions.all():
+        if position.symbol in prices:
+            try:
+                position.current_price = Decimal(str(prices[position.symbol]))
+                position.save()
+                updated_count += 1
+            except (InvalidOperation, TypeError):
+                pass
+    
+    return cors_response({
+        'message': f'Updated {updated_count} position prices',
+        'updated_count': updated_count,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "OPTIONS"])
+def trades_view(request):
+    """
+    GET: Get trade history
+    POST: Execute a new trade
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    
+    if request.method == 'GET':
+        # Get trade history with pagination
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
+        symbol = request.GET.get('symbol')  # Optional filter by symbol
+        
+        trades_qs = account.trades.all()
+        if symbol:
+            trades_qs = trades_qs.filter(symbol=symbol.upper())
+        
+        total_count = trades_qs.count()
+        trades = trades_qs[offset:offset+limit]
+        
+        return cors_response({
+            'trades': [
+                {
+                    'id': t.id,
+                    'symbol': t.symbol,
+                    'name': t.name,
+                    'side': t.side,
+                    'order_type': t.order_type,
+                    'quantity': str(t.quantity),
+                    'price': str(t.price),
+                    'total_amount': str(t.total_amount),
+                    'status': t.status,
+                    'created_at': t.created_at.isoformat(),
+                    'executed_at': t.executed_at.isoformat() if t.executed_at else None,
+                }
+                for t in trades
+            ],
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+        })
+    
+    elif request.method == 'POST':
+        # Execute a trade
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return cors_response({'error': 'Invalid JSON'}, status=400)
+        
+        # Validate required fields
+        required = ['symbol', 'side', 'quantity', 'price']
+        for field in required:
+            if field not in data:
+                return cors_response({'error': f'Missing required field: {field}'}, status=400)
+        
+        try:
+            symbol = data['symbol'].upper()
+            name = data.get('name', '')
+            side = data['side'].lower()
+            quantity = Decimal(str(data['quantity']))
+            price = Decimal(str(data['price']))
+            order_type = data.get('order_type', 'market')
+        except (InvalidOperation, AttributeError) as e:
+            return cors_response({'error': f'Invalid data format: {str(e)}'}, status=400)
+        
+        if side not in ['buy', 'sell']:
+            return cors_response({'error': 'Side must be "buy" or "sell"'}, status=400)
+        
+        if quantity <= 0:
+            return cors_response({'error': 'Quantity must be greater than 0'}, status=400)
+        
+        if price <= 0:
+            return cors_response({'error': 'Price must be greater than 0'}, status=400)
+        
+        total_amount = quantity * price
+        
+        if side == 'buy':
+            # Check if user has enough balance
+            if account.balance < total_amount:
+                return cors_response({
+                    'error': 'Insufficient balance',
+                    'required': str(total_amount),
+                    'available': str(account.balance),
+                }, status=400)
+            
+            # Deduct from balance
+            account.balance -= total_amount
+            account.save()
+            
+            # Update or create position
+            position, created = Position.objects.get_or_create(
+                account=account,
+                symbol=symbol,
+                defaults={
+                    'name': name,
+                    'quantity': quantity,
+                    'average_cost': price,
+                    'current_price': price,
+                }
+            )
+            
+            if not created:
+                # Update existing position - calculate new average cost
+                total_cost = (position.quantity * position.average_cost) + total_amount
+                position.quantity += quantity
+                position.average_cost = total_cost / position.quantity
+                position.current_price = price
+                if name:
+                    position.name = name
+                position.save()
+        
+        else:  # sell
+            # Check if user has enough shares
+            try:
+                position = Position.objects.get(account=account, symbol=symbol)
+            except Position.DoesNotExist:
+                return cors_response({'error': f'No position in {symbol}'}, status=400)
+            
+            if position.quantity < quantity:
+                return cors_response({
+                    'error': 'Insufficient shares',
+                    'required': str(quantity),
+                    'available': str(position.quantity),
+                }, status=400)
+            
+            # Add to balance
+            account.balance += total_amount
+            account.save()
+            
+            # Update position
+            position.quantity -= quantity
+            position.current_price = price
+            
+            if position.quantity == 0:
+                position.delete()
+            else:
+                position.save()
+        
+        # Record the trade
+        trade = Trade.objects.create(
+            account=account,
+            symbol=symbol,
+            name=name,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            total_amount=total_amount,
+            status='filled',
+            executed_at=timezone.now(),
+        )
+        
+        return cors_response({
+            'message': f'{side.upper()} order executed',
+            'trade': {
+                'id': trade.id,
+                'symbol': trade.symbol,
+                'side': trade.side,
+                'quantity': str(trade.quantity),
+                'price': str(trade.price),
+                'total_amount': str(trade.total_amount),
+                'status': trade.status,
+                'executed_at': trade.executed_at.isoformat(),
+            },
+            'account': {
+                'balance': str(account.balance),
+                'total_value': str(account.total_value),
+            }
+        })
+
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def portfolio_summary(request):
+    """Get a summary of the paper trading portfolio"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    positions = account.positions.all()
+    trades = account.trades.all()
+    
+    # Calculate metrics
+    total_trades = trades.count()
+    winning_trades = trades.filter(side='sell').count()  # Simplified - would need realized P&L tracking
+    
+    positions_data = [
+        {
+            'symbol': p.symbol,
+            'name': p.name,
+            'quantity': str(p.quantity),
+            'average_cost': str(p.average_cost),
+            'current_price': str(p.current_price),
+            'market_value': str(p.market_value),
+            'unrealized_pl': str(p.unrealized_pl),
+            'unrealized_pl_percent': str(p.unrealized_pl_percent),
+            'weight': str((p.market_value / account.total_value * 100) if account.total_value > 0 else 0),
+        }
+        for p in positions
+    ]
+    
+    return cors_response({
+        'summary': {
+            'cash_balance': str(account.balance),
+            'positions_value': str(sum(p.market_value for p in positions)),
+            'total_value': str(account.total_value),
+            'initial_balance': str(account.initial_balance),
+            'total_pl': str(account.total_pl),
+            'total_pl_percent': str(account.total_pl_percent),
+            'positions_count': positions.count(),
+            'total_trades': total_trades,
+        },
+        'positions': positions_data,
+        'recent_trades': [
+            {
+                'id': t.id,
+                'symbol': t.symbol,
+                'side': t.side,
+                'quantity': str(t.quantity),
+                'price': str(t.price),
+                'total_amount': str(t.total_amount),
+                'executed_at': t.executed_at.isoformat() if t.executed_at else t.created_at.isoformat(),
+            }
+            for t in trades[:10]  # Last 10 trades
+        ],
+    })
+
+
+# ============================================
+# OPTIONS TRADING VIEWS
+# ============================================
+
+def serialize_option_contract(contract):
+    """Serialize an OptionContract to dict"""
+    return {
+        'id': contract.id,
+        'contract_symbol': contract.contract_symbol,
+        'underlying_symbol': contract.underlying_symbol,
+        'option_type': contract.option_type,
+        'strike_price': str(contract.strike_price),
+        'expiration_date': contract.expiration_date.isoformat(),
+        'multiplier': contract.multiplier,
+        'is_expired': contract.is_expired,
+        'days_to_expiration': contract.days_to_expiration,
+    }
+
+
+def serialize_option_position(position):
+    """Serialize an OptionPosition to dict"""
+    return {
+        'id': position.id,
+        'contract': serialize_option_contract(position.contract),
+        'position_type': position.position_type,
+        'quantity': position.quantity,
+        'average_cost': str(position.average_cost),
+        'current_price': str(position.current_price),
+        'market_value': str(position.market_value),
+        'cost_basis': str(position.cost_basis),
+        'unrealized_pl': str(position.unrealized_pl),
+        'unrealized_pl_percent': str(position.unrealized_pl_percent),
+        'opened_at': position.opened_at.isoformat(),
+    }
+
+
+def serialize_option_trade(trade):
+    """Serialize an OptionTrade to dict"""
+    return {
+        'id': trade.id,
+        'contract': serialize_option_contract(trade.contract),
+        'action': trade.action,
+        'order_type': trade.order_type,
+        'quantity': trade.quantity,
+        'premium': str(trade.premium),
+        'total_amount': str(trade.total_amount),
+        'commission': str(trade.commission),
+        'status': trade.status,
+        'created_at': trade.created_at.isoformat(),
+        'executed_at': trade.executed_at.isoformat() if trade.executed_at else None,
+        'notes': trade.notes,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "OPTIONS"])
+def option_contracts_view(request):
+    """
+    GET: Get option contracts (with optional filtering)
+    POST: Create a new option contract (for paper trading)
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    if request.method == 'GET':
+        underlying = request.GET.get('underlying')
+        option_type = request.GET.get('type')  # call or put
+        expiration = request.GET.get('expiration')  # YYYY-MM-DD
+        
+        contracts_qs = OptionContract.objects.all()
+        
+        if underlying:
+            contracts_qs = contracts_qs.filter(underlying_symbol=underlying.upper())
+        if option_type:
+            contracts_qs = contracts_qs.filter(option_type=option_type.lower())
+        if expiration:
+            contracts_qs = contracts_qs.filter(expiration_date=expiration)
+        
+        return cors_response({
+            'contracts': [serialize_option_contract(c) for c in contracts_qs[:100]]
+        })
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return cors_response({'error': 'Invalid JSON'}, status=400)
+        
+        required = ['underlying_symbol', 'option_type', 'strike_price', 'expiration_date', 'contract_symbol']
+        for field in required:
+            if field not in data:
+                return cors_response({'error': f'Missing required field: {field}'}, status=400)
+        
+        try:
+            contract, created = OptionContract.objects.get_or_create(
+                contract_symbol=data['contract_symbol'],
+                defaults={
+                    'underlying_symbol': data['underlying_symbol'].upper(),
+                    'option_type': data['option_type'].lower(),
+                    'strike_price': Decimal(str(data['strike_price'])),
+                    'expiration_date': data['expiration_date'],
+                    'multiplier': int(data.get('multiplier', 100)),
+                }
+            )
+        except Exception as e:
+            return cors_response({'error': str(e)}, status=400)
+        
+        return cors_response({
+            'message': 'Contract created' if created else 'Contract already exists',
+            'contract': serialize_option_contract(contract),
+        }, status=201 if created else 200)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def option_positions_view(request):
+    """Get all option positions for the user's paper trading account"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    positions = account.option_positions.select_related('contract').all()
+    
+    # Calculate totals
+    total_value = sum(p.market_value for p in positions)
+    total_pl = sum(p.unrealized_pl for p in positions)
+    
+    return cors_response({
+        'positions': [serialize_option_position(p) for p in positions],
+        'summary': {
+            'total_positions': positions.count(),
+            'total_market_value': str(total_value),
+            'total_unrealized_pl': str(total_pl),
+        }
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST", "OPTIONS"])
+def update_option_positions_prices(request):
+    """Update current prices for option positions"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        prices = data.get('prices', {})  # {contract_symbol: premium}
+    except json.JSONDecodeError:
+        return cors_response({'error': 'Invalid JSON'}, status=400)
+    
+    account = get_or_create_account(user)
+    updated_count = 0
+    
+    for position in account.option_positions.select_related('contract').all():
+        if position.contract.contract_symbol in prices:
+            try:
+                position.current_price = Decimal(str(prices[position.contract.contract_symbol]))
+                position.save()
+                updated_count += 1
+            except (InvalidOperation, TypeError):
+                pass
+    
+    return cors_response({
+        'message': f'Updated {updated_count} option position prices',
+        'updated_count': updated_count,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "OPTIONS"])
+def option_trades_view(request):
+    """
+    GET: Get option trade history
+    POST: Execute a new option trade
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    
+    if request.method == 'GET':
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
+        underlying = request.GET.get('underlying')
+        
+        trades_qs = account.option_trades.select_related('contract').all()
+        if underlying:
+            trades_qs = trades_qs.filter(contract__underlying_symbol=underlying.upper())
+        
+        total_count = trades_qs.count()
+        trades = trades_qs[offset:offset+limit]
+        
+        return cors_response({
+            'trades': [serialize_option_trade(t) for t in trades],
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+        })
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return cors_response({'error': 'Invalid JSON'}, status=400)
+        
+        # Validate required fields
+        required = ['contract_symbol', 'action', 'quantity', 'premium']
+        for field in required:
+            if field not in data:
+                return cors_response({'error': f'Missing required field: {field}'}, status=400)
+        
+        try:
+            contract_symbol = data['contract_symbol']
+            action = data['action'].lower()  # buy_to_open, sell_to_close, etc.
+            quantity = int(data['quantity'])
+            premium = Decimal(str(data['premium']))  # Premium per share
+            order_type = data.get('order_type', 'market')
+            commission = Decimal(str(data.get('commission', '0')))
+        except (InvalidOperation, ValueError) as e:
+            return cors_response({'error': f'Invalid data format: {str(e)}'}, status=400)
+        
+        valid_actions = ['buy_to_open', 'sell_to_close', 'sell_to_open', 'buy_to_close']
+        if action not in valid_actions:
+            return cors_response({'error': f'Action must be one of: {", ".join(valid_actions)}'}, status=400)
+        
+        if quantity <= 0:
+            return cors_response({'error': 'Quantity must be greater than 0'}, status=400)
+        
+        if premium < 0:
+            return cors_response({'error': 'Premium cannot be negative'}, status=400)
+        
+        # Get or create the contract
+        try:
+            contract = OptionContract.objects.get(contract_symbol=contract_symbol)
+        except OptionContract.DoesNotExist:
+            # If contract doesn't exist, try to create it from provided data
+            contract_data = data.get('contract')
+            if not contract_data:
+                return cors_response({'error': f'Contract {contract_symbol} not found. Provide contract details.'}, status=400)
+            
+            try:
+                contract = OptionContract.objects.create(
+                    contract_symbol=contract_symbol,
+                    underlying_symbol=contract_data['underlying_symbol'].upper(),
+                    option_type=contract_data['option_type'].lower(),
+                    strike_price=Decimal(str(contract_data['strike_price'])),
+                    expiration_date=contract_data['expiration_date'],
+                    multiplier=int(contract_data.get('multiplier', 100)),
+                )
+            except Exception as e:
+                return cors_response({'error': f'Failed to create contract: {str(e)}'}, status=400)
+        
+        # Check if contract is expired
+        if contract.is_expired:
+            return cors_response({'error': 'Cannot trade expired option'}, status=400)
+        
+        multiplier = contract.multiplier
+        total_amount = quantity * premium * multiplier + commission
+        
+        if action == 'buy_to_open':
+            # Buying to open a long position - requires cash
+            if account.balance < total_amount:
+                return cors_response({
+                    'error': 'Insufficient balance',
+                    'required': str(total_amount),
+                    'available': str(account.balance),
+                }, status=400)
+            
+            # Deduct from balance
+            account.balance -= total_amount
+            account.save()
+            
+            # Create or update position
+            position, created = OptionPosition.objects.get_or_create(
+                account=account,
+                contract=contract,
+                position_type='long',
+                defaults={
+                    'quantity': quantity,
+                    'average_cost': premium,
+                    'current_price': premium,
+                }
+            )
+            
+            if not created:
+                # Update existing position
+                total_cost = (position.quantity * position.average_cost) + (quantity * premium)
+                position.quantity += quantity
+                position.average_cost = total_cost / position.quantity
+                position.current_price = premium
+                position.save()
+        
+        elif action == 'sell_to_close':
+            # Selling to close a long position
+            try:
+                position = OptionPosition.objects.get(
+                    account=account,
+                    contract=contract,
+                    position_type='long'
+                )
+            except OptionPosition.DoesNotExist:
+                return cors_response({'error': f'No long position in {contract_symbol}'}, status=400)
+            
+            if position.quantity < quantity:
+                return cors_response({
+                    'error': 'Insufficient contracts',
+                    'required': quantity,
+                    'available': position.quantity,
+                }, status=400)
+            
+            # Add to balance (minus commission)
+            proceeds = quantity * premium * multiplier - commission
+            account.balance += proceeds
+            account.save()
+            
+            # Update position
+            position.quantity -= quantity
+            position.current_price = premium
+            
+            if position.quantity == 0:
+                position.delete()
+            else:
+                position.save()
+        
+        elif action == 'sell_to_open':
+            # Selling to open a short position (writing options)
+            # Receives premium but may need margin (simplified: just track the position)
+            proceeds = quantity * premium * multiplier - commission
+            account.balance += proceeds
+            account.save()
+            
+            # Create or update short position
+            position, created = OptionPosition.objects.get_or_create(
+                account=account,
+                contract=contract,
+                position_type='short',
+                defaults={
+                    'quantity': quantity,
+                    'average_cost': premium,
+                    'current_price': premium,
+                }
+            )
+            
+            if not created:
+                total_premium = (position.quantity * position.average_cost) + (quantity * premium)
+                position.quantity += quantity
+                position.average_cost = total_premium / position.quantity
+                position.current_price = premium
+                position.save()
+        
+        elif action == 'buy_to_close':
+            # Buying to close a short position
+            try:
+                position = OptionPosition.objects.get(
+                    account=account,
+                    contract=contract,
+                    position_type='short'
+                )
+            except OptionPosition.DoesNotExist:
+                return cors_response({'error': f'No short position in {contract_symbol}'}, status=400)
+            
+            if position.quantity < quantity:
+                return cors_response({
+                    'error': 'Insufficient contracts',
+                    'required': quantity,
+                    'available': position.quantity,
+                }, status=400)
+            
+            # Deduct from balance
+            if account.balance < total_amount:
+                return cors_response({
+                    'error': 'Insufficient balance',
+                    'required': str(total_amount),
+                    'available': str(account.balance),
+                }, status=400)
+            
+            account.balance -= total_amount
+            account.save()
+            
+            # Update position
+            position.quantity -= quantity
+            position.current_price = premium
+            
+            if position.quantity == 0:
+                position.delete()
+            else:
+                position.save()
+        
+        # Record the trade
+        trade = OptionTrade.objects.create(
+            account=account,
+            contract=contract,
+            action=action,
+            order_type=order_type,
+            quantity=quantity,
+            premium=premium,
+            total_amount=total_amount,
+            commission=commission,
+            status='filled',
+            executed_at=timezone.now(),
+        )
+        
+        return cors_response({
+            'message': f'{action.replace("_", " ").title()} order executed',
+            'trade': serialize_option_trade(trade),
+            'account': {
+                'balance': str(account.balance),
+                'total_value': str(account.total_value),
+            }
+        })
+
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def options_summary_view(request):
+    """Get a summary of options positions and activity"""
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    account = get_or_create_account(user)
+    positions = account.option_positions.select_related('contract').all()
+    trades = account.option_trades.select_related('contract').all()
+    
+    # Separate long and short positions
+    long_positions = [p for p in positions if p.position_type == 'long']
+    short_positions = [p for p in positions if p.position_type == 'short']
+    
+    # Group by underlying
+    underlyings = {}
+    for p in positions:
+        sym = p.contract.underlying_symbol
+        if sym not in underlyings:
+            underlyings[sym] = {'long': [], 'short': []}
+        underlyings[sym][p.position_type].append(serialize_option_position(p))
+    
+    return cors_response({
+        'summary': {
+            'total_positions': positions.count(),
+            'long_positions': len(long_positions),
+            'short_positions': len(short_positions),
+            'total_market_value': str(sum(p.market_value for p in positions)),
+            'long_value': str(sum(p.market_value for p in long_positions)),
+            'short_value': str(sum(p.market_value for p in short_positions)),
+            'total_unrealized_pl': str(sum(p.unrealized_pl for p in positions)),
+            'total_trades': trades.count(),
+        },
+        'positions_by_underlying': underlyings,
+        'recent_trades': [serialize_option_trade(t) for t in trades[:10]],
+    })
