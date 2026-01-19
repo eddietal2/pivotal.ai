@@ -544,7 +544,7 @@ export default function App() {
 
                   {/* Link to Paper Trading */}
                   <div className="mt-4 text-center">
-                    <Link href="/watchlist?section=paperTrading" className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-sm font-medium">
+                    <Link href="/paper-trading" className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-sm font-medium">
                       View full portfolio →
                     </Link>
                   </div>

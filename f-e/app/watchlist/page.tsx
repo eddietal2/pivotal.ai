@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 // Set to true to enable timer/fetch logging
 const DEBUG_LOGS = true;
@@ -11,7 +12,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
-import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText } from 'lucide-react';
+import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -2095,13 +2096,17 @@ function WatchlistPageContent() {
             <div>
               {/* Section Header */}
               <div className="flex items-center justify-between py-4">
-                <span className="flex items-center gap-2 text-lg font-semibold">
+                <Link
+                  href="/paper-trading"
+                  className="flex items-center gap-2 text-lg font-semibold hover:opacity-80 transition-opacity"
+                >
                   <FileText className="w-5 h-5 text-orange-500" />
                   <span>Paper Trading</span>
                   <span className="px-2 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
                     Beta
                   </span>
-                </span>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </Link>
                 <div className="flex items-center gap-3">
                   {/* Toggle Switch */}
                   <button
