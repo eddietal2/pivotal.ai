@@ -1,6 +1,6 @@
 import React from 'react';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
-import { AlertTriangle, FileText, Cpu } from 'lucide-react';
+import { AlertTriangle, FileText, Cpu, ShieldAlert } from 'lucide-react';
 import { DisclaimersSkeleton } from '@/components/ui/skeletons';
 
 interface Props {
@@ -14,8 +14,19 @@ export default function DisclaimersSection({ isLoading, setStopLossModalOpen, se
   if (isLoading) return <DisclaimersSkeleton />;
 
   return (
-    <CollapsibleSection title={<span className="flex items-center gap-2">Disclaimers & Risk Notices</span>} openKey={'disclaimers'}>
-      <div className="grid grid-cols-1 gap-3">
+    <CollapsibleSection
+      title={
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-amber-500" />
+          <span className="text-xl font-bold text-gray-900 dark:text-white">Disclaimers & Risk Notices</span>
+        </div>
+      }
+      defaultOpen={false}
+      borderBottom={false}
+      openKey={'disclaimers'}
+    >
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-1 gap-3">
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-start gap-3 item-press">
           <div className="item-press-inner relative flex-1">
             <strong className="block flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-400" />Stop Loss Reminder</strong>
@@ -44,6 +55,7 @@ export default function DisclaimersSection({ isLoading, setStopLossModalOpen, se
           <div className="flex-shrink-0">
             <button data-testid="ai-usage-open-btn" className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-gray-900" aria-label="Open AI usage details" onClick={() => setAiUsageModalOpen(true)}>Learn more</button>
           </div>
+        </div>
         </div>
       </div>
     </CollapsibleSection>

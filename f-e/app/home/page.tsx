@@ -459,24 +459,22 @@ export default function App() {
 
           {/* Paper Trading Holdings - Only shown when enabled */}
           {isPaperTradingEnabled && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-orange-200 dark:border-orange-800/30">
-              <div className="flex items-center justify-between mb-4">
+            <CollapsibleSection
+              title={
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-orange-500" />
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paper Trading</h2>
-                  <span className="px-2 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
-                    Beta
-                  </span>
-                </div>
-                {paperTradingAccount && (
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Total Value</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">Paper Trading</span>
+                  {paperTradingAccount && (
+                    <span className="ml-auto text-sm font-semibold text-gray-900 dark:text-white">
                       ${parseFloat(paperTradingAccount.total_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                )}
-              </div>
+                    </span>
+                  )}
+                </div>
+              }
+              defaultOpen={true}
+              borderBottom={false}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-orange-200 dark:border-orange-800/30">
 
               {isPaperTradingLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -554,7 +552,8 @@ export default function App() {
                   <p>Unable to load account</p>
                 </div>
               )}
-            </div>
+              </div>
+            </CollapsibleSection>
           )}
 
           {/* Top Market Indicator at the Moment */}
@@ -595,9 +594,18 @@ export default function App() {
               </div>
             </div>
           ) : (topBullish || topBearish) && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Today's Top Market Indicators</h2>
-              <p>An AI generated impression of these two together</p>
+            <CollapsibleSection
+              title={
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-500" />
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">Today's Top Market Indicators</span>
+                </div>
+              }
+              defaultOpen={true}
+              borderBottom={false}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
+                <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">An AI generated impression of these two together</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {topBullish && (
                   <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
@@ -629,15 +637,13 @@ export default function App() {
                 )}
               </div>
               <div className="mt-4 text-center">
-                <Link href="/watchlist" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
-                  View all market indicators →
-                </Link>
+                  <Link href="/watchlist" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
+                    View all market indicators →
+                  </Link>
+                </div>
               </div>
-            </div>
+            </CollapsibleSection>
           )}
-          
-          {/* Spacer */}
-          <div className='mt-4'></div>
 
           {/* Real-time Confluence Feed */}
           <LiveSetupScansSection
@@ -860,5 +866,3 @@ export default function App() {
     </div>
   );
 }
-
-// Note: InfoModal component has been extracted to components/InfoModal.tsx

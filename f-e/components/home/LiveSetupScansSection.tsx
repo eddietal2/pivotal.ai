@@ -4,7 +4,7 @@ import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { SignalFeedSkeleton } from '@/components/ui/skeletons';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, Zap } from 'lucide-react';
 
 interface Props {
   isLoading: boolean;
@@ -19,8 +19,13 @@ export default function LiveSetupScansSection({ isLoading, filteredSignals, sign
   return (
     <CollapsibleSection
       title={
-        <span className="flex items-center gap-2">Live Setup Scans</span>
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-yellow-500" />
+          <span className="text-xl font-bold text-gray-900 dark:text-white">Live Setup Scans</span>
+        </div>
       }
+      defaultOpen={true}
+      borderBottom={false}
       infoButton={(open) => open ? (
         <div className="flex items-center gap-2">
           <div className="ml-3 inline-flex items-center rounded-md bg-gray-50 border border-gray-200 p-1 dark:bg-gray-800 dark:border-gray-700">
@@ -40,8 +45,9 @@ export default function LiveSetupScansSection({ isLoading, filteredSignals, sign
         </div>
       ) : null}
     >
-      <p className='text-[#999]'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
-      <h3 className='my-4 text-lg'>Leads: 12/09/25</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className='text-gray-500 dark:text-gray-400 text-sm mb-4'>Daily market scans using key swing-trading indicators (MACD, RSI, volume, moving averages), producing up to 10 generated leads per trading day.</p>
+        <h3 className='mb-4 text-lg font-semibold text-gray-900 dark:text-white'>Leads: 12/09/25</h3>
       <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:gap-4">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <SignalFeedSkeleton key={i} />)
@@ -59,14 +65,15 @@ export default function LiveSetupScansSection({ isLoading, filteredSignals, sign
         </div>
       </div>
 
-      <div className="mt-6 text-right">
-        <button
-          type="button"
-          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-          onClick={(e) => { e.stopPropagation(); setSignalFeedInfoOpen(true); }}
-        >
-          Learn more about Live Setup Scans →
-        </button>
+        <div className="mt-6 text-right">
+          <button
+            type="button"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
+            onClick={(e) => { e.stopPropagation(); setSignalFeedInfoOpen(true); }}
+          >
+            Learn more about Live Setup Scans →
+          </button>
+        </div>
       </div>
 
     </CollapsibleSection>
