@@ -589,18 +589,6 @@ export default function StockDetailPage() {
             >
               <TrendingUp className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'text-purple-500' : 'text-gray-400 hover:text-purple-400'}`} />
             </button>
-            <button 
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-              title="Set price alert"
-            >
-              <Bell className="w-6 h-6" />
-            </button>
-            <button 
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-              title="Share"
-            >
-              <Share2 className="w-6 h-6" />
-            </button>
           </div>
         </div>
       </div>
