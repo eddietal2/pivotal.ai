@@ -1,0 +1,156 @@
+'use client';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+interface PaperTradingAccount {
+  id: number;
+  balance: string;
+  initial_balance: string;
+  total_value: string;
+  total_pl: string;
+  total_pl_percent: string;
+  created_at: string;
+}
+
+interface PaperTradingContextType {
+  isEnabled: boolean;
+  setEnabled: (enabled: boolean) => void;
+  toggleEnabled: () => void;
+  account: PaperTradingAccount | null;
+  isLoading: boolean;
+  error: string | null;
+  refreshAccount: () => Promise<void>;
+}
+
+const PaperTradingContext = createContext<PaperTradingContextType | undefined>(undefined);
+
+const PAPER_TRADING_ENABLED_KEY = 'paper_trading_enabled';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+
+function getUserEmail(): string | null {
+  if (typeof window === 'undefined') return null;
+  const user = localStorage.getItem('user');
+  if (!user) return null;
+  try {
+    return JSON.parse(user).email;
+  } catch {
+    return null;
+  }
+}
+
+export const PaperTradingProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [account, setAccount] = useState<PaperTradingAccount | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load enabled state from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PAPER_TRADING_ENABLED_KEY);
+      if (saved === 'true') {
+        setIsEnabled(true);
+      }
+    } catch (err) {
+      console.error('Error loading paper trading state:', err);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Persist enabled state to localStorage
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem(PAPER_TRADING_ENABLED_KEY, String(isEnabled));
+    } catch (err) {
+      console.error('Error saving paper trading state:', err);
+    }
+  }, [isEnabled, isHydrated]);
+
+  // Fetch account when enabled
+  const refreshAccount = useCallback(async () => {
+    const email = getUserEmail();
+    if (!email) {
+      setError('Not authenticated');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/paper-trading/account/`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': email,
+        },
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to fetch account');
+      }
+
+      const data = await response.json();
+      setAccount(data.account);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setAccount(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch account when enabled changes to true
+  useEffect(() => {
+    if (isHydrated && isEnabled) {
+      refreshAccount();
+    }
+  }, [isEnabled, isHydrated, refreshAccount]);
+
+  const setEnabled = useCallback((enabled: boolean) => {
+    setIsEnabled(enabled);
+    if (!enabled) {
+      // Clear account data when disabled
+      setAccount(null);
+      setError(null);
+    }
+  }, []);
+
+  const toggleEnabled = useCallback(() => {
+    setIsEnabled(prev => {
+      const newValue = !prev;
+      if (!newValue) {
+        setAccount(null);
+        setError(null);
+      }
+      return newValue;
+    });
+  }, []);
+
+  return (
+    <PaperTradingContext.Provider
+      value={{
+        isEnabled,
+        setEnabled,
+        toggleEnabled,
+        account,
+        isLoading,
+        error,
+        refreshAccount,
+      }}
+    >
+      {children}
+    </PaperTradingContext.Provider>
+  );
+};
+
+export const usePaperTrading = () => {
+  const context = useContext(PaperTradingContext);
+  if (context === undefined) {
+    throw new Error('usePaperTrading must be used within a PaperTradingProvider');
+  }
+  return context;
+};
+
+export default PaperTradingContext;

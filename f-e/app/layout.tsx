@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/context/ToastContext";
 import { PivyChatProvider } from "@/components/context/PivyChatContext";
 import { FavoritesProvider } from "@/components/context/FavoritesContext";
 import { WatchlistProvider } from "@/components/context/WatchlistContext";
+import { PaperTradingProvider } from "@/components/context/PaperTradingContext";
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
 import { UIProvider } from "@/components/context/UIContext";
@@ -48,6 +49,7 @@ export default function RootLayout({
               <PivyChatProvider>
               <FavoritesProvider>
               <WatchlistProvider>
+              <PaperTradingProvider>
               <div className="min-h-screen flex flex-col">
                 {/* Navigation wrapper conditionally renders TopNav and BottomNav */}
                 <NavigationWrapper />
@@ -56,6 +58,7 @@ export default function RootLayout({
                   {children}
                 </main>
               </div>
+              </PaperTradingProvider>
               </WatchlistProvider>
               </FavoritesProvider>
               </PivyChatProvider>

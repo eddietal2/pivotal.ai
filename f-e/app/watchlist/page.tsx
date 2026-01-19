@@ -15,6 +15,7 @@ import { Info, LineChart, ChevronDown, Settings, Star, Search, X, Activity, Tren
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
+import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
 import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
 
@@ -79,6 +80,7 @@ function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
+  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, isLoading: isPaperTradingLoading } = usePaperTrading();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   
@@ -165,6 +167,8 @@ function WatchlistPageContent() {
   const [isMyScreensInfoOpen, setIsMyScreensInfoOpen] = useState(false);
   // Live Screens info modal state
   const [isLiveScreensInfoOpen, setIsLiveScreensInfoOpen] = useState(false);
+  // Paper Trading info modal state
+  const [isPaperTradingInfoOpen, setIsPaperTradingInfoOpen] = useState(false);
   // Search drawer state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2101,6 +2105,7 @@ function WatchlistPageContent() {
                   className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   title="Learn more about Paper Trading"
                   aria-label="More info about Paper Trading"
+                  onClick={() => setIsPaperTradingInfoOpen(true)}
                 >
                   <Info className="w-5 h-5 text-gray-400" />
                 </button>
@@ -2109,22 +2114,94 @@ function WatchlistPageContent() {
                 Practice trading with virtual money. Test your strategies risk-free before committing real capital.
               </p>
               
-              {/* Empty State */}
-              <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Paper Trading Coming Soon
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">
-                  Simulate trades, track your virtual portfolio performance, and refine your strategy without any financial risk.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span>In Development</span>
+              {/* Enabled State - Show Account Info */}
+              {isPaperTradingEnabled ? (
+                <div className="space-y-4">
+                  {isPaperTradingLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+                    </div>
+                  ) : paperTradingAccount ? (
+                    <>
+                      {/* Account Summary Cards */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cash Balance</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${parseFloat(paperTradingAccount.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Value</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${parseFloat(paperTradingAccount.total_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total P&L</p>
+                          <p className={`text-lg font-semibold ${parseFloat(paperTradingAccount.total_pl) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {parseFloat(paperTradingAccount.total_pl) >= 0 ? '+' : ''}${parseFloat(paperTradingAccount.total_pl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Return</p>
+                          <p className={`text-lg font-semibold ${parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? '+' : ''}{parseFloat(paperTradingAccount.total_pl_percent).toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Quick Actions */}
+                      <div className="flex gap-3 pt-2">
+                        <button className="flex-1 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors">
+                          Buy
+                        </button>
+                        <button className="flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors">
+                          Sell
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <p>Unable to load account. Please try again.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Disabled State - Show Empty State */
+                <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                  <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Enable Paper Trading
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">
+                    Toggle the switch below to start paper trading with $100,000 in virtual funds.
+                  </p>
+                  {/* Toggle Switch in Empty State */}
+                  <button
+                    type="button"
+                    onClick={togglePaperTrading}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 mb-6 ${
+                      isPaperTradingEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={isPaperTradingEnabled}
+                    aria-label="Toggle Paper Trading"
+                  >
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
+                        isPaperTradingEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="w-2 h-2 bg-orange-500 rounded-full" />
+                      <span>Risk-free practice trading</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           )}
@@ -3293,6 +3370,97 @@ function WatchlistPageContent() {
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               <strong>Tip:</strong> Use My Screens for assets you're actively considering for trades. Keep your watchlist for broader market monitoring.
+            </p>
+          </div>
+        </div>
+      </InfoModal>
+
+      {/* Paper Trading Info Modal */}
+      <InfoModal
+        open={isPaperTradingInfoOpen}
+        onClose={() => setIsPaperTradingInfoOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-orange-500" />
+            About Paper Trading
+          </span>
+        }
+        ariaLabel="Paper Trading Information"
+      >
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 w-full max-w-md">
+          {/* Paper Trading illustration */}
+          <div className="w-full h-32 mb-2 relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
+            <svg className="w-full h-full" viewBox="0 0 400 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Background grid */}
+              <g className="opacity-10">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <line key={`h-${i}`} x1="0" y1={i * 26} x2="400" y2={i * 26} stroke="currentColor" strokeWidth="0.5" />
+                ))}
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <line key={`v-${i}`} x1={i * 50} y1="0" x2={i * 50} y2="130" stroke="currentColor" strokeWidth="0.5" />
+                ))}
+              </g>
+              
+              {/* Rising chart line */}
+              <path
+                d="M20 100 L80 85 L140 90 L200 60 L260 70 L320 40 L380 25"
+                stroke="#f97316"
+                strokeWidth="3"
+                strokeLinecap="round"
+                fill="none"
+              />
+              
+              {/* Area under the line */}
+              <path
+                d="M20 100 L80 85 L140 90 L200 60 L260 70 L320 40 L380 25 L380 130 L20 130 Z"
+                fill="url(#orangeGradient)"
+                className="opacity-30"
+              />
+              
+              <defs>
+                <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#f97316" />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              
+              {/* Dollar signs */}
+              <text x="50" y="50" fill="#22c55e" fontSize="24" fontWeight="bold" className="opacity-60">$</text>
+              <text x="180" y="35" fill="#22c55e" fontSize="18" fontWeight="bold" className="opacity-40">$</text>
+              <text x="300" y="65" fill="#22c55e" fontSize="20" fontWeight="bold" className="opacity-50">$</text>
+              
+              {/* Virtual badge */}
+              <rect x="290" y="95" width="90" height="24" rx="12" fill="#f97316" className="opacity-90" />
+              <text x="335" y="112" fill="white" fontSize="11" fontWeight="600" textAnchor="middle">VIRTUAL</text>
+            </svg>
+          </div>
+
+          <p>
+            <strong>Paper Trading</strong> lets you practice trading with virtual money—no real funds at risk. Perfect for testing strategies before committing real capital.
+          </p>
+          
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">💰 Virtual Balance</h4>
+              <p className="text-sm">Start with $100,000 in virtual funds. Buy and sell stocks just like real trading.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📊 Track Performance</h4>
+              <p className="text-sm">Monitor your positions, P&L, and portfolio value in real-time with live market prices.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">📈 Options Trading</h4>
+              <p className="text-sm">Practice options strategies including calls, puts, and multi-leg positions.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">🔄 Reset Anytime</h4>
+              <p className="text-sm">Made some mistakes? Reset your account to start fresh with a new $100,000 balance.</p>
+            </div>
+          </div>
+          
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <strong>Tip:</strong> Toggle Paper Trading on to see your account summary and start placing virtual trades from stock detail pages.
             </p>
           </div>
         </div>
