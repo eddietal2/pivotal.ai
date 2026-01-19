@@ -33,6 +33,8 @@ interface PaperTradingContextType {
   isLoading: boolean;
   error: string | null;
   refreshAccount: () => Promise<void>;
+  hasPosition: (symbol: string) => boolean;
+  getPosition: (symbol: string) => PaperTradingPosition | undefined;
 }
 
 const PaperTradingContext = createContext<PaperTradingContextType | undefined>(undefined);
@@ -147,6 +149,16 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  const hasPosition = useCallback((symbol: string) => {
+    if (!isEnabled) return false;
+    return positions.some(p => p.symbol.toUpperCase() === symbol.toUpperCase());
+  }, [isEnabled, positions]);
+
+  const getPosition = useCallback((symbol: string) => {
+    if (!isEnabled) return undefined;
+    return positions.find(p => p.symbol.toUpperCase() === symbol.toUpperCase());
+  }, [isEnabled, positions]);
+
   return (
     <PaperTradingContext.Provider
       value={{
@@ -158,6 +170,8 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
         isLoading,
         error,
         refreshAccount,
+        hasPosition,
+        getPosition,
       }}
     >
       {children}

@@ -80,7 +80,7 @@ function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
-  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, isLoading: isPaperTradingLoading } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   
@@ -1458,6 +1458,7 @@ function WatchlistPageContent() {
                               rv={(pulse as any).rv}
                               isInWatchlist={isInWatchlist(pulseSymbol)}
                               isInSwingScreens={isFavorite(pulseSymbol)}
+                              isPaperTrading={isPaperTradingEnabled && hasPosition(pulseSymbol)}
                               isRecentlyAdded={recentlyAdded.has(pulseSymbol)}
                               isRecentlyAddedToScreens={recentlyAddedToScreens.has(pulseSymbol)}
                               showQuickActions
@@ -1810,6 +1811,7 @@ function WatchlistPageContent() {
                           timeframe={selectedTimeframe}
                           afterHours={tfData?.latest?.is_after_hours}
                           isInSwingScreens={isFavorite(item.symbol)}
+                          isPaperTrading={isPaperTradingEnabled && hasPosition(item.symbol)}
                           isRecentlyAdded={recentlyAdded.has(item.symbol)}
                           isRecentlyAddedToScreens={recentlyAddedToScreens.has(item.symbol)}
                           showQuickActions
@@ -2168,16 +2170,6 @@ function WatchlistPageContent() {
                             {parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? '+' : ''}{parseFloat(paperTradingAccount.total_pl_percent).toFixed(2)}%
                           </p>
                         </div>
-                      </div>
-                      
-                      {/* Quick Actions */}
-                      <div className="flex gap-3 pt-2">
-                        <button className="flex-1 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors">
-                          Buy
-                        </button>
-                        <button className="flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors">
-                          Sell
-                        </button>
                       </div>
                     </>
                   ) : (

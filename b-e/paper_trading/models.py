@@ -18,8 +18,8 @@ class PaperTradingAccount(models.Model):
     @property
     def total_value(self):
         """Calculate total account value (balance + positions market value + options market value)"""
-        positions_value = sum(p.market_value for p in self.positions.all())
-        options_value = sum(p.market_value for p in self.option_positions.all())
+        positions_value = sum((p.market_value for p in self.positions.all()), Decimal('0'))
+        options_value = sum((p.market_value for p in self.option_positions.all()), Decimal('0'))
         return self.balance + positions_value + options_value
     
     @property
@@ -67,7 +67,7 @@ class Position(models.Model):
     @property
     def market_value(self):
         """Current market value of the position"""
-        return self.quantity * self.current_price
+        return (self.quantity * self.current_price).quantize(Decimal('0.01'))
     
     @property
     def cost_basis(self):
@@ -221,7 +221,7 @@ class OptionPosition(models.Model):
     @property
     def market_value(self):
         """Current market value of the position"""
-        value = self.quantity * self.current_price * self.contract.multiplier
+        value = (self.quantity * self.current_price * self.contract.multiplier).quantize(Decimal('0.01'))
         # Short positions have negative market value (liability)
         return value if self.position_type == 'long' else -value
     

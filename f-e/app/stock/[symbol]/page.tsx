@@ -8,6 +8,7 @@ import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
+import PaperTradingSection from '@/components/stock/PaperTradingSection';
 
 interface StockData {
   symbol: string;
@@ -704,6 +705,15 @@ export default function StockDetailPage() {
             <StatItem label="P/E Ratio" value={stockData?.pe?.toFixed(2) || '—'} />
           </div>
         </div>
+
+        {/* Paper Trading Section */}
+        {stockData && (
+          <PaperTradingSection
+            symbol={symbol}
+            name={stockData.name || symbol}
+            currentPrice={stockData.price}
+          />
+        )}
 
         {/* External Links */}
         <div className="space-y-4">

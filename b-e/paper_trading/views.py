@@ -271,8 +271,8 @@ def trades_view(request):
             symbol = data['symbol'].upper()
             name = data.get('name', '')
             side = data['side'].lower()
-            quantity = Decimal(str(data['quantity']))
-            price = Decimal(str(data['price']))
+            quantity = Decimal(str(data['quantity'])).quantize(Decimal('0.000001'))  # 6 decimal places
+            price = Decimal(str(data['price'])).quantize(Decimal('0.0001'))  # 4 decimal places
             order_type = data.get('order_type', 'market')
         except (InvalidOperation, AttributeError) as e:
             return cors_response({'error': f'Invalid data format: {str(e)}'}, status=400)
@@ -286,7 +286,7 @@ def trades_view(request):
         if price <= 0:
             return cors_response({'error': 'Price must be greater than 0'}, status=400)
         
-        total_amount = quantity * price
+        total_amount = (quantity * price).quantize(Decimal('0.01'))  # Round to cents
         
         if side == 'buy':
             # Check if user has enough balance

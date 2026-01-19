@@ -8,6 +8,7 @@ import { usePivyChat } from '@/components/context/PivyChatContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
+import PaperTradingSection from '@/components/stock/PaperTradingSection';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -812,8 +813,8 @@ export default function StockPreviewModal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
+        {/* Content - scrollable */}
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Price - shows scrub price when touching chart */}
           <div className={`flex items-baseline gap-3 flex-wrap transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -905,6 +906,13 @@ export default function StockPreviewModal({
               )}
             </div>
           )}
+
+          {/* Paper Trading Section */}
+          <PaperTradingSection
+            symbol={symbol}
+            name={name}
+            currentPrice={numericPrice}
+          />
         </div>
 
         {/* Actions - fixed at bottom */}
