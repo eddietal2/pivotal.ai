@@ -5,6 +5,7 @@ import { FavoritesProvider } from '@/components/context/FavoritesContext';
 import { WatchlistProvider } from '@/components/context/WatchlistContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
 import { ToastProvider } from '@/components/context/ToastContext';
+import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -26,11 +27,13 @@ jest.mock('next/navigation', () => ({
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
     <PivyChatProvider>
-      <FavoritesProvider>
-        <WatchlistProvider>
-          {children}
-        </WatchlistProvider>
-      </FavoritesProvider>
+      <PaperTradingProvider>
+        <FavoritesProvider>
+          <WatchlistProvider>
+            {children}
+          </WatchlistProvider>
+        </FavoritesProvider>
+      </PaperTradingProvider>
     </PivyChatProvider>
   </ToastProvider>
 );
@@ -390,15 +393,15 @@ describe('Watchlist page', () => {
       expect(buttons[4]).toHaveTextContent('Paper Trading');
     });
 
-    test('Paper Trading tab displays coming soon message', () => {
+    test('Paper Trading tab displays enable prompt when disabled', () => {
       renderWithProviders(<WatchlistPage />);
       const paperTradingButton = screen.getAllByRole('button').find(button => 
         button.hasAttribute('data-tab') && button.textContent === 'Paper Trading'
       )!;
       fireEvent.click(paperTradingButton);
       
-      expect(screen.getByText('Paper Trading Coming Soon')).toBeInTheDocument();
-      expect(screen.getByText(/Practice trading with virtual money/i)).toBeInTheDocument();
+      expect(screen.getByText('Enable Paper Trading')).toBeInTheDocument();
+      expect(screen.getByText(/Toggle the switch above to start paper trading/i)).toBeInTheDocument();
     });
 
     test('Paper Trading tab has Beta badge', () => {

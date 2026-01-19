@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/context/ThemeContext';
 import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
+import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -39,9 +40,11 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -73,9 +76,11 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -88,9 +93,11 @@ describe('Stop Loss modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>

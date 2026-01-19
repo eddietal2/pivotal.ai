@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/context/ThemeContext';
 import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
+import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
 
 // Mock Next.js navigation
 jest.mock('next/navigation', () => ({
@@ -48,9 +49,11 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -72,9 +75,11 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -94,9 +99,11 @@ describe('AI Usage modal flow', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <PivyChatProvider>
-              <App />
-            </PivyChatProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                <App />
+              </PivyChatProvider>
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>

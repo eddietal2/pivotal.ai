@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup, within } from '@testing-library/rea
 import { ThemeProvider } from '../../components/context/ThemeContext'
 import { ToastProvider } from '@/components/context/ToastContext'
 import { UIProvider } from '@/components/context/UIContext'
+import { PaperTradingProvider } from '@/components/context/PaperTradingContext'
 import App from '@/app/home/page'
 
 // Mock next/navigation to provide router context
@@ -41,7 +42,9 @@ describe('Home page (/app/home/page)', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PaperTradingProvider>
+              <App />
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -61,7 +64,9 @@ describe('Home page (/app/home/page)', () => {
       <ThemeProvider>
         <ToastProvider>
           <UIProvider>
-            <App />
+            <PaperTradingProvider>
+              <App />
+            </PaperTradingProvider>
           </UIProvider>
         </ToastProvider>
       </ThemeProvider>

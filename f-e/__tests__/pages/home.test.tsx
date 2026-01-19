@@ -4,6 +4,7 @@ import HomePage from '@/app/home/page';
 import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
+import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -32,9 +33,11 @@ jest.mock('next/link', () => {
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
     <UIProvider>
-      <PivyChatProvider>
-        {children}
-      </PivyChatProvider>
+      <PaperTradingProvider>
+        <PivyChatProvider>
+          {children}
+        </PivyChatProvider>
+      </PaperTradingProvider>
     </UIProvider>
   </ToastProvider>
 );
