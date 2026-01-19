@@ -346,7 +346,16 @@ function WatchlistPageContent() {
       }
       setBackendReady(true);
 
-      const tickers = Object.keys(tickerNames).join(',');
+      // Combine Market Pulse tickers with watchlist and favorites symbols
+      const marketPulseTickers = Object.keys(tickerNames);
+      const watchlistSymbols = watchlist.map(item => item.symbol);
+      const favoriteSymbols = favorites.map(item => item.symbol);
+      
+      // Create unique set of all tickers to fetch
+      const allTickers = [...new Set([...marketPulseTickers, ...watchlistSymbols, ...favoriteSymbols])];
+      const tickers = allTickers.join(',');
+      
+      console.log(`📊 Fetching ${allTickers.length} tickers (Market Pulse: ${marketPulseTickers.length}, Watchlist: ${watchlistSymbols.length}, Favorites: ${favoriteSymbols.length})`);
       
       // Use longer timeout on initial load (cold start) vs polling
       // Cold start can take 30-60s due to yfinance rate limits and external API calls
@@ -457,7 +466,7 @@ function WatchlistPageContent() {
       fetchInProgressRef.current = false;
       setLoading(false);
     }
-  }, [tickerNames, checkBackendHealth]);
+  }, [tickerNames, checkBackendHealth, watchlist, favorites]);
 
   // Initial fetch on mount only (empty dependency array to run once)
   React.useEffect(() => {
@@ -487,6 +496,25 @@ function WatchlistPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Object.keys(marketData).length > 0]); // Only re-run when hasData changes
+
+  // Refetch when new symbols are added to watchlist/favorites that don't have data yet
+  const watchlistSymbolsKey = watchlist.map(w => w.symbol).sort().join(',');
+  const favoritesSymbolsKey = favorites.map(f => f.symbol).sort().join(',');
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return;
+    
+    // Check if any watchlist or favorites symbols are missing from marketData
+    const missingSymbols = [
+      ...watchlist.filter(w => !marketData[w.symbol]),
+      ...favorites.filter(f => !marketData[f.symbol])
+    ];
+    
+    if (missingSymbols.length > 0 && Object.keys(marketData).length > 0 && !fetchInProgressRef.current) {
+      console.log(`📈 Found ${missingSymbols.length} new symbols without data, refetching:`, missingSymbols.map(s => s.symbol));
+      fetchMarketData(true); // Silent refetch
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchlistSymbolsKey, favoritesSymbolsKey]);
 
   // Cleanup abort controller and retry timeout on unmount
   React.useEffect(() => {
