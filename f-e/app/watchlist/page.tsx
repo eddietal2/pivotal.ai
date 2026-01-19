@@ -3536,6 +3536,17 @@ function WatchlistPageContent() {
               <p className="text-sm">Made some mistakes? Reset your account to start fresh with a new $100,000 balance.</p>
             </div>
           </div>
+
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">🚀 How to Paper Trade</h4>
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li><strong>Enable Paper Trading</strong> — Toggle the Paper Trading switch ON from your Watchlist or Settings page.</li>
+              <li><strong>Search for a Stock</strong> — Use the search bar to find any stock by ticker or company name.</li>
+              <li><strong>Open Stock Details</strong> — Tap on a stock to view its detail page with charts and analysis.</li>
+              <li><strong>Place a Trade</strong> — In the Paper Trading section, enter the number of shares and click Buy or Sell.</li>
+              <li><strong>Track Your Portfolio</strong> — View your holdings, P&L, and performance on the Home page or Paper Trading dashboard.</li>
+            </ol>
+          </div>
           
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">
