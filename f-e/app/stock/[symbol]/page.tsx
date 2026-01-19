@@ -703,23 +703,6 @@ export default function StockDetailPage() {
           </button>
         </div>
 
-        {/* Key Statistics */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Key Statistics</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <StatItem label="Open" value={formatPrice(stockData?.open)} />
-            <StatItem label="Previous Close" value={formatPrice(stockData?.previousClose)} />
-            <StatItem label="Day High" value={formatPrice(stockData?.high)} />
-            <StatItem label="Day Low" value={formatPrice(stockData?.low)} />
-            <StatItem label="52W High" value={formatPrice(stockData?.week52High)} />
-            <StatItem label="52W Low" value={formatPrice(stockData?.week52Low)} />
-            <StatItem label="Volume" value={formatNumber(stockData?.volume, 0)} />
-            <StatItem label="Avg Volume" value={formatNumber(stockData?.avgVolume, 0)} />
-            <StatItem label="Market Cap" value={formatNumber(stockData?.marketCap)} />
-            <StatItem label="P/E Ratio" value={stockData?.pe?.toFixed(2) || '—'} />
-          </div>
-        </div>
-
         {/* Paper Trading Section - Collapsible */}
         {stockData && (
           <div className="border border-orange-200 dark:border-orange-800 rounded-xl overflow-hidden bg-orange-50 dark:bg-orange-900/20">
@@ -762,6 +745,23 @@ export default function StockDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Key Statistics */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Key Statistics</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatItem label="Open" value={formatPrice(stockData?.open)} />
+            <StatItem label="Previous Close" value={formatPrice(stockData?.previousClose)} />
+            <StatItem label="Day High" value={formatPrice(stockData?.high)} />
+            <StatItem label="Day Low" value={formatPrice(stockData?.low)} />
+            <StatItem label="52W High" value={formatPrice(stockData?.week52High)} />
+            <StatItem label="52W Low" value={formatPrice(stockData?.week52Low)} />
+            <StatItem label="Volume" value={formatNumber(stockData?.volume, 0)} />
+            <StatItem label="Avg Volume" value={formatNumber(stockData?.avgVolume, 0)} />
+            <StatItem label="Market Cap" value={formatNumber(stockData?.marketCap)} />
+            <StatItem label="P/E Ratio" value={stockData?.pe?.toFixed(2) || '—'} />
+          </div>
+        </div>
 
         {/* External Links */}
         <div className="space-y-4">
