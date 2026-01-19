@@ -5,6 +5,7 @@ import InfoModal from '@/components/modals/InfoModal';
 import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useToast } from '@/components/context/ToastContext';
+import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
 import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
@@ -104,6 +105,7 @@ const mockSignals = [
 // 4. Main Application Layout
 export default function App() {
   const { modalOpen, setModalOpen } = useUI();
+  const { isEnabled: isPaperTradingEnabled, account: paperTradingAccount, positions: paperTradingPositions, isLoading: isPaperTradingLoading } = usePaperTrading();
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
@@ -454,6 +456,106 @@ export default function App() {
               Learn more about Pivy Chat →
             </Link>
           </div>
+
+          {/* Paper Trading Holdings - Only shown when enabled */}
+          {isPaperTradingEnabled && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-orange-200 dark:border-orange-800/30">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-orange-500" />
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paper Trading</h2>
+                  <span className="px-2 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
+                    Beta
+                  </span>
+                </div>
+                {paperTradingAccount && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Total Value</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      ${parseFloat(paperTradingAccount.total_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {isPaperTradingLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+                </div>
+              ) : paperTradingAccount ? (
+                <>
+                  {/* Account Summary Row */}
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Cash</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        ${parseFloat(paperTradingAccount.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">P&L</p>
+                      <p className={`text-sm font-semibold ${parseFloat(paperTradingAccount.total_pl) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {parseFloat(paperTradingAccount.total_pl) >= 0 ? '+' : ''}${parseFloat(paperTradingAccount.total_pl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Return</p>
+                      <p className={`text-sm font-semibold ${parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? '+' : ''}{parseFloat(paperTradingAccount.total_pl_percent).toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Holdings List */}
+                  {paperTradingPositions.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Holdings ({paperTradingPositions.length})</p>
+                      {paperTradingPositions.slice(0, 5).map((position) => (
+                        <div key={position.symbol} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-900 dark:text-white">{position.symbol}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{position.quantity} shares</span>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{position.name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                              ${parseFloat(position.market_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                            <p className={`text-xs font-medium ${parseFloat(position.unrealized_pl) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {parseFloat(position.unrealized_pl) >= 0 ? '+' : ''}{parseFloat(position.unrealized_pl_percent).toFixed(2)}%
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {paperTradingPositions.length > 5 && (
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
+                          +{paperTradingPositions.length - 5} more positions
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                      <p className="text-sm">No positions yet</p>
+                      <p className="text-xs mt-1">Start trading from stock detail pages</p>
+                    </div>
+                  )}
+
+                  {/* Link to Paper Trading */}
+                  <div className="mt-4 text-center">
+                    <Link href="/watchlist?section=paperTrading" className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-sm font-medium">
+                      View full portfolio →
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  <p>Unable to load account</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Top Market Indicator at the Moment */}
           {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : topIndicatorsError ? (

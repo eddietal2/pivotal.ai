@@ -11,11 +11,25 @@ interface PaperTradingAccount {
   created_at: string;
 }
 
+interface PaperTradingPosition {
+  symbol: string;
+  name: string;
+  quantity: string;
+  average_cost: string;
+  current_price: string;
+  market_value: string;
+  cost_basis: string;
+  unrealized_pl: string;
+  unrealized_pl_percent: string;
+  opened_at: string;
+}
+
 interface PaperTradingContextType {
   isEnabled: boolean;
   setEnabled: (enabled: boolean) => void;
   toggleEnabled: () => void;
   account: PaperTradingAccount | null;
+  positions: PaperTradingPosition[];
   isLoading: boolean;
   error: string | null;
   refreshAccount: () => Promise<void>;
@@ -40,6 +54,7 @@ function getUserEmail(): string | null {
 export const PaperTradingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [account, setAccount] = useState<PaperTradingAccount | null>(null);
+  const [positions, setPositions] = useState<PaperTradingPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -93,9 +108,11 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
 
       const data = await response.json();
       setAccount(data.account);
+      setPositions(data.positions || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setAccount(null);
+      setPositions([]);
     } finally {
       setIsLoading(false);
     }
@@ -113,6 +130,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
     if (!enabled) {
       // Clear account data when disabled
       setAccount(null);
+      setPositions([]);
       setError(null);
     }
   }, []);
@@ -122,6 +140,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
       const newValue = !prev;
       if (!newValue) {
         setAccount(null);
+        setPositions([]);
         setError(null);
       }
       return newValue;
@@ -135,6 +154,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
         setEnabled,
         toggleEnabled,
         account,
+        positions,
         isLoading,
         error,
         refreshAccount,

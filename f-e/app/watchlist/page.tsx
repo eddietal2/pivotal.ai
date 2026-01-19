@@ -2100,15 +2100,34 @@ function WatchlistPageContent() {
                     Beta
                   </span>
                 </span>
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                  title="Learn more about Paper Trading"
-                  aria-label="More info about Paper Trading"
-                  onClick={() => setIsPaperTradingInfoOpen(true)}
-                >
-                  <Info className="w-5 h-5 text-gray-400" />
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Toggle Switch */}
+                  <button
+                    type="button"
+                    onClick={togglePaperTrading}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                      isPaperTradingEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={isPaperTradingEnabled}
+                    aria-label="Toggle Paper Trading"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        isPaperTradingEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                    title="Learn more about Paper Trading"
+                    aria-label="More info about Paper Trading"
+                    onClick={() => setIsPaperTradingInfoOpen(true)}
+                  >
+                    <Info className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Practice trading with virtual money. Test your strategies risk-free before committing real capital.
@@ -2175,25 +2194,8 @@ function WatchlistPageContent() {
                     Enable Paper Trading
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">
-                    Toggle the switch below to start paper trading with $100,000 in virtual funds.
+                    Toggle the switch above to start paper trading with $100,000 in virtual funds.
                   </p>
-                  {/* Toggle Switch in Empty State */}
-                  <button
-                    type="button"
-                    onClick={togglePaperTrading}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 mb-6 ${
-                      isPaperTradingEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    role="switch"
-                    aria-checked={isPaperTradingEnabled}
-                    aria-label="Toggle Paper Trading"
-                  >
-                    <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
-                        isPaperTradingEnabled ? 'translate-x-7' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
                   <div className="flex flex-col sm:flex-row items-center gap-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <span className="w-2 h-2 bg-orange-500 rounded-full" />

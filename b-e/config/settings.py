@@ -83,6 +83,20 @@ CORS_ALLOWED_ORIGINS = [
 # Set to True if your frontend needs to send cookies, authentication headers, or tokens.
 CORS_ALLOW_CREDENTIALS = True
 
+# Allow custom headers in CORS requests
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-user-email',  # Custom header for paper trading auth
+]
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],  # Disable global auth, handle per-view
