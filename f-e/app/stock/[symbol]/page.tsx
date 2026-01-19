@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart, Briefcase, ChevronDown, FileText } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
+import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
@@ -40,6 +41,7 @@ export default function StockDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
+  const [isPaperTradingExpanded, setIsPaperTradingExpanded] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,8 @@ export default function StockDetailPage() {
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
+  const { isEnabled: isPaperTradingEnabled, getPosition } = usePaperTrading();
+  const position = getPosition(symbol);
 
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
@@ -643,6 +647,16 @@ export default function StockDetailPage() {
               </div>
             )}
           </div>
+
+          {/* User's Position */}
+          {isPaperTradingEnabled && position && (
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2 mt-2 w-fit">
+              <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                You own {parseFloat(position.quantity).toLocaleString()} shares
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Chart - interactive scrubbing */}
@@ -706,13 +720,47 @@ export default function StockDetailPage() {
           </div>
         </div>
 
-        {/* Paper Trading Section */}
+        {/* Paper Trading Section - Collapsible */}
         {stockData && (
-          <PaperTradingSection
-            symbol={symbol}
-            name={stockData.name || symbol}
-            currentPrice={stockData.price}
-          />
+          <div className="border border-orange-200 dark:border-orange-800 rounded-xl overflow-hidden bg-orange-50 dark:bg-orange-900/20">
+            <button
+              onClick={() => setIsPaperTradingExpanded(!isPaperTradingExpanded)}
+              className="w-full flex items-center justify-between p-4 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-orange-500" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">Paper Trading</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Position summary when collapsed */}
+                {!isPaperTradingExpanded && isPaperTradingEnabled && position && (
+                  <div className="flex flex-col items-end text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">
+                      {parseFloat(position.quantity).toLocaleString()} shares
+                    </span>
+                    <span className={`font-semibold ${
+                      parseFloat(position.unrealized_pl) >= 0 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {parseFloat(position.unrealized_pl) >= 0 ? '+' : ''}${parseFloat(position.unrealized_pl).toFixed(2)} ({parseFloat(position.unrealized_pl_percent).toFixed(1)}%)
+                    </span>
+                  </div>
+                )}
+                <ChevronDown className={`w-5 h-5 text-orange-500 transition-transform duration-200 ${isPaperTradingExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isPaperTradingExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="border-t border-orange-200 dark:border-orange-800">
+                <PaperTradingSection
+                  symbol={symbol}
+                  name={stockData.name || symbol}
+                  currentPrice={stockData.price}
+                  hideHeader
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {/* External Links */}

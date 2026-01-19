@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, FileText } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
+import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
@@ -166,8 +167,11 @@ export default function StockPreviewModal({
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
+  const { isEnabled: isPaperTradingEnabled, getPosition } = usePaperTrading();
+  const position = getPosition(symbol);
   const [isClosing, setIsClosing] = React.useState(false);
   const [chartMode, setChartMode] = React.useState<'line' | 'candle'>('line');
+  const [isPaperTradingExpanded, setIsPaperTradingExpanded] = React.useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
     (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
   );
@@ -847,6 +851,15 @@ export default function StockPreviewModal({
             </div>
           </div>
 
+          {/* User's Position */}
+          {isPaperTradingEnabled && position && (
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+              <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                You own {parseFloat(position.quantity).toLocaleString()} shares
+              </span>
+            </div>
+          )}
 
           {/* Chart - interactive scrubbing */}
           <div 
@@ -907,12 +920,46 @@ export default function StockPreviewModal({
             </div>
           )}
 
-          {/* Paper Trading Section */}
-          <PaperTradingSection
-            symbol={symbol}
-            name={name}
-            currentPrice={numericPrice}
-          />
+          {/* Paper Trading Section - Collapsible */}
+          <div className="border border-orange-200 dark:border-orange-800 rounded-xl overflow-hidden bg-orange-50 dark:bg-orange-900/20">
+            <button
+              onClick={() => setIsPaperTradingExpanded(!isPaperTradingExpanded)}
+              className="w-full flex items-center justify-between p-3 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-orange-500" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Paper Trading</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Position summary when collapsed */}
+                {!isPaperTradingExpanded && isPaperTradingEnabled && position && (
+                  <div className="flex flex-col items-end text-xs">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">
+                      {parseFloat(position.quantity).toLocaleString()} shares
+                    </span>
+                    <span className={`font-semibold ${
+                      parseFloat(position.unrealized_pl) >= 0 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {parseFloat(position.unrealized_pl) >= 0 ? '+' : ''}${parseFloat(position.unrealized_pl).toFixed(2)} ({parseFloat(position.unrealized_pl_percent).toFixed(1)}%)
+                    </span>
+                  </div>
+                )}
+                <ChevronDown className={`w-5 h-5 text-orange-500 transition-transform duration-200 ${isPaperTradingExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isPaperTradingExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="border-t border-orange-200 dark:border-orange-800">
+                <PaperTradingSection
+                  symbol={symbol}
+                  name={name}
+                  currentPrice={numericPrice}
+                  hideHeader
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Actions - fixed at bottom */}

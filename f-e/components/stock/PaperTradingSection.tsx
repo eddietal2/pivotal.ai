@@ -3,12 +3,14 @@
 import React, { useState } from 'react';
 import { FileText, TrendingUp, TrendingDown, DollarSign, Minus, Plus, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
+import { useToast } from '@/components/context/ToastContext';
 
 interface PaperTradingSectionProps {
   symbol: string;
   name: string;
   currentPrice: number;
   onTradeComplete?: () => void;
+  hideHeader?: boolean;
 }
 
 export default function PaperTradingSection({
@@ -16,6 +18,7 @@ export default function PaperTradingSection({
   name,
   currentPrice,
   onTradeComplete,
+  hideHeader = false,
 }: PaperTradingSectionProps) {
   const {
     isEnabled,
@@ -26,6 +29,7 @@ export default function PaperTradingSection({
     refreshAccount,
     isLoading: isAccountLoading,
   } = usePaperTrading();
+  const { showToast } = useToast();
 
   const [quantity, setQuantity] = useState(1);
   const [isTrading, setIsTrading] = useState(false);
@@ -81,10 +85,17 @@ export default function PaperTradingSection({
         throw new Error(data.error || 'Trade failed');
       }
 
-      setTradeSuccess(
-        `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} share${quantity > 1 ? 's' : ''} of ${symbol} at $${currentPrice.toFixed(2)}`
-      );
+      const successMessage = `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} share${quantity > 1 ? 's' : ''} of ${symbol} at $${currentPrice.toFixed(2)}`;
+      setTradeSuccess(successMessage);
       setQuantity(1);
+      
+      // Show toast notification
+      showToast(
+        successMessage,
+        side === 'buy' ? 'success' : 'info',
+        3000,
+        { link: '/paper-trading' }
+      );
       
       // Refresh account data
       await refreshAccount();
@@ -94,7 +105,9 @@ export default function PaperTradingSection({
       
       onTradeComplete?.();
     } catch (err: any) {
-      setTradeError(err.message || 'Failed to execute trade');
+      const errorMessage = err.message || 'Failed to execute trade';
+      setTradeError(errorMessage);
+      showToast(errorMessage, 'error', 5000);
       setTimeout(() => setTradeError(null), 5000);
     } finally {
       setIsTrading(false);
@@ -113,13 +126,15 @@ export default function PaperTradingSection({
   }
 
   return (
-    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 space-y-4">
+    <div className={hideHeader ? 'p-4 space-y-4' : 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 space-y-4'}>
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <FileText className="w-5 h-5 text-orange-500" />
-        <h3 className="font-semibold text-gray-900 dark:text-white">Paper Trading</h3>
-        {isAccountLoading && <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />}
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-orange-500" />
+          <h3 className="font-semibold text-gray-900 dark:text-white">Paper Trading</h3>
+          {isAccountLoading && <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />}
+        </div>
+      )}
 
       {/* Current Position (if any) */}
       {hasOpenPosition && position && (

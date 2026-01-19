@@ -81,7 +81,7 @@ function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
-  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, positions: paperTradingPositions, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   
@@ -2203,6 +2203,58 @@ function WatchlistPageContent() {
                             {parseFloat(paperTradingAccount.total_pl_percent) >= 0 ? '+' : ''}{parseFloat(paperTradingAccount.total_pl_percent).toFixed(2)}%
                           </p>
                         </div>
+                      </div>
+
+                      {/* Current Positions */}
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Current Positions</h4>
+                        {paperTradingPositions.length === 0 ? (
+                          <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No open positions</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Buy stocks from their detail page to open positions</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {paperTradingPositions.map((position) => {
+                              const plValue = parseFloat(position.unrealized_pl);
+                              const plPercent = parseFloat(position.unrealized_pl_percent);
+                              const isPositive = plValue >= 0;
+                              return (
+                                <button
+                                  key={position.symbol}
+                                  onClick={() => setSelectedStock({
+                                    symbol: position.symbol,
+                                    name: position.name,
+                                    price: parseFloat(position.current_price),
+                                    change: plPercent,
+                                    valueChange: plValue,
+                                    sparkline: [],
+                                    timeframe: selectedTimeframe,
+                                  })}
+                                  className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900 dark:text-white">{position.symbol}</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{position.name}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                      {parseFloat(position.quantity).toLocaleString()} shares @ ${parseFloat(position.average_cost).toFixed(2)}
+                                    </div>
+                                  </div>
+                                  <div className="text-right ml-3">
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                      ${parseFloat(position.market_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <div className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                      {isPositive ? '+' : ''}{plPercent.toFixed(2)}% ({isPositive ? '+' : ''}${plValue.toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </>
                   ) : (
