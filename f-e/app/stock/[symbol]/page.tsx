@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart, Briefcase, ChevronDown, FileText } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart, Briefcase, ChevronDown, FileText, DollarSign } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
@@ -10,6 +10,7 @@ import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesConte
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
 import PaperTradingSection from '@/components/stock/PaperTradingSection';
+import OptionsChainSection from '@/components/stock/OptionsChainSection';
 
 interface StockData {
   symbol: string;
@@ -42,6 +43,7 @@ export default function StockDetailPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
   const [isPaperTradingExpanded, setIsPaperTradingExpanded] = useState(false);
+  const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -53,8 +55,9 @@ export default function StockDetailPage() {
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
-  const { isEnabled: isPaperTradingEnabled, getPosition } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, getPosition, getOptionPositionsForUnderlying } = usePaperTrading();
   const position = getPosition(symbol);
+  const optionPositions = getOptionPositionsForUnderlying(symbol);
 
   // Check if asset is already in today's chat
   const isInChat = isAssetInTodaysChat(symbol);
@@ -636,12 +639,22 @@ export default function StockDetailPage() {
             )}
           </div>
 
-          {/* User's Position */}
+          {/* User's Stock Position */}
           {isPaperTradingEnabled && position && (
             <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2 mt-2 w-fit">
               <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                 You own {parseFloat(position.quantity).toLocaleString()} shares
+              </span>
+            </div>
+          )}
+
+          {/* User's Options Positions */}
+          {isPaperTradingEnabled && optionPositions.length > 0 && (
+            <div className="flex items-center gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg px-3 py-2 mt-2 w-fit">
+              <DollarSign className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                {optionPositions.length} option{optionPositions.length !== 1 ? 's' : ''} contract{optionPositions.length !== 1 ? 's' : ''}
               </span>
             </div>
           )}
@@ -728,6 +741,43 @@ export default function StockDetailPage() {
                   name={stockData.name || symbol}
                   currentPrice={stockData.price}
                   hideHeader
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Options Chain Section - Collapsible */}
+        {stockData && isPaperTradingEnabled && (
+          <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-purple-50 dark:bg-purple-900/20">
+            <button
+              onClick={() => setIsOptionsExpanded(!isOptionsExpanded)}
+              className="w-full flex items-center justify-between p-4 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-purple-500" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">Options Chain</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Options positions summary when collapsed */}
+                {!isOptionsExpanded && optionPositions.length > 0 && (
+                  <div className="flex flex-col items-end text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">
+                      {optionPositions.length} contract{optionPositions.length !== 1 ? 's' : ''}
+                    </span>
+                    <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                      {optionPositions.filter(p => p.position_type === 'long').length} long / {optionPositions.filter(p => p.position_type === 'short').length} short
+                    </span>
+                  </div>
+                )}
+                <ChevronDown className={`w-5 h-5 text-purple-500 transition-transform duration-200 ${isOptionsExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOptionsExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="border-t border-purple-200 dark:border-purple-800 p-4">
+                <OptionsChainSection
+                  symbol={symbol}
+                  currentPrice={stockData.price}
                 />
               </div>
             </div>

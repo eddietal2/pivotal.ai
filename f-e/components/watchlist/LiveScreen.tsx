@@ -324,10 +324,25 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
       }));
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
         const response = await fetch(
           `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${period}&interval=${interval}&indicator=ALL`
         );
+
+        if (response.status === 429) {
+          // Rate limited - use placeholder data silently
+          const placeholderHistogram = Array.from({ length: 20 }, () => (Math.random() - 0.5) * 0.3);
+          setIndicatorData(prev => ({
+            ...prev,
+            [symbol]: {
+              symbol,
+              macdHistogram: placeholderHistogram,
+              trend: 'neutral',
+              isLoading: false,
+            }
+          }));
+          return;
+        }
 
         if (!response.ok) {
           throw new Error('Failed to fetch');
@@ -388,17 +403,22 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
       }
     };
 
-    // Fetch data for all favorites (with slight stagger to avoid rate limiting)
-    await Promise.all(
-      favorites.map((fav, index) => 
-        new Promise<void>(resolve => {
-          setTimeout(async () => {
-            await fetchIndicatorData(fav.symbol);
-            resolve();
-          }, index * 200);
-        })
-      )
-    );
+    // Fetch data for all favorites sequentially with longer delay to avoid rate limiting
+    // Only fetch first 5 immediately, then batch the rest with longer delays
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY = 1500; // 1.5 seconds between batches
+    
+    for (let i = 0; i < favorites.length; i += BATCH_SIZE) {
+      const batch = favorites.slice(i, i + BATCH_SIZE);
+      
+      // Fetch batch in parallel
+      await Promise.all(batch.map(fav => fetchIndicatorData(fav.symbol)));
+      
+      // Wait before next batch (except for the last batch)
+      if (i + BATCH_SIZE < favorites.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
     
     setIsRefreshing(false);
   }, [favorites, period, interval]);

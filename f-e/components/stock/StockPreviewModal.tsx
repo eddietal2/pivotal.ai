@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, FileText } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, FileText, DollarSign } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
@@ -10,6 +10,8 @@ import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesConte
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
 import PaperTradingSection from '@/components/stock/PaperTradingSection';
+import OptionsChainSection from '@/components/stock/OptionsChainSection';
+import TimeframeSelector, { PeriodType, IntervalType, getDefaultInterval } from '@/components/charts/TimeframeSelector';
 
 // Static descriptions for each asset
 const assetDescriptions: Record<string, { description: string; interpretation?: string }> = {
@@ -167,14 +169,27 @@ export default function StockPreviewModal({
   const { addAssetToTodaysChat, isAssetInTodaysChat, removeAssetFromTodaysChat } = usePivyChat();
   const { isFavorite, toggleFavorite, isFull: isFavoritesFull } = useFavorites();
   const { isInWatchlist, toggleWatchlist, isFull: isWatchlistFull } = useWatchlist();
-  const { isEnabled: isPaperTradingEnabled, getPosition } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, getPosition, getOptionPositionsForUnderlying } = usePaperTrading();
   const position = getPosition(symbol);
+  const optionPositions = getOptionPositionsForUnderlying(symbol);
   const [isClosing, setIsClosing] = React.useState(false);
   const [chartMode, setChartMode] = React.useState<'line' | 'candle'>('line');
   const [isPaperTradingExpanded, setIsPaperTradingExpanded] = React.useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = React.useState<'day' | 'week' | 'month' | 'year'>(
-    (timeframe?.toLowerCase() as 'day' | 'week' | 'month' | 'year') || 'day'
-  );
+  const [isOptionsExpanded, setIsOptionsExpanded] = React.useState(false);
+  
+  // Period and interval selection
+  const periodFromTimeframe = (tf: string): PeriodType => {
+    const map: Record<string, PeriodType> = { day: '1D', week: '1W', month: '1M', year: '1Y' };
+    return map[tf?.toLowerCase()] || '1D';
+  };
+  const [selectedPeriod, setSelectedPeriod] = React.useState<PeriodType>(periodFromTimeframe(timeframe));
+  const [selectedInterval, setSelectedInterval] = React.useState<IntervalType>(getDefaultInterval(periodFromTimeframe(timeframe)));
+  
+  // Legacy timeframe for data fetching (maps period to backend format)
+  const selectedTimeframe = React.useMemo<'day' | 'week' | 'month' | 'year'>(() => {
+    const map: Record<PeriodType, 'day' | 'week' | 'month' | 'year'> = { '1D': 'day', '1W': 'week', '1M': 'month', '1Y': 'year' };
+    return map[selectedPeriod];
+  }, [selectedPeriod]);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   
@@ -261,22 +276,26 @@ export default function StockPreviewModal({
   };
 
   // Handle timeframe change with transition
-  const handleTimeframeChange = (tf: 'day' | 'week' | 'month' | 'year') => {
-    if (tf === selectedTimeframe) return;
+  const handlePeriodChange = (period: PeriodType) => {
+    if (period === selectedPeriod) return;
     setIsTransitioning(true);
     setTimeout(() => {
-      setSelectedTimeframe(tf);
+      setSelectedPeriod(period);
+      setSelectedInterval(getDefaultInterval(period));
       setTimeout(() => setIsTransitioning(false), 50);
     }, 150);
+  };
+
+  const handleIntervalChange = (interval: IntervalType) => {
+    setSelectedInterval(interval);
   };
 
   // Reset selected timeframe when modal opens with new data
   React.useEffect(() => {
     if (isOpen && timeframe) {
-      const tf = timeframe.toLowerCase();
-      if (tf === 'day' || tf === 'week' || tf === 'month' || tf === 'year') {
-        setSelectedTimeframe(tf);
-      }
+      const period = periodFromTimeframe(timeframe);
+      setSelectedPeriod(period);
+      setSelectedInterval(getDefaultInterval(period));
     }
   }, [isOpen, timeframe]);
 
@@ -874,25 +893,21 @@ export default function StockPreviewModal({
             {renderSparkline()}
           </div>
           
-          {/* Timeframe buttons */}
-          <div className="flex gap-2">
-            {(['day', 'week', 'month', 'year'] as const).map((tf) => (
-              <button
-                key={tf}
-                onClick={() => handleTimeframeChange(tf)}
-                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                  selectedTimeframe === tf
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {tf === 'day' ? '1D' : tf === 'week' ? '1W' : tf === 'month' ? '1M' : '1Y'}
-              </button>
-            ))}
+          {/* Timeframe & Interval Selector */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <TimeframeSelector
+                selectedPeriod={selectedPeriod}
+                selectedInterval={selectedInterval}
+                onPeriodChange={handlePeriodChange}
+                onIntervalChange={handleIntervalChange}
+                compact
+              />
+            </div>
             {/* Chart mode toggle */}
             <button
               onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
                 chartMode === 'candle'
                   ? 'bg-orange-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -956,6 +971,36 @@ export default function StockPreviewModal({
                   name={name}
                   currentPrice={numericPrice}
                   hideHeader
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Options Chain Section - Collapsible */}
+          <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-purple-50 dark:bg-purple-900/20">
+            <button
+              onClick={() => setIsOptionsExpanded(!isOptionsExpanded)}
+              className="w-full flex items-center justify-between p-3 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-purple-500" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Options Chain</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Options positions summary when collapsed */}
+                {!isOptionsExpanded && isPaperTradingEnabled && optionPositions.length > 0 && (
+                  <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                    {optionPositions.length} position{optionPositions.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+                <ChevronDown className={`w-5 h-5 text-purple-500 transition-transform duration-200 ${isOptionsExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOptionsExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="border-t border-purple-200 dark:border-purple-800 p-3">
+                <OptionsChainSection
+                  symbol={symbol}
+                  currentPrice={numericPrice}
                 />
               </div>
             </div>

@@ -81,7 +81,7 @@ function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
-  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, positions: paperTradingPositions, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, positions: paperTradingPositions, optionPositions: paperTradingOptionPositions, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   
@@ -2240,6 +2240,87 @@ function WatchlistPageContent() {
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                       {parseFloat(position.quantity).toLocaleString()} shares @ ${parseFloat(position.average_cost).toFixed(2)}
+                                    </div>
+                                  </div>
+                                  <div className="text-right ml-3">
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                      ${parseFloat(position.market_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <div className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                      {isPositive ? '+' : ''}{plPercent.toFixed(2)}% ({isPositive ? '+' : ''}${plValue.toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Options Positions */}
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                          Options Positions
+                          {paperTradingOptionPositions.length > 0 && (
+                            <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                              {paperTradingOptionPositions.length}
+                            </span>
+                          )}
+                        </h4>
+                        {paperTradingOptionPositions.length === 0 ? (
+                          <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No options positions</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Trade options from the Options Chain on stock detail pages</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {paperTradingOptionPositions.map((position) => {
+                              const plValue = parseFloat(position.unrealized_pl);
+                              const plPercent = parseFloat(position.unrealized_pl_percent);
+                              const isPositive = plValue >= 0;
+                              const isCall = position.contract.option_type === 'call';
+                              const expDate = new Date(position.contract.expiration_date);
+                              const daysToExp = position.contract.days_to_expiration;
+                              
+                              return (
+                                <button
+                                  key={position.id}
+                                  onClick={() => setSelectedStock({
+                                    symbol: position.contract.underlying_symbol,
+                                    name: `${position.contract.underlying_symbol} Options`,
+                                    price: parseFloat(position.current_price),
+                                    change: plPercent,
+                                    valueChange: plValue,
+                                    sparkline: [],
+                                    timeframe: selectedTimeframe,
+                                  })}
+                                  className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left ${
+                                    isCall 
+                                      ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30'
+                                      : 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30'
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900 dark:text-white">
+                                        {position.contract.underlying_symbol} ${parseFloat(position.contract.strike_price).toFixed(0)}{isCall ? 'C' : 'P'}
+                                      </span>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                        isCall 
+                                          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                          : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                                      }`}>
+                                        {isCall ? 'CALL' : 'PUT'}
+                                      </span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {position.position_type === 'long' ? 'Long' : 'Short'}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+                                      <span>{position.quantity}x @ ${parseFloat(position.average_cost).toFixed(2)}</span>
+                                      <span className={daysToExp <= 7 ? 'text-orange-500' : ''}>
+                                        Exp: {expDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({daysToExp}d)
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="text-right ml-3">

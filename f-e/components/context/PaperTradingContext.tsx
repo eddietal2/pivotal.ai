@@ -24,17 +24,45 @@ interface PaperTradingPosition {
   opened_at: string;
 }
 
+interface OptionPosition {
+  id: number;
+  contract: {
+    id: number;
+    contract_symbol: string;
+    underlying_symbol: string;
+    option_type: 'call' | 'put';
+    strike_price: string;
+    expiration_date: string;
+    multiplier: number;
+    is_expired: boolean;
+    days_to_expiration: number;
+  };
+  position_type: 'long' | 'short';
+  quantity: number;
+  average_cost: string;
+  current_price: string;
+  market_value: string;
+  cost_basis: string;
+  unrealized_pl: string;
+  unrealized_pl_percent: string;
+  opened_at: string;
+}
+
 interface PaperTradingContextType {
   isEnabled: boolean;
   setEnabled: (enabled: boolean) => void;
   toggleEnabled: () => void;
   account: PaperTradingAccount | null;
   positions: PaperTradingPosition[];
+  optionPositions: OptionPosition[];
   isLoading: boolean;
   error: string | null;
   refreshAccount: () => Promise<void>;
   hasPosition: (symbol: string) => boolean;
   getPosition: (symbol: string) => PaperTradingPosition | undefined;
+  hasOptionPosition: (contractSymbol: string) => boolean;
+  getOptionPosition: (contractSymbol: string) => OptionPosition | undefined;
+  getOptionPositionsForUnderlying: (symbol: string) => OptionPosition[];
 }
 
 const PaperTradingContext = createContext<PaperTradingContextType | undefined>(undefined);
@@ -57,6 +85,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
   const [isEnabled, setIsEnabled] = useState(false);
   const [account, setAccount] = useState<PaperTradingAccount | null>(null);
   const [positions, setPositions] = useState<PaperTradingPosition[]>([]);
+  const [optionPositions, setOptionPositions] = useState<OptionPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -96,6 +125,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
     setError(null);
 
     try {
+      // Fetch stock account and positions
       const response = await fetch(`${BACKEND_URL}/api/paper-trading/account/`, {
         headers: {
           'Content-Type': 'application/json',
@@ -111,10 +141,29 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
       const data = await response.json();
       setAccount(data.account);
       setPositions(data.positions || []);
+
+      // Fetch options positions
+      try {
+        const optionsResponse = await fetch(`${BACKEND_URL}/api/paper-trading/options/positions/`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Email': email,
+          },
+        });
+
+        if (optionsResponse.ok) {
+          const optionsData = await optionsResponse.json();
+          setOptionPositions(optionsData.positions || []);
+        }
+      } catch (optErr) {
+        console.error('Error fetching options positions:', optErr);
+        // Don't fail the whole request if options fetch fails
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setAccount(null);
       setPositions([]);
+      setOptionPositions([]);
     } finally {
       setIsLoading(false);
     }
@@ -133,6 +182,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
       // Clear account data when disabled
       setAccount(null);
       setPositions([]);
+      setOptionPositions([]);
       setError(null);
     }
   }, []);
@@ -143,6 +193,7 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
       if (!newValue) {
         setAccount(null);
         setPositions([]);
+        setOptionPositions([]);
         setError(null);
       }
       return newValue;
@@ -159,6 +210,21 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
     return positions.find(p => p.symbol.toUpperCase() === symbol.toUpperCase());
   }, [isEnabled, positions]);
 
+  const hasOptionPosition = useCallback((contractSymbol: string) => {
+    if (!isEnabled) return false;
+    return optionPositions.some(p => p.contract.contract_symbol === contractSymbol);
+  }, [isEnabled, optionPositions]);
+
+  const getOptionPosition = useCallback((contractSymbol: string) => {
+    if (!isEnabled) return undefined;
+    return optionPositions.find(p => p.contract.contract_symbol === contractSymbol);
+  }, [isEnabled, optionPositions]);
+
+  const getOptionPositionsForUnderlying = useCallback((symbol: string) => {
+    if (!isEnabled) return [];
+    return optionPositions.filter(p => p.contract.underlying_symbol.toUpperCase() === symbol.toUpperCase());
+  }, [isEnabled, optionPositions]);
+
   return (
     <PaperTradingContext.Provider
       value={{
@@ -167,11 +233,15 @@ export const PaperTradingProvider = ({ children }: { children: React.ReactNode }
         toggleEnabled,
         account,
         positions,
+        optionPositions,
         isLoading,
         error,
         refreshAccount,
         hasPosition,
         getPosition,
+        hasOptionPosition,
+        getOptionPosition,
+        getOptionPositionsForUnderlying,
       }}
     >
       {children}
