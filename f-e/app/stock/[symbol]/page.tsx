@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart, Briefcase, ChevronDown, FileText, DollarSign } from 'lucide-react';
+import { ArrowLeft, Share2, Bell, TrendingUp, TrendingDown, ExternalLink, MessageSquarePlus, Check, Star, X, BarChart2, LineChart, Briefcase, ChevronDown, FileText, DollarSign, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, isCurrencyAsset } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
@@ -12,6 +12,7 @@ import AnimatedPrice from '@/components/ui/AnimatedPrice';
 import PaperTradingSection from '@/components/stock/PaperTradingSection';
 import OptionsChainSection from '@/components/stock/OptionsChainSection';
 import TimeframeSelector, { type PeriodType, type IntervalType, getDefaultInterval } from '@/components/charts/TimeframeSelector';
+import { useChartZoom } from '@/hooks/useChartZoom';
 
 interface StockData {
   symbol: string;
@@ -50,6 +51,20 @@ export default function StockDetailPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const intervalAbortRef = useRef<AbortController | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+  
+  // Pinch-to-zoom for mobile charts
+  const {
+    zoomState,
+    isZooming,
+    isPanning,
+    handleTouchStart: handleZoomTouchStart,
+    handleTouchMove: handleZoomTouchMove,
+    handleTouchEnd: handleZoomTouchEnd,
+    resetZoom,
+    getVisibleRange,
+    zoomIn,
+    zoomOut,
+  } = useChartZoom(chartRef as React.RefObject<HTMLElement>, { minScale: 1, maxScale: 5 });
   
   // State for interval-specific chart data (fetched from indicators endpoint)
   const [intervalChartData, setIntervalChartData] = useState<{
@@ -346,8 +361,8 @@ export default function StockDetailPage() {
       );
     }
     
-    const data = currentChartData.sparkline;
-    if (data.length < 2) {
+    const fullData = currentChartData.sparkline;
+    if (fullData.length < 2) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400">
           No chart data available
@@ -355,6 +370,11 @@ export default function StockDetailPage() {
       );
     }
 
+    // Get visible range based on zoom level
+    const { startIndex, endIndex } = getVisibleRange(fullData.length);
+    const data = fullData.slice(startIndex, endIndex + 1);
+    
+    // Recalculate min/max for visible data only
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1;
@@ -366,7 +386,7 @@ export default function StockDetailPage() {
 
     // Get time labels and highlight index
     const timeLabels = getTimeLabels(selectedPeriod);
-    const highlightIdx = getHighlightedLabelIndex(data.length);
+    const highlightIdx = getHighlightedLabelIndex(fullData.length);
 
     // Candlestick mode rendering
     if (chartMode === 'candle') {
@@ -743,17 +763,66 @@ export default function StockDetailPage() {
           )}
         </div>
 
-        {/* Chart - interactive scrubbing */}
-        <div 
-          ref={chartRef}
-          className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-64 overflow-hidden touch-none ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
-          onPointerDown={handleScrubStart}
-          onPointerMove={handleScrubMove}
-          onPointerUp={handleScrubEnd}
-          onPointerCancel={handleScrubEnd}
-          onPointerLeave={handleScrubEnd}
-        >
-          {renderChart()}
+        {/* Chart - interactive scrubbing and pinch-to-zoom */}
+        <div className="relative">
+          <div 
+            ref={chartRef}
+            className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 h-64 overflow-hidden touch-none ${
+              isZooming || isPanning ? 'cursor-move' : (isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair')
+            }`}
+            onPointerDown={!isZooming && !isPanning ? handleScrubStart : undefined}
+            onPointerMove={!isZooming && !isPanning ? handleScrubMove : undefined}
+            onPointerUp={!isZooming && !isPanning ? handleScrubEnd : undefined}
+            onPointerCancel={!isZooming && !isPanning ? handleScrubEnd : undefined}
+            onPointerLeave={!isZooming && !isPanning ? handleScrubEnd : undefined}
+            onTouchStart={handleZoomTouchStart}
+            onTouchMove={handleZoomTouchMove}
+            onTouchEnd={handleZoomTouchEnd}
+          >
+            {renderChart()}
+          </div>
+          
+          {/* Zoom controls - show when zoomed or on hover */}
+          <div className={`absolute top-2 right-2 flex items-center gap-1 transition-opacity ${
+            zoomState.scale > 1 ? 'opacity-100' : 'opacity-0 hover:opacity-100'
+          }`}>
+            {zoomState.scale > 1 && (
+              <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full mr-1">
+                {zoomState.scale.toFixed(1)}x
+              </span>
+            )}
+            <button
+              onClick={zoomIn}
+              className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-full shadow-sm hover:bg-white dark:hover:bg-gray-700 transition-colors"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            </button>
+            <button
+              onClick={zoomOut}
+              disabled={zoomState.scale <= 1}
+              className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-full shadow-sm hover:bg-white dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            </button>
+            {zoomState.scale > 1 && (
+              <button
+                onClick={resetZoom}
+                className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-full shadow-sm hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                title="Reset zoom"
+              >
+                <RotateCcw className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            )}
+          </div>
+          
+          {/* Zoom hint for mobile */}
+          {zoomState.scale === 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-gray-400 dark:text-gray-500 pointer-events-none md:hidden">
+              Pinch to zoom
+            </div>
+          )}
         </div>
         {/* X-axis time labels */}
         {renderTimeLabels()}
