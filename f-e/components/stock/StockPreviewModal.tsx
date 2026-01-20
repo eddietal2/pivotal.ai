@@ -200,6 +200,12 @@ export default function StockPreviewModal({
     error: string | null;
   }>({ loading: false, error: null });
   
+  // State for interval-specific chart data (fetched from indicators endpoint)
+  const [intervalChartData, setIntervalChartData] = React.useState<{
+    sparkline: number[];
+    loading: boolean;
+  }>({ sparkline: [], loading: false });
+  
   // Chart scrubbing state (Robinhood-style touch interaction)
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [scrubIndex, setScrubIndex] = React.useState<number | null>(null);
@@ -287,7 +293,12 @@ export default function StockPreviewModal({
   };
 
   const handleIntervalChange = (interval: IntervalType) => {
-    setSelectedInterval(interval);
+    if (interval === selectedInterval) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedInterval(interval);
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
   };
 
   // Reset selected timeframe when modal opens with new data
@@ -374,6 +385,37 @@ export default function StockPreviewModal({
     return () => controller.abort();
   }, [isOpen, symbol, timeframes, sparkline]);
 
+  // Fetch interval-specific chart data when period or interval changes
+  React.useEffect(() => {
+    if (!isOpen || !symbol) return;
+    
+    const controller = new AbortController();
+    // Clear old data and start loading
+    setIntervalChartData({ sparkline: [], loading: true });
+    
+    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+    const url = `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`;
+    
+    fetch(url, { signal: controller.signal })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.closes && data.closes.length > 0) {
+          setIntervalChartData({
+            sparkline: data.closes,
+            loading: false,
+          });
+        } else {
+          setIntervalChartData({ sparkline: [], loading: false });
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setIntervalChartData({ sparkline: [], loading: false });
+      });
+    
+    return () => controller.abort();
+  }, [isOpen, symbol, selectedPeriod, selectedInterval]);
+
   // Use fetched timeframes if props don't have valid data
   const hasValidPropsTimeframes = timeframes && 
     Object.keys(timeframes).length > 0 && 
@@ -383,8 +425,25 @@ export default function StockPreviewModal({
     ? timeframes 
     : fetchedData.timeframes;
 
-  // Get current data based on selected timeframe
+  // Get current data based on selected timeframe and interval
   const currentData = React.useMemo(() => {
+    // If we have interval-specific chart data, use it
+    if (intervalChartData.sparkline.length > 0) {
+      const firstPrice = intervalChartData.sparkline[0] || 0;
+      const lastPrice = intervalChartData.sparkline[intervalChartData.sparkline.length - 1] || 0;
+      const intervalValueChange = lastPrice - firstPrice;
+      const intervalPercentChange = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+      
+      return {
+        sparkline: intervalChartData.sparkline,
+        change: intervalPercentChange,
+        valueChange: intervalValueChange,
+        price: lastPrice || (typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price),
+        isIntervalData: true,
+      };
+    }
+    
+    // Fall back to timeframe data
     if (effectiveTimeframes && effectiveTimeframes[selectedTimeframe]) {
       const tfData = effectiveTimeframes[selectedTimeframe]!;
       return {
@@ -392,6 +451,7 @@ export default function StockPreviewModal({
         change: tfData.latest?.change ?? change,
         valueChange: tfData.latest?.value_change ?? valueChange,
         price: tfData.latest?.close ? parseFloat(tfData.latest.close.replace(/,/g, '')) : (typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price),
+        isIntervalData: false,
       };
     }
     // Fallback to props
@@ -400,8 +460,9 @@ export default function StockPreviewModal({
       change,
       valueChange,
       price: typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price,
+      isIntervalData: false,
     };
-  }, [effectiveTimeframes, selectedTimeframe, sparkline, change, valueChange, price]);
+  }, [effectiveTimeframes, selectedTimeframe, sparkline, change, valueChange, price, intervalChartData.sparkline]);
 
   // Get scrubbed price when touching chart
   const scrubPrice = React.useMemo(() => {
@@ -883,13 +944,18 @@ export default function StockPreviewModal({
           {/* Chart - interactive scrubbing */}
           <div 
             ref={chartRef}
-            className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 touch-none ${isTransitioning ? 'opacity-0' : 'opacity-100'} ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+            className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 touch-none relative ${isTransitioning || intervalChartData.loading ? 'opacity-50' : 'opacity-100'} ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
             onPointerDown={handleScrubStart}
             onPointerMove={handleScrubMove}
             onPointerUp={handleScrubEnd}
             onPointerCancel={handleScrubEnd}
             onPointerLeave={handleScrubEnd}
           >
+            {intervalChartData.loading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 dark:bg-gray-700/50 z-10">
+                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
             {renderSparkline()}
           </div>
           

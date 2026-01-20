@@ -305,12 +305,41 @@ def technical_indicators(request, symbol):
     timeframe = request.GET.get('timeframe')  # Legacy support
     indicator = request.GET.get('indicator', 'ALL').upper()
     
-    # Map period to yfinance period string
-    period_map = {
-        '1D': '5d',      # 5 days of data for intraday
-        '1W': '1mo',     # 1 month of data
-        '1M': '3mo',     # 3 months of data
-        '1Y': '1y',      # 1 year of data
+    # Map period+interval combination to optimal yfinance period
+    # The key insight: period controls the TIME RANGE, interval controls GRANULARITY
+    # We need different yfinance periods based on interval to get meaningful data
+    period_interval_map = {
+        # 1D (Day view) - show today's/recent intraday data
+        ('1D', '5m'): '1d',      # Last day with 5-min candles
+        ('1D', '15m'): '5d',     # 5 days with 15-min candles (more context)
+        ('1D', '1h'): '5d',      # 5 days with hourly candles
+        ('1D', '4h'): '1mo',     # 1 month with 4h candles (need more range)
+        ('1D', '1d'): '1mo',     # 1 month of daily candles
+        ('1D', '1w'): '3mo',     # 3 months of weekly candles
+        
+        # 1W (Week view) - show last week's worth of data
+        ('1W', '5m'): '5d',      # 5 days with 5-min candles
+        ('1W', '15m'): '5d',     # 5 days with 15-min candles
+        ('1W', '1h'): '1mo',     # 1 month with hourly candles
+        ('1W', '4h'): '1mo',     # 1 month with 4h candles
+        ('1W', '1d'): '3mo',     # 3 months of daily candles
+        ('1W', '1w'): '6mo',     # 6 months of weekly candles
+        
+        # 1M (Month view) - show last month's worth of data
+        ('1M', '5m'): '5d',      # 5 days max for 5m (yfinance limit)
+        ('1M', '15m'): '1mo',    # 1 month with 15-min candles
+        ('1M', '1h'): '1mo',     # 1 month with hourly candles  
+        ('1M', '4h'): '3mo',     # 3 months with 4h candles
+        ('1M', '1d'): '3mo',     # 3 months of daily candles
+        ('1M', '1w'): '1y',      # 1 year of weekly candles
+        
+        # 1Y (Year view) - show last year's worth of data
+        ('1Y', '5m'): '5d',      # 5 days max for 5m (yfinance limit)
+        ('1Y', '15m'): '1mo',    # 1 month max for 15m with good data
+        ('1Y', '1h'): '3mo',     # 3 months with hourly candles
+        ('1Y', '4h'): '1y',      # 1 year with 4h candles
+        ('1Y', '1d'): '1y',      # 1 year of daily candles
+        ('1Y', '1w'): '2y',      # 2 years of weekly candles
     }
     
     # Map interval to yfinance interval string
@@ -318,7 +347,7 @@ def technical_indicators(request, symbol):
         '5m': '5m',
         '15m': '15m',
         '1h': '1h',
-        '4h': '4h',      # Note: yfinance might not support this directly
+        '4h': '1h',      # yfinance doesn't have 4h, use 1h and we'll aggregate
         '1d': '1d',
         '1w': '1wk',
     }
@@ -333,13 +362,9 @@ def technical_indicators(request, symbol):
     
     # Determine yfinance parameters
     if period and interval:
-        # New format: explicit period and interval
-        yf_period = period_map.get(period, '5d')
+        # New format: use period+interval combination map
+        yf_period = period_interval_map.get((period, interval), '5d')
         yf_interval = interval_map.get(interval, '15m')
-        
-        # Handle 4h interval (yfinance limitation - use 1h and aggregate or fall back)
-        if interval == '4h':
-            yf_interval = '1h'  # We'll use 1h as fallback since yfinance doesn't have 4h
     elif timeframe:
         # Legacy format: map timeframe to period+interval
         config = legacy_timeframe_map.get(timeframe, legacy_timeframe_map['D'])
@@ -371,8 +396,22 @@ def technical_indicators(request, symbol):
                 'retryAfter': 30
             }, status=404)
         
+        # Aggregate to 4h if requested (yfinance only has 1h)
+        if interval == '4h' and yf_interval == '1h':
+            # Resample 1h data to 4h
+            df = df.resample('4h').agg({
+                'Open': 'first',
+                'High': 'max',
+                'Low': 'min',
+                'Close': 'last',
+                'Volume': 'sum'
+            }).dropna()
+        
         # Get timestamps
         timestamps = df.index.strftime('%Y-%m-%d %H:%M').tolist()
+        
+        # Get close prices for chart data
+        closes = [round(v, 2) if not pd.isna(v) else None for v in df['Close'].tolist()]
         
         response_data = {
             'symbol': symbol.upper(),
@@ -380,7 +419,10 @@ def technical_indicators(request, symbol):
             'interval': interval,
             'timeframe': period,  # Legacy support
             'timestamps': timestamps,
+            'closes': closes,  # Close prices for chart rendering
             'dataPoints': len(timestamps),
+            'yf_period': yf_period,  # Debug: show what yfinance period was used
+            'yf_interval': yf_interval,  # Debug: show what yfinance interval was used
         }
         
         # Calculate requested indicators

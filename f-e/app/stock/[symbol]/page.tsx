@@ -11,6 +11,7 @@ import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistConte
 import AnimatedPrice from '@/components/ui/AnimatedPrice';
 import PaperTradingSection from '@/components/stock/PaperTradingSection';
 import OptionsChainSection from '@/components/stock/OptionsChainSection';
+import TimeframeSelector, { type PeriodType, type IntervalType, getDefaultInterval } from '@/components/charts/TimeframeSelector';
 
 interface StockData {
   symbol: string;
@@ -40,13 +41,21 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1D');
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('1D');
+  const [selectedInterval, setSelectedInterval] = useState<IntervalType>('15m');
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
   const [isPaperTradingExpanded, setIsPaperTradingExpanded] = useState(false);
   const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'watchlist' | 'error'; link?: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const intervalAbortRef = useRef<AbortController | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+  
+  // State for interval-specific chart data (fetched from indicators endpoint)
+  const [intervalChartData, setIntervalChartData] = useState<{
+    sparkline: number[];
+    loading: boolean;
+  }>({ sparkline: [], loading: false });
   
   // Chart scrubbing state (Robinhood-style touch interaction)
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -140,17 +149,16 @@ export default function StockDetailPage() {
       setError(null);
       
       try {
-        const timeframeMap: Record<string, string> = {
+        // Map period to backend timeframe format
+        const periodToTimeframe: Record<PeriodType, string> = {
           '1D': 'day',
           '1W': 'week',
           '1M': 'month',
-          '3M': 'month',
-          '1Y': 'year',
-          'ALL': 'year'
+          '1Y': 'year'
         };
         
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframeMap[selectedTimeframe]}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=${periodToTimeframe[selectedPeriod]}`,
           { signal: controller.signal }
         );
         
@@ -177,7 +185,72 @@ export default function StockDetailPage() {
         abortControllerRef.current.abort();
       }
     };
-  }, [symbol, selectedTimeframe]);
+  }, [symbol, selectedPeriod]);
+
+  // Fetch interval-specific chart data when period or interval changes
+  useEffect(() => {
+    // Abort any in-flight interval request
+    if (intervalAbortRef.current) {
+      intervalAbortRef.current.abort();
+    }
+    
+    const controller = new AbortController();
+    intervalAbortRef.current = controller;
+    
+    // Clear old data and start loading
+    setIntervalChartData({ sparkline: [], loading: true });
+    
+    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+    
+    fetch(
+      `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`,
+      { signal: controller.signal }
+    )
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.closes && data.closes.length > 0) {
+          setIntervalChartData({
+            sparkline: data.closes,
+            loading: false,
+          });
+        } else {
+          setIntervalChartData({ sparkline: [], loading: false });
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setIntervalChartData({ sparkline: [], loading: false });
+      });
+    
+    return () => {
+      if (intervalAbortRef.current) {
+        intervalAbortRef.current.abort();
+      }
+    };
+  }, [symbol, selectedPeriod, selectedInterval]);
+
+  // Get current chart data - prefer interval data, fallback to stock data sparkline
+  const currentChartData = useMemo(() => {
+    if (intervalChartData.sparkline.length > 0) {
+      const firstPrice = intervalChartData.sparkline[0] || 0;
+      const lastPrice = intervalChartData.sparkline[intervalChartData.sparkline.length - 1] || 0;
+      const intervalValueChange = lastPrice - firstPrice;
+      const intervalPercentChange = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+      
+      return {
+        sparkline: intervalChartData.sparkline,
+        change: intervalPercentChange,
+        valueChange: intervalValueChange,
+      };
+    }
+    
+    // Fallback to stock data
+    return {
+      sparkline: stockData?.sparkline || [],
+      change: stockData?.change || 0,
+      valueChange: stockData?.valueChange || 0,
+    };
+  }, [intervalChartData.sparkline, stockData?.sparkline, stockData?.change, stockData?.valueChange]);
 
   const pricePrefix = getPricePrefix(symbol);
   const priceSuffix = getPriceSuffix(symbol);
@@ -198,32 +271,32 @@ export default function StockDetailPage() {
 
   // Get scrubbed price when touching chart
   const scrubPrice = useMemo(() => {
-    const data = stockData?.sparkline || [];
+    const data = currentChartData.sparkline;
     if (scrubIndex === null || data.length === 0) return null;
     const idx = Math.max(0, Math.min(scrubIndex, data.length - 1));
     return data[idx];
-  }, [scrubIndex, stockData?.sparkline]);
+  }, [scrubIndex, currentChartData.sparkline]);
 
   // Calculate change from first data point to scrubbed point
   const scrubChange = useMemo(() => {
-    const data = stockData?.sparkline || [];
+    const data = currentChartData.sparkline;
     if (scrubPrice === null || data.length === 0) return null;
     const firstPrice = data[0];
     const valueChange = scrubPrice - firstPrice;
     const percentChange = ((scrubPrice - firstPrice) / firstPrice) * 100;
     return { valueChange, percentChange };
-  }, [scrubPrice, stockData?.sparkline]);
+  }, [scrubPrice, currentChartData.sparkline]);
 
   // Handle chart scrubbing
   const handleChartScrub = useCallback((clientX: number) => {
-    const data = stockData?.sparkline || [];
+    const data = currentChartData.sparkline;
     if (!chartRef.current || data.length === 0) return;
     const rect = chartRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percent = Math.max(0, Math.min(1, x / rect.width));
     const index = Math.round(percent * (data.length - 1));
     setScrubIndex(index);
-  }, [stockData?.sparkline]);
+  }, [currentChartData.sparkline]);
 
   const handleScrubStart = useCallback((e: React.PointerEvent) => {
     setIsScrubbing(true);
@@ -241,29 +314,39 @@ export default function StockDetailPage() {
     setScrubIndex(null);
   }, []);
 
-  // Get time labels based on timeframe
-  const getTimeLabels = (tf: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL') => {
-    switch (tf) {
+  // Get time labels based on period
+  const getTimeLabels = (period: PeriodType) => {
+    switch (period) {
       case '1D': return ['9:30 AM', '10:30', '11:30', '12:30 PM', '1:30', '2:30', '3:30'];
       case '1W': return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
       case '1M': return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-      case '3M': return ['Month 1', 'Month 2', 'Month 3'];
       case '1Y': return ['Jan', 'Apr', 'Jul', 'Oct'];
-      case 'ALL': return ['Start', 'Q1', 'Mid', 'Q3', 'Now'];
     }
   };
 
   // Calculate highlighted time label index based on scrub position
   const getHighlightedLabelIndex = (dataLength: number) => {
     if (!isScrubbing || scrubIndex === null || dataLength === 0) return -1;
-    const labels = getTimeLabels(selectedTimeframe);
+    const labels = getTimeLabels(selectedPeriod);
     const percent = scrubIndex / (dataLength - 1);
     return Math.round(percent * (labels.length - 1));
   };
 
   // Render sparkline as SVG
   const renderChart = () => {
-    const data = stockData?.sparkline || [];
+    // Show loading state when fetching interval data
+    if (intervalChartData.loading) {
+      return (
+        <div className="flex items-center justify-center h-full text-gray-400">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            Loading...
+          </div>
+        </div>
+      );
+    }
+    
+    const data = currentChartData.sparkline;
     if (data.length < 2) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400">
@@ -279,10 +362,10 @@ export default function StockDetailPage() {
     const paddedMin = min - range * 0.05;
     const paddedMax = max + range * 0.05;
     const paddedRange = paddedMax - paddedMin;
-    const isPositive = (stockData?.change ?? 0) >= 0;
+    const isPositive = currentChartData.change >= 0;
 
     // Get time labels and highlight index
-    const timeLabels = getTimeLabels(selectedTimeframe);
+    const timeLabels = getTimeLabels(selectedPeriod);
     const highlightIdx = getHighlightedLabelIndex(data.length);
 
     // Candlestick mode rendering
@@ -495,7 +578,7 @@ export default function StockDetailPage() {
     const data = stockData?.sparkline || [];
     if (data.length < 2) return null;
     
-    const timeLabels = getTimeLabels(selectedTimeframe);
+    const timeLabels = getTimeLabels(selectedPeriod);
     const highlightIdx = getHighlightedLabelIndex(data.length);
     
     return (
@@ -623,16 +706,16 @@ export default function StockDetailPage() {
               <div className={`flex items-center gap-1 ${
                 isScrubbing && scrubChange 
                   ? (scrubChange.percentChange >= 0 ? 'text-green-500' : 'text-red-500')
-                  : ((stockData.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500')
+                  : (currentChartData.change >= 0 ? 'text-green-500' : 'text-red-500')
               }`}>
-                {(isScrubbing && scrubChange ? scrubChange.percentChange >= 0 : (stockData.change ?? 0) >= 0) 
+                {(isScrubbing && scrubChange ? scrubChange.percentChange >= 0 : currentChartData.change >= 0) 
                   ? <TrendingUp className="w-5 h-5" /> 
                   : <TrendingDown className="w-5 h-5" />}
                 <span className="text-lg font-semibold">
                   {isScrubbing && scrubChange ? (
                     <>{pricePrefix}{scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.valueChange.toFixed(2)}{priceSuffix} ({scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.percentChange.toFixed(2)}%)</>
                   ) : (
-                    <>{pricePrefix}{(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.valueChange?.toFixed(2) || '0.00'}{priceSuffix} ({(stockData.change ?? 0) >= 0 ? '+' : ''}{stockData.change?.toFixed(2) || '0.00'}%)</>
+                    <>{pricePrefix}{currentChartData.change >= 0 ? '+' : ''}{currentChartData.valueChange.toFixed(2)}{priceSuffix} ({currentChartData.change >= 0 ? '+' : ''}{currentChartData.change.toFixed(2)}%)</>
                   )}
                 </span>
               </div>
@@ -675,25 +758,24 @@ export default function StockDetailPage() {
         {/* X-axis time labels */}
         {renderTimeLabels()}
 
-        {/* Timeframe Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {(['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const).map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setSelectedTimeframe(tf)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedTimeframe === tf
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {tf}
-            </button>
-          ))}
+        {/* Timeframe & Interval Selector */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <TimeframeSelector
+              selectedPeriod={selectedPeriod}
+              selectedInterval={selectedInterval}
+              onPeriodChange={(period) => {
+                setSelectedPeriod(period);
+                setSelectedInterval(getDefaultInterval(period));
+              }}
+              onIntervalChange={setSelectedInterval}
+              compact
+            />
+          </div>
           {/* Chart mode toggle */}
           <button
             onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
               chartMode === 'candle'
                 ? 'bg-orange-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
