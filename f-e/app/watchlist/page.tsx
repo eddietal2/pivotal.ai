@@ -151,8 +151,10 @@ function WatchlistPageContent() {
   // Track swipe gesture
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [touchStartYSwipe, setTouchStartYSwipe] = useState<number | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwipingTab, setIsSwipingTab] = useState(false);
+  const [isSwipeGestureLocked, setIsSwipeGestureLocked] = useState<'horizontal' | 'vertical' | null>(null);
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -768,28 +770,59 @@ function WatchlistPageContent() {
   }, [searchParams]);
 
   // Swipe gesture handling for tab navigation
-  const minSwipeDistance = 50;
+  // Increased threshold to reduce accidental swipes when interacting with inner sliders
+  const minSwipeDistance = 80;
+  // Threshold to lock the gesture direction (prevents accidental tab swipes during vertical scroll or inner slider interaction)
+  const gestureDirectionThreshold = 15;
   
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
-    setIsSwipingTab(true);
+    setTouchStartYSwipe(e.targetTouches[0].clientY);
+    setIsSwipingTab(false);
+    setIsSwipeGestureLocked(null);
   };
   
   const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const currentTouch = e.targetTouches[0].clientX;
-    setTouchEnd(currentTouch);
-    const distance = currentTouch - touchStart;
-    // Limit swipe offset to prevent overscroll
-    const maxOffset = 100;
-    setSwipeOffset(Math.max(-maxOffset, Math.min(maxOffset, distance)));
+    if (touchStart === null || touchStartYSwipe === null) return;
+    
+    const currentTouchX = e.targetTouches[0].clientX;
+    const currentTouchY = e.targetTouches[0].clientY;
+    const deltaX = Math.abs(currentTouchX - touchStart);
+    const deltaY = Math.abs(currentTouchY - touchStartYSwipe);
+    
+    // Lock gesture direction once we've moved enough
+    if (isSwipeGestureLocked === null && (deltaX > gestureDirectionThreshold || deltaY > gestureDirectionThreshold)) {
+      // Only allow horizontal swipe if horizontal movement is significantly greater than vertical
+      // This prevents accidental tab swipes when scrolling or using inner horizontal sliders
+      if (deltaX > deltaY * 1.5) {
+        setIsSwipeGestureLocked('horizontal');
+        setIsSwipingTab(true);
+      } else {
+        setIsSwipeGestureLocked('vertical');
+        setIsSwipingTab(false);
+      }
+    }
+    
+    // Only update swipe offset if we're in a horizontal gesture
+    if (isSwipeGestureLocked === 'horizontal') {
+      setTouchEnd(currentTouchX);
+      const distance = currentTouchX - touchStart;
+      // Limit swipe offset to prevent overscroll
+      const maxOffset = 100;
+      setSwipeOffset(Math.max(-maxOffset, Math.min(maxOffset, distance)));
+    }
   };
   
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) {
+    // Only process swipe if gesture was locked as horizontal
+    if (!touchStart || !touchEnd || isSwipeGestureLocked !== 'horizontal') {
       setIsSwipingTab(false);
       setSwipeOffset(0);
+      setIsSwipeGestureLocked(null);
+      setTouchStart(null);
+      setTouchEnd(null);
+      setTouchStartYSwipe(null);
       return;
     }
     
@@ -818,8 +851,10 @@ function WatchlistPageContent() {
     
     setTouchStart(null);
     setTouchEnd(null);
+    setTouchStartYSwipe(null);
     setSwipeOffset(0);
     setIsSwipingTab(false);
+    setIsSwipeGestureLocked(null);
   };
 
   // Tab change handler (syncs activeSection and persists to localStorage)
