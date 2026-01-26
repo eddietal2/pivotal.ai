@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronDown, Bookmark, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { ChevronDown, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { LiveScreen, LiveScreenStock, categoryConfig } from '@/types/screens';
 import { getTimeUntilRefresh } from '@/data/mockLiveScreens';
 import Sparkline from '@/components/ui/Sparkline';
@@ -47,47 +47,52 @@ export default function LiveScreenCard({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
+        className="w-full p-4 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
       >
-        <div className="flex items-center gap-3">
-          {/* Icon with gradient background */}
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${categoryStyle.bgColor} ${categoryStyle.borderColor} border`}>
-            {screen.icon}
-          </div>
-          
-          <div className="flex flex-col items-start">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {screen.title}
-              </span>
-              {/* Category Badge */}
-              <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${categoryStyle.bgColor} ${categoryStyle.color} ${categoryStyle.borderColor} border`}>
-                {categoryStyle.label}
-              </span>
+        {/* Top row: Icon, Title, Chevron */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            {/* Icon with gradient background */}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${categoryStyle.bgColor} ${categoryStyle.borderColor} border`}>
+              {screen.icon}
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {screen.description}
-            </span>
+            
+            <div className="flex flex-col items-start min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-gray-900 dark:text-white text-left">
+                  {screen.title}
+                </span>
+                {/* Category Badge */}
+                <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap ${categoryStyle.bgColor} ${categoryStyle.color} ${categoryStyle.borderColor} border`}>
+                  {categoryStyle.label}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Chevron */}
+          <div className={`flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-all duration-300 flex-shrink-0 ml-2 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
+            <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Stock count */}
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {screen.stocks.length} stocks
+        {/* Bottom row: Description and metadata */}
+        <div className="flex items-center justify-between pl-[52px]">
+          <span className={`text-xs text-gray-500 dark:text-gray-400 text-left flex-1 mr-3 ${isExpanded ? '' : 'line-clamp-1'}`}>
+            {screen.description}
           </span>
           
-          {/* Refresh indicator */}
-          {screen.refreshInterval && (
-            <div className="hidden sm:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-              <RefreshCw className="w-3 h-3" />
-              <span>{timeUntilRefresh}</span>
-            </div>
-          )}
-          
-          {/* Chevron */}
-          <div className={`flex items-center justify-center w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-all duration-300 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
-            <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <div className="flex items-center gap-2 flex-shrink-0 text-xs text-gray-400 dark:text-gray-500">
+            <span>{screen.stocks.length} stocks</span>
+            {screen.refreshInterval && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <div className="flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  <span className="hidden sm:inline">{timeUntilRefresh}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </button>
@@ -95,23 +100,6 @@ export default function LiveScreenCard({
       {/* Expanded Content - Vertical List */}
       <div className={`overflow-hidden transition-all duration-300 ease-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-4 pb-4">
-          {/* Save Screen Button */}
-          <div className="flex items-center justify-between py-2 mb-2 border-b border-gray-100 dark:border-gray-700/50">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Tap to view • Double-tap to add
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSaveScreen(screen);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-            >
-              <Bookmark className="w-3.5 h-3.5" />
-              Save All
-            </button>
-          </div>
-
           {/* Vertical Stock List */}
           <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {screen.stocks.map((stock, index) => {
