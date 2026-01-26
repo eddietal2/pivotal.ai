@@ -34,8 +34,16 @@ export default function LiveScreenCard({
   recentlyAddedToScreens,
 }: LiveScreenCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '1W' | '1M' | '3M'>('1D');
   const categoryStyle = categoryConfig[screen.category];
   const timeUntilRefresh = getTimeUntilRefresh(screen.expiresAt);
+  
+  const timeframeOptions = [
+    { value: '1D' as const, label: '1D' },
+    { value: '1W' as const, label: '1W' },
+    { value: '1M' as const, label: '1M' },
+    { value: '3M' as const, label: '3M' },
+  ];
 
   return (
     <div 
@@ -100,6 +108,29 @@ export default function LiveScreenCard({
       {/* Expanded Content - Vertical List */}
       <div className={`overflow-hidden transition-all duration-300 ease-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-4 pb-4">
+          {/* Timeframe Filter */}
+          <div className="flex items-center gap-1 mb-3 pb-3 border-b border-gray-100 dark:border-gray-700/50">
+            {timeframeOptions.map((tf) => (
+              <button
+                key={tf.value}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedTimeframe(tf.value);
+                }}
+                className={`
+                  px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200
+                  ${selectedTimeframe === tf.value
+                    ? `${categoryStyle.bgColor} ${categoryStyle.color} ${categoryStyle.borderColor} border`
+                    : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 border border-transparent hover:bg-gray-200 dark:hover:bg-gray-600/50'
+                  }
+                `}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
           {/* Vertical Stock List */}
           <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {screen.stocks.map((stock, index) => {
