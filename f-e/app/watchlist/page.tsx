@@ -11,7 +11,7 @@ import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
 import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
-import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText } from 'lucide-react';
+import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText, RefreshCw, Database } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -186,6 +186,37 @@ function WatchlistPageContent() {
     return 'both';
   });
   
+  // Data Settings (persisted in localStorage)
+  const [dataSettingsExpanded, setDataSettingsExpanded] = useState(false);
+  
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<15 | 30 | 60 | 0>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistAutoRefreshInterval');
+      if (saved && [15, 30, 60, 0].includes(Number(saved))) {
+        return Number(saved) as 15 | 30 | 60 | 0;
+      }
+    }
+    return 30; // Default 30s
+  });
+  
+  const [defaultTimeframe, setDefaultTimeframe] = useState<'day' | 'week' | 'month' | 'year'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistDefaultTimeframe');
+      if (['day', 'week', 'month', 'year'].includes(saved || '')) {
+        return saved as 'day' | 'week' | 'month' | 'year';
+      }
+    }
+    return 'day';
+  });
+  
+  const [showExtendedHoursData, setShowExtendedHoursData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistShowExtendedHoursData');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
   // Track selected Live Screen IDs (individual screens)
   const [selectedScreenIds, setSelectedScreenIds] = useState<ScreenId[]>(() => {
     if (typeof window !== 'undefined') {
@@ -195,8 +226,8 @@ function WatchlistPageContent() {
     // Default: all 8 screens
     return [...allScreenIds];
   });
-  // Track selected timeframe for market data
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  // Track selected timeframe for market data (initialized from defaultTimeframe)
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month' | 'year'>(defaultTimeframe);
   // Track brief loading state when switching timeframes
   const [timeframeSwitching, setTimeframeSwitching] = useState(false);
 
@@ -268,7 +299,7 @@ function WatchlistPageContent() {
     refresh: refreshMarketPulse,
   } = useMarketPulseData({
     isActive: activeTab === 0,
-    pollingInterval: 30000, // 30 seconds
+    pollingInterval: autoRefreshInterval === 0 ? 0 : autoRefreshInterval * 1000,
   });
 
   // Live Screens data hook - only fetches/polls when Tab 1 is active
@@ -281,7 +312,7 @@ function WatchlistPageContent() {
   } = useLiveScreensData({
     isActive: activeTab === 1,
     selectedScreenIds,
-    pollingInterval: 60000, // 1 minute (screens don't change as often)
+    pollingInterval: autoRefreshInterval === 0 ? 0 : Math.max(autoRefreshInterval * 1000, 60000), // Min 60s for screens
   });
 
   // My Watchlist data hook - only fetches/polls when Tab 2 is active
@@ -296,7 +327,7 @@ function WatchlistPageContent() {
   } = useWatchlistData({
     isActive: activeTab === 2,
     symbols: watchlistSymbols,
-    pollingInterval: 30000, // 30 seconds
+    pollingInterval: autoRefreshInterval === 0 ? 0 : autoRefreshInterval * 1000,
   });
 
   // My Screens data hook - only fetches/polls when Tab 3 is active
@@ -310,7 +341,7 @@ function WatchlistPageContent() {
   } = useMyScreensData({
     isActive: activeTab === 3,
     symbols: favoritesSymbols,
-    pollingInterval: 60000, // 1 minute (indicators refresh less frequently)
+    pollingInterval: autoRefreshInterval === 0 ? 0 : Math.max(autoRefreshInterval * 1000, 60000), // Min 60s for indicators
   });
 
   // Paper Trading data hook - only fetches/polls when Tab 4 is active
@@ -326,7 +357,7 @@ function WatchlistPageContent() {
   } = usePaperTradingData({
     isActive: activeTab === 4 && isPaperTradingEnabled,
     positionSymbols,
-    pollingInterval: 30000, // 30 seconds
+    pollingInterval: autoRefreshInterval === 0 ? 0 : autoRefreshInterval * 1000,
   });
 
   // Derive state for Market Pulse tab (Tab 0)
@@ -2504,10 +2535,12 @@ function WatchlistPageContent() {
             <div className="flex-1 overflow-y-auto p-4">
               {/* Arrange */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section3Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section3Expanded || displaySettingsExpanded || dataSettingsExpanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
                   setSection3Expanded(false);
+                  setDisplaySettingsExpanded(false);
+                  setDataSettingsExpanded(false);
                 }}
               >
                 <h3 className="flex items-center gap-2">
@@ -2535,10 +2568,12 @@ function WatchlistPageContent() {
 
               {/* Live Screen Categories */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || displaySettingsExpanded || dataSettingsExpanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection3Expanded(!section3Expanded);
                   setSection2Expanded(false);
+                  setDisplaySettingsExpanded(false);
+                  setDataSettingsExpanded(false);
                 }}
               >
                 <h3 className="flex items-center gap-2">
@@ -2630,11 +2665,12 @@ function WatchlistPageContent() {
 
               {/* Display Settings */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded || dataSettingsExpanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setDisplaySettingsExpanded(!displaySettingsExpanded);
                   setSection2Expanded(false);
                   setSection3Expanded(false);
+                  setDataSettingsExpanded(false);
                 }}
               >
                 <h3 className="flex items-center gap-2">
@@ -2764,6 +2800,131 @@ function WatchlistPageContent() {
                       {priceChangeFormat === 'both' && 'Show both (+$5.00, +2.5%)'}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Data Settings */}
+              <button
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded || displaySettingsExpanded ? 'opacity-50' : ''}`}
+                onClick={() => {
+                  setDataSettingsExpanded(!dataSettingsExpanded);
+                  setSection2Expanded(false);
+                  setSection3Expanded(false);
+                  setDisplaySettingsExpanded(false);
+                }}
+              >
+                <h3 className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-green-500" />
+                  Data Settings
+                </h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${dataSettingsExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {dataSettingsExpanded && (
+                <div className="mt-3 space-y-4">
+                  {/* Auto-Refresh Interval */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Auto-Refresh Interval</p>
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                      {([
+                        { value: 15, label: '15s' },
+                        { value: 30, label: '30s' },
+                        { value: 60, label: '60s' },
+                        { value: 0, label: 'Manual' },
+                      ] as const).map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setAutoRefreshInterval(value);
+                            localStorage.setItem('watchlistAutoRefreshInterval', String(value));
+                          }}
+                          className={`flex-1 px-2.5 py-1.5 text-xs font-medium rounded transition-colors ${
+                            autoRefreshInterval === value
+                              ? 'bg-green-500 text-white'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {autoRefreshInterval === 0 
+                        ? 'Data updates only when you manually refresh' 
+                        : `Data auto-updates every ${autoRefreshInterval} seconds`}
+                    </p>
+                  </div>
+
+                  {/* Default Timeframe */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Default Timeframe</p>
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                      {([
+                        { value: 'day', label: 'D' },
+                        { value: 'week', label: 'W' },
+                        { value: 'month', label: 'M' },
+                        { value: 'year', label: 'Y' },
+                      ] as const).map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setDefaultTimeframe(value);
+                            localStorage.setItem('watchlistDefaultTimeframe', value);
+                            // Also update current timeframe if user changes default
+                            setSelectedTimeframe(value);
+                          }}
+                          className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                            defaultTimeframe === value
+                              ? 'bg-green-500 text-white'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {{
+                        day: 'Daily price data (1D)',
+                        week: 'Weekly price data (1W)',
+                        month: 'Monthly price data (1M)',
+                        year: 'Yearly price data (1Y)',
+                      }[defaultTimeframe]}
+                    </p>
+                  </div>
+
+                  {/* Show Extended Hours Data */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Extended Hours Data</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Include pre/after-market prices</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newValue = !showExtendedHoursData;
+                        setShowExtendedHoursData(newValue);
+                        localStorage.setItem('watchlistShowExtendedHoursData', String(newValue));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showExtendedHoursData ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        showExtendedHoursData ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Manual Refresh Button (visible when auto-refresh is off) */}
+                  {autoRefreshInterval === 0 && (
+                    <button
+                      onClick={handleRefresh}
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                      {loading ? 'Refreshing...' : 'Refresh Data Now'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
