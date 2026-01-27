@@ -1051,18 +1051,52 @@ function WatchlistPageContent() {
               ) : (topIndicators.bullish || topIndicators.bearish) && (
                 <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
                   {topIndicators.bullish && (
-                    <span className="flex items-center gap-0.5 sm:gap-1 text-green-500">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const itemData = marketData[topIndicators.bullish!.symbol];
+                        const tfData = itemData?.timeframes?.day;
+                        setSelectedStock({
+                          symbol: topIndicators.bullish!.symbol,
+                          name: topIndicators.bullish!.ticker,
+                          price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                          change: topIndicators.bullish!.change,
+                          valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                          sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                          timeframe: 'day',
+                          timeframes: itemData?.timeframes,
+                        });
+                      }}
+                      className="flex items-center gap-0.5 sm:gap-1 text-green-500 hover:text-green-600 hover:underline transition-colors"
+                    >
                       <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
                       <span className="font-semibold">+{topIndicators.bullish.change.toFixed(1)}%</span>
-                    </span>
+                    </button>
                   )}
                   {topIndicators.bearish && (
-                    <span className="hidden sm:flex items-center gap-1 text-red-500">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const itemData = marketData[topIndicators.bearish!.symbol];
+                        const tfData = itemData?.timeframes?.day;
+                        setSelectedStock({
+                          symbol: topIndicators.bearish!.symbol,
+                          name: topIndicators.bearish!.ticker,
+                          price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                          change: topIndicators.bearish!.change,
+                          valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                          sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                          timeframe: 'day',
+                          timeframes: itemData?.timeframes,
+                        });
+                      }}
+                      className="hidden sm:flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline transition-colors"
+                    >
                       <TrendingDown className="w-3 h-3" />
                       <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
                       <span className="font-semibold">{topIndicators.bearish.change.toFixed(1)}%</span>
-                    </span>
+                    </button>
                   )}
                 </div>
               )}
@@ -1292,18 +1326,52 @@ function WatchlistPageContent() {
                     ) : (topIndicators.bullish || topIndicators.bearish) ? (
                       <div className="flex items-center gap-3 text-xs">
                         {topIndicators.bullish && (
-                          <span className="flex items-center gap-1 text-green-500">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const itemData = marketData[topIndicators.bullish!.symbol];
+                              const tfData = itemData?.timeframes?.day;
+                              setSelectedStock({
+                                symbol: topIndicators.bullish!.symbol,
+                                name: topIndicators.bullish!.ticker,
+                                price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                                change: topIndicators.bullish!.change,
+                                valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                                sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                                timeframe: 'day',
+                                timeframes: itemData?.timeframes,
+                              });
+                            }}
+                            className="flex items-center gap-1 text-green-500 hover:text-green-600 hover:underline transition-colors"
+                          >
                             <TrendingUp className="w-3 h-3" />
-                            <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                            <span className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">{topIndicators.bullish.ticker}</span>
                             <span className="font-semibold">+{topIndicators.bullish.change.toFixed(2)}%</span>
-                          </span>
+                          </button>
                         )}
                         {topIndicators.bearish && (
-                          <span className="flex items-center gap-1 text-red-500">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const itemData = marketData[topIndicators.bearish!.symbol];
+                              const tfData = itemData?.timeframes?.day;
+                              setSelectedStock({
+                                symbol: topIndicators.bearish!.symbol,
+                                name: topIndicators.bearish!.ticker,
+                                price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                                change: topIndicators.bearish!.change,
+                                valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                                sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                                timeframe: 'day',
+                                timeframes: itemData?.timeframes,
+                              });
+                            }}
+                            className="flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline transition-colors"
+                          >
                             <TrendingDown className="w-3 h-3" />
-                            <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                            <span className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">{topIndicators.bearish.ticker}</span>
                             <span className="font-semibold">{topIndicators.bearish.change.toFixed(2)}%</span>
-                          </span>
+                          </button>
                         )}
                       </div>
                     ) : null}
