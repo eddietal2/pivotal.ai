@@ -19,6 +19,7 @@ import PivyChatCard from '@/components/home/PivyChatCard';
 import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
 import DisclaimersSection from '@/components/home/DisclaimersSection';
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
+import StockPreviewModal from '@/components/stock/StockPreviewModal';
 
 // Ticker to name mapping for Market Pulse (same as watchlist)
 const tickerNames: Record<string, string> = {
@@ -168,6 +169,57 @@ export default function App() {
   const retryCountRef = React.useRef(0);
   const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = React.useRef(true);
+
+  // StockPreviewModal state
+  const [previewModalOpen, setPreviewModalOpen] = React.useState(false);
+  const [previewStock, setPreviewStock] = React.useState<{
+    symbol: string;
+    name: string;
+    price: number;
+    change: number;
+    valueChange: number;
+    sparkline: number[];
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = React.useState(false);
+
+  // Open preview modal with stock data
+  const openPreviewModal = React.useCallback(async (symbol: string, name: string) => {
+    // Open modal immediately with placeholder data to show skeleton
+    setPreviewStock({
+      symbol,
+      name,
+      price: 0,
+      change: 0,
+      valueChange: 0,
+      sparkline: [],
+    });
+    setPreviewModalOpen(true);
+    setPreviewLoading(true);
+    
+    // Fetch actual data in background
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(symbol)}&timeframe=day`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // Small delay to ensure skeleton is visible
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setPreviewStock({
+          symbol,
+          name: data.name || name,
+          price: data.price || 0,
+          change: data.change || 0,
+          valueChange: data.valueChange || 0,
+          sparkline: data.sparkline || [],
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching preview data:', error);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   // Fetch market data for top indicators
   const fetchMarketData = React.useCallback(async (isRetry = false) => {
@@ -509,7 +561,11 @@ export default function App() {
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Holdings ({paperTradingPositions.length})</p>
                       {paperTradingPositions.slice(0, 5).map((position) => (
-                        <div key={position.symbol} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <button
+                          key={position.symbol}
+                          onClick={() => openPreviewModal(position.symbol, position.name)}
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors w-full text-left"
+                        >
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-900 dark:text-white">{position.symbol}</span>
@@ -525,7 +581,7 @@ export default function App() {
                               {parseFloat(position.unrealized_pl) >= 0 ? '+' : ''}{parseFloat(position.unrealized_pl_percent).toFixed(2)}%
                             </p>
                           </div>
-                        </div>
+                        </button>
                       ))}
                       {paperTradingPositions.length > 5 && (
                         <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
@@ -608,7 +664,10 @@ export default function App() {
                 <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">An AI generated impression of these two together</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {topBullish && (
-                  <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <button
+                    onClick={() => openPreviewModal(topBullish.symbol, topBullish.ticker)}
+                    className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors text-left w-full"
+                  >
                     <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full">
                       <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
@@ -619,10 +678,13 @@ export default function App() {
                         +{topBullish.change?.toFixed(2)}%
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {topBearish && (
-                  <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <button
+                    onClick={() => openPreviewModal(topBearish.symbol, topBearish.ticker)}
+                    className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-left w-full"
+                  >
                     <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-800 rounded-full">
                       <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 rotate-180" />
                     </div>
@@ -633,7 +695,7 @@ export default function App() {
                         {topBearish.change?.toFixed(2)}%
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )}
               </div>
               <div className="mt-4 text-center">
@@ -863,6 +925,19 @@ export default function App() {
           {/* ...existing BottomNav code... */}
         </div>
       )}
+
+      {/* Stock Preview Modal */}
+      <StockPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        symbol={previewStock?.symbol || ''}
+        name={previewStock?.name || ''}
+        price={previewStock?.price || 0}
+        change={previewStock?.change || 0}
+        valueChange={previewStock?.valueChange || 0}
+        sparkline={previewStock?.sparkline || []}
+        timeframe="day"
+      />
     </div>
   );
 }

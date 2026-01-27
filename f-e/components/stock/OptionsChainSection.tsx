@@ -71,6 +71,19 @@ export default function OptionsChainSection({
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
 
+  // Check if symbol supports options trading
+  const supportsOptions = useCallback((sym: string): boolean => {
+    // Futures symbols (e.g., CL=F, GC=F, ES=F)
+    if (sym.includes('=F')) return false;
+    // Forex symbols (e.g., EURUSD=X)
+    if (sym.includes('=X')) return false;
+    // Crypto symbols (e.g., BTC-USD, ETH-USD)
+    if (sym.includes('-USD') || sym.includes('-EUR')) return false;
+    // Index symbols (e.g., ^GSPC, ^DJI)
+    if (sym.startsWith('^')) return false;
+    return true;
+  }, []);
+
   const getUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null;
     const user = localStorage.getItem('user');
@@ -114,10 +127,10 @@ export default function OptionsChainSection({
 
   // Load options chain on mount
   useEffect(() => {
-    if (isEnabled) {
+    if (isEnabled && supportsOptions(symbol)) {
       fetchOptionsChain();
     }
-  }, [isEnabled, fetchOptionsChain]);
+  }, [isEnabled, fetchOptionsChain, symbol, supportsOptions]);
 
   // Refetch when expiration changes
   const handleExpirationChange = (expiration: string) => {
@@ -228,6 +241,16 @@ export default function OptionsChainSection({
     return (
       <div className="p-4 text-center text-gray-500 dark:text-gray-400">
         Enable Paper Trading to view options chain
+      </div>
+    );
+  }
+
+  // Check if symbol supports options
+  if (!supportsOptions(symbol)) {
+    return (
+      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+        <p className="font-medium">Options not available</p>
+        <p className="text-sm mt-1">Options trading is not supported for {symbol.includes('=F') ? 'futures' : symbol.includes('=X') ? 'forex' : symbol.startsWith('^') ? 'index' : 'this asset type'}</p>
       </div>
     );
   }

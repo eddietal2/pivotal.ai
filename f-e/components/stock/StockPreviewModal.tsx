@@ -689,7 +689,7 @@ export default function StockPreviewModal({
   // Render sparkline chart with axes
   const renderSparkline = () => {
     // Show loading state while fetching
-    if (fetchedData.loading) {
+    if (fetchedData.loading || intervalChartData.loading) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400 text-sm">
           <div className="flex items-center gap-2">
@@ -700,8 +700,8 @@ export default function StockPreviewModal({
       );
     }
     
-    // Show error state
-    if (fetchedData.error) {
+    // Show error state only if we don't have interval chart data
+    if (fetchedData.error && intervalChartData.sparkline.length === 0) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400 text-sm">
           {fetchedData.error}
@@ -1050,7 +1050,7 @@ export default function StockPreviewModal({
           <div className="relative">
             <div 
               ref={chartRef}
-              className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning || intervalChartData.loading ? 'opacity-50' : 'opacity-100'} ${
+              className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'} ${
                 isZooming || isPanning ? 'cursor-move touch-none' : (isScrubbing ? 'cursor-grabbing touch-none' : 'cursor-crosshair')
               }`}
               onPointerDown={!isZooming && !isPanning ? handleScrubStart : undefined}
@@ -1062,11 +1062,6 @@ export default function StockPreviewModal({
               onTouchMove={handleZoomTouchMove}
               onTouchEnd={handleZoomTouchEnd}
             >
-              {intervalChartData.loading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 dark:bg-gray-700/50 z-10">
-                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
               {renderSparkline()}
             </div>
             
