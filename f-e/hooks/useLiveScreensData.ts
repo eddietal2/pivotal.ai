@@ -20,6 +20,7 @@ interface UseLiveScreensDataReturn {
   lastFetched: number | null;
   retryCount: number;
   backendReady: boolean;
+  warmingUp: boolean; // True when backend is doing cold-start market scan (can take 1-2 min)
   refresh: () => void;
 }
 
@@ -43,6 +44,7 @@ export function useLiveScreensData({
   const [lastFetched, setLastFetched] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [backendReady, setBackendReady] = useState(true);
+  const [warmingUp, setWarmingUp] = useState(false); // True when backend is doing cold-start scan
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -51,6 +53,8 @@ export function useLiveScreensData({
   const hasFetchedRef = useRef(false);
   const isMountedRef = useRef(true);
   const retryCountRef = useRef(0);
+  const fetchInProgressRef = useRef(false);
+  const fetchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Health check
   const checkBackendHealth = useCallback(async (): Promise<boolean> => {
@@ -73,27 +77,47 @@ export function useLiveScreensData({
     // Skip if tab is inactive AND we already have data (use cached)
     if (!isActive && hasFetchedRef.current) return;
 
+    // Skip if a fetch is already in progress (unless it's a retry)
+    if (fetchInProgressRef.current && !isRetry) {
+      return;
+    }
+
     // Clear any pending retry timeout
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
 
-    // Abort any in-flight request
-    if (abortControllerRef.current) {
+    // Create new abort controller (don't abort previous - let it complete or timeout naturally)
+    const controller = new AbortController();
+    
+    // Only abort previous if it's a manual refresh or retry
+    if (isRetry && abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
-    const controller = new AbortController();
+    
     abortControllerRef.current = controller;
+    fetchInProgressRef.current = true;
+
+    // Track fetch start time to detect slow cold-start loads
+    const fetchStartTime = Date.now();
+    let warmingUpTimeout: NodeJS.Timeout | null = null;
 
     if (isInitial) {
       setLoading(true);
+      setWarmingUp(false);
       setError(null);
       if (!isRetry) {
         retryCountRef.current = 0;
         setRetryCount(0);
       }
+      
+      // If loading takes more than 5s, it's likely a cold-start market scan
+      warmingUpTimeout = setTimeout(() => {
+        if (isMountedRef.current && fetchInProgressRef.current) {
+          setWarmingUp(true);
+        }
+      }, 5000);
     }
 
     try {
@@ -135,6 +159,9 @@ export function useLiveScreensData({
 
       const json = await res.json();
 
+      // Clear warming up timeout
+      if (warmingUpTimeout) clearTimeout(warmingUpTimeout);
+
       if (!isMountedRef.current) return;
 
       // Extract screens from response
@@ -143,12 +170,19 @@ export function useLiveScreensData({
       setData(screens);
       setError(null);
       setLoading(false);
+      setWarmingUp(false);
       setLastFetched(Date.now());
       hasFetchedRef.current = true;
       retryCountRef.current = 0;
       setRetryCount(0);
+      fetchInProgressRef.current = false;
 
     } catch (err) {
+      // Clear warming up timeout
+      if (warmingUpTimeout) clearTimeout(warmingUpTimeout);
+      
+      fetchInProgressRef.current = false;
+      setWarmingUp(false);
       if (!isMountedRef.current) return;
       if (controller.signal.aborted && !isInitial) return;
 
@@ -189,9 +223,14 @@ export function useLiveScreensData({
 
   // Initial fetch when tab becomes active (lazy loading)
   useEffect(() => {
-    if (isActive && !hasFetchedRef.current) {
-      fetchData(true);
-    }
+    // Small debounce to prevent React StrictMode double-invocation issues
+    const timeoutId = setTimeout(() => {
+      if (isActive && !hasFetchedRef.current) {
+        fetchData(true);
+      }
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
   }, [isActive, fetchData]);
 
   // Polling when tab is active
@@ -217,10 +256,15 @@ export function useLiveScreensData({
     };
   }, [isActive, pollingInterval, fetchData]);
 
-  // Refetch when selectedScreenIds changes
+  // Refetch when selectedScreenIds changes (but not on initial mount)
+  const prevScreenIdsRef = useRef<string>((selectedScreenIds ?? []).join(','));
   useEffect(() => {
-    if (isActive && hasFetchedRef.current) {
-      fetchData(true, false);
+    const currentIds = (selectedScreenIds ?? []).join(',');
+    if (prevScreenIdsRef.current !== currentIds) {
+      prevScreenIdsRef.current = currentIds;
+      if (isActive && hasFetchedRef.current) {
+        fetchData(true, false);
+      }
     }
   }, [selectedScreenIds, isActive, fetchData]);
 
@@ -250,6 +294,7 @@ export function useLiveScreensData({
     lastFetched,
     retryCount,
     backendReady,
+    warmingUp,
     refresh,
   };
 }

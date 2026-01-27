@@ -144,10 +144,10 @@ export function useWatchlistData({
       // Check if aborted
       if (controller.signal.aborted) return;
 
-      // Fetch market data for all symbols using batch endpoint
-      const symbolsParam = symbols.join(',');
+      // Fetch market data for all symbols using the market-data endpoint
+      const tickersParam = symbols.join(',');
       const response = await fetch(
-        `${BACKEND_URL}/api/market-data/batch/?symbols=${encodeURIComponent(symbolsParam)}`,
+        `${BACKEND_URL}/api/market-data/?tickers=${encodeURIComponent(tickersParam)}`,
         {
           signal: controller.signal,
         }

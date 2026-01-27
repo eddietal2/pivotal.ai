@@ -1548,7 +1548,7 @@ LIVE_SCREENS_CACHE_DURATION = 300  # 5 minutes - can be adjusted
 # Cache for scanned market data (longer cache since it's expensive)
 _market_scan_cache = {}
 _market_scan_timestamp = None
-MARKET_SCAN_CACHE_DURATION = 180  # 3 minutes
+MARKET_SCAN_CACHE_DURATION = 600  # 10 minutes - scanning 300 stocks is expensive
 
 
 class LiveScreensService:

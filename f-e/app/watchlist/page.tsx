@@ -224,6 +224,7 @@ function WatchlistPageContent() {
     data: liveScreensData,
     loading: liveScreensLoading,
     error: liveScreensError,
+    warmingUp: liveScreensWarmingUp,
     refresh: refreshLiveScreens,
   } = useLiveScreensData({
     isActive: activeTab === 1,
@@ -1534,6 +1535,7 @@ function WatchlistPageContent() {
                 selectedScreenIds={selectedScreenIds}
                 screens={liveScreensData}
                 loading={liveScreensLoading}
+                warmingUp={liveScreensWarmingUp}
                 error={liveScreensError}
                 onRefresh={refreshLiveScreens}
               />

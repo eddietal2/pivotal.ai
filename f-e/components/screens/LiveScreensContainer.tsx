@@ -20,6 +20,7 @@ interface LiveScreensContainerProps {
   // New props from hook
   screens?: LiveScreen[];
   loading?: boolean;
+  warmingUp?: boolean; // True when backend is doing cold-start market scan
   error?: string | null;
   onRefresh?: () => void;
 }
@@ -37,6 +38,7 @@ export default function LiveScreensContainer({
   selectedScreenIds,
   screens: externalScreens,
   loading: externalLoading,
+  warmingUp = false,
   error: externalError,
   onRefresh,
 }: LiveScreensContainerProps) {
@@ -140,11 +142,21 @@ export default function LiveScreensContainer({
       <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
         <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-          Loading Live Screens...
+          {warmingUp ? 'Scanning Market...' : 'Loading Live Screens...'}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-          Fetching AI-curated stock data
+          {warmingUp 
+            ? 'Initial scan of 300+ stocks may take up to 2 minutes'
+            : 'Fetching AI-curated stock data'
+          }
         </p>
+        {warmingUp && (
+          <div className="mt-3 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
+              ☕ First load is slow — subsequent loads will be instant
+            </p>
+          </div>
+        )}
       </div>
     );
   }

@@ -143,10 +143,10 @@ export function usePaperTradingData({
       // Check if aborted
       if (controller.signal.aborted) return;
 
-      // Fetch market data for all position symbols using batch endpoint
-      const symbolsParam = positionSymbols.join(',');
+      // Fetch market data for all position symbols using market-data endpoint
+      const tickersParam = positionSymbols.join(',');
       const response = await fetch(
-        `${BACKEND_URL}/api/market-data/batch/?symbols=${encodeURIComponent(symbolsParam)}`,
+        `${BACKEND_URL}/api/market-data/?tickers=${encodeURIComponent(tickersParam)}`,
         {
           signal: controller.signal,
         }
