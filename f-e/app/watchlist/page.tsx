@@ -4,8 +4,6 @@ import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-// Set to true to enable timer/fetch logging
-const DEBUG_LOGS = true;
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
 import WatchListItem from '../../components/watchlist/WatchListItem';
 import StockPreviewModal from '../../components/stock/StockPreviewModal';
@@ -256,21 +254,13 @@ function WatchlistPageContent() {
     };
   } | null>(null);
 
-  // Market data state (from b-e financial_data)
+  // Market data state - will be populated by individual tab hooks
   const [marketData, setMarketData] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [backendReady, setBackendReady] = useState(false);
-
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-  const retryCountRef = React.useRef(0); // Internal ref for callback access
-  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = React.useRef(true);
-  const betweenCallTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const secondsSinceCallRef = React.useRef(0);
-  const fetchInProgressRef = React.useRef(false);
+  const [backendReady, setBackendReady] = useState(true);
 
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
@@ -284,265 +274,6 @@ function WatchlistPageContent() {
     if (t.includes('Y') || t.includes('YEAR')) return 'Y';
     return 'D';
   };
-
-  // Quick health check to verify backend is ready
-  const checkBackendHealth = React.useCallback(async (): Promise<boolean> => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/health/`, {
-        signal: AbortSignal.timeout(3000), // 3 second timeout for health check
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Fetch market data directly from Python server
-  const fetchMarketData = React.useCallback(async (isRetry = false) => {
-    // Skip in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-    
-    // Prevent concurrent fetches - if one is in progress, skip
-    if (fetchInProgressRef.current && isRetry) {
-      console.log('⏸️ Fetch already in progress, skipping retry');
-      return;
-    }
-    
-    // Clear any pending retry timeout to prevent duplicate calls
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-    
-    console.log(`🚀 Fetching market data${isRetry ? ` (retry #${retryCountRef.current})` : ' (fresh)'}`);
-    
-    // Mark fetch as in progress
-    fetchInProgressRef.current = true;
-    
-    // Abort any in-flight request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    // Create new AbortController for this request
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    
-    try {
-      if (!isRetry) {
-        setLoading(true);
-        setError(null);
-        retryCountRef.current = 0; // Reset retry count on fresh fetch
-        setRetryCount(0);
-      }
-
-      // Always check backend health on retries to detect when server comes back up
-      console.log('🔍 Checking backend health...');
-      const isHealthy = await checkBackendHealth();
-      console.log(`🔍 Health check result: ${isHealthy ? '✅ healthy' : '❌ not available'}`)
-      if (!isHealthy) {
-        setBackendReady(false);
-        throw new Error('Backend server is not available');
-      }
-      setBackendReady(true);
-
-      // Combine Market Pulse tickers with watchlist and favorites symbols
-      const marketPulseTickers = Object.keys(tickerNames);
-      const watchlistSymbols = watchlist.map(item => item.symbol);
-      const favoriteSymbols = favorites.map(item => item.symbol);
-      
-      // Create unique set of all tickers to fetch
-      const allTickers = [...new Set([...marketPulseTickers, ...watchlistSymbols, ...favoriteSymbols])];
-      const tickers = allTickers.join(',');
-      
-      console.log(`📊 Fetching ${allTickers.length} tickers (Market Pulse: ${marketPulseTickers.length}, Watchlist: ${watchlistSymbols.length}, Favorites: ${favoriteSymbols.length})`);
-      
-      // Use longer timeout on initial load (cold start) vs polling
-      // Cold start can take 30-60s due to yfinance rate limits and external API calls
-      const timeoutMs = isRetry ? 30000 : 60000; // 30s for retries, 60s for fresh
-      console.log(`⏱️ Using ${timeoutMs/1000}s timeout (${isRetry ? 'retry' : 'fresh'})`);
-      
-      // Set up timeout that will abort the request
-      const timeoutId = setTimeout(() => {
-        if (!controller.signal.aborted) {
-          console.log(`⏱️ Request timed out after ${timeoutMs/1000}s`);
-          controller.abort();
-        }
-      }, timeoutMs);
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/?tickers=${encodeURIComponent(tickers)}`, {
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      // Check if this request was aborted (by a newer request)
-      if (controller.signal.aborted) {
-        return; // Silently exit, a newer request is in progress
-      }
-      
-      if (!res.ok) {
-        throw new Error(`Server responded with status: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      
-      console.log(`✅ Market data received: ${Object.keys(data).length} tickers`);
-      
-      setMarketData(data);
-      setError(null);
-      retryCountRef.current = 0;
-      setRetryCount(0);
-      
-      // Start timer to count seconds since last successful call
-      if (betweenCallTimerRef.current) {
-        clearInterval(betweenCallTimerRef.current);
-      }
-      secondsSinceCallRef.current = 0;
-      betweenCallTimerRef.current = setInterval(() => {
-        secondsSinceCallRef.current++;
-        if (DEBUG_LOGS) console.log(`⏱️ ${secondsSinceCallRef.current}s since last API call`);
-      }, 1000);
-    } catch (err: any) {
-      // Check if this was an intentional cancellation (new request started)
-      const wasIntentionalCancel = err.name === 'AbortError' && controller !== abortControllerRef.current;
-      if (wasIntentionalCancel) {
-        console.log('🔄 Request cancelled by newer request, ignoring');
-        return; // Don't retry, a newer request took over
-      }
-      
-      // Timeout aborts should trigger retry
-      const wasTimeout = err.name === 'AbortError' && controller === abortControllerRef.current;
-      if (wasTimeout) {
-        console.log('⏱️ Request timed out, will retry...');
-        setError('Request timed out. The server is processing market data. Retrying...');
-      }
-      
-      // Mark backend as not ready on connection errors so next retry checks health
-      if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_CONNECTION_REFUSED') || err.message?.includes('not available')) {
-        setBackendReady(false);
-      }
-      
-      if (!wasTimeout) {
-        console.error('Error fetching market data:', err);
-      }
-      
-      let errorMessage = wasTimeout 
-        ? 'Request timed out. The server is fetching market data. Please wait...'
-        : 'Unable to load market data';
-      
-      if (!wasTimeout) {
-        if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_CONNECTION_REFUSED') || err.message?.includes('not available')) {
-          errorMessage = 'Unable to connect to the market data server. Please ensure the backend server is running.';
-        } else if (err.message?.includes('Server responded with status')) {
-          errorMessage = `Server error: ${err.message}`;
-        } else if (err.message) {
-          errorMessage = `Network error: ${err.message}`;
-        }
-      }
-      
-      setError(errorMessage);
-      
-      // Auto-retry up to 10 times with exponential backoff (increased from 5)
-      // This helps when the backend server just started and needs time to warm up
-      if (retryCountRef.current < 10 && isMountedRef.current) {
-        // Exponential backoff: 2s, 4s, 6s, 8s, 10s, 12s... (capped at 15s)
-        const delay = Math.min(2000 + (retryCountRef.current * 2000), 15000);
-        retryCountRef.current++;
-        setRetryCount(retryCountRef.current);
-        console.log(`⏳ Will retry in ${delay / 1000}s (attempt ${retryCountRef.current}/10)`);
-        retryTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            console.log(`🔄 Executing retry #${retryCountRef.current}...`);
-            // Keep loading state during retries for better UX on cold starts
-            setLoading(true);
-            fetchMarketData(true);
-          }
-        }, delay);
-      } else if (retryCountRef.current >= 10) {
-        console.log('❌ Max retries (10) reached. Giving up.');
-      }
-    } finally {
-      fetchInProgressRef.current = false;
-      setLoading(false);
-    }
-  }, [tickerNames, checkBackendHealth, watchlist, favorites]);
-
-  // Initial fetch on mount only (empty dependency array to run once)
-  React.useEffect(() => {
-    if (process.env.NODE_ENV !== 'test') {
-      fetchMarketData();
-    } else {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only on mount, not when fetchMarketData changes
-
-  // Poll for real-time updates every 5 seconds (only after initial data is loaded)
-  React.useEffect(() => {
-    if (process.env.NODE_ENV !== 'test') {
-      // Don't start polling until we have initial data loaded successfully
-      // This prevents polling from interfering with retry logic on cold starts
-      const hasData = Object.keys(marketData).length > 0;
-      if (!hasData) return;
-      
-      const interval = setInterval(() => {
-        if (isMountedRef.current && !fetchInProgressRef.current) {
-          fetchMarketData(true); // Don't show loading for polling
-        }
-      }, 5000); // 5 seconds
-
-      return () => clearInterval(interval);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Object.keys(marketData).length > 0]); // Only re-run when hasData changes
-
-  // Refetch when new symbols are added to watchlist/favorites that don't have data yet
-  const watchlistSymbolsKey = watchlist.map(w => w.symbol).sort().join(',');
-  const favoritesSymbolsKey = favorites.map(f => f.symbol).sort().join(',');
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === 'test') return;
-    
-    // Check if any watchlist or favorites symbols are missing from marketData
-    const missingSymbols = [
-      ...watchlist.filter(w => !marketData[w.symbol]),
-      ...favorites.filter(f => !marketData[f.symbol])
-    ];
-    
-    if (missingSymbols.length > 0 && Object.keys(marketData).length > 0 && !fetchInProgressRef.current) {
-      console.log(`📈 Found ${missingSymbols.length} new symbols without data, refetching:`, missingSymbols.map(s => s.symbol));
-      fetchMarketData(true); // Silent refetch
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchlistSymbolsKey, favoritesSymbolsKey]);
-
-  // Cleanup abort controller and retry timeout on unmount
-  React.useEffect(() => {
-    isMountedRef.current = true;
-    
-    return () => {
-      isMountedRef.current = false;
-      
-      // Abort any in-flight requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
-      // Clear any pending retry timeout
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-      
-      // Clear the between-call timer
-      if (betweenCallTimerRef.current) {
-        clearInterval(betweenCallTimerRef.current);
-        betweenCallTimerRef.current = null;
-      }
-    };
-  }, []);
 
   // Filter pulses by chosen timeframe and group by asset class (prefer backend market data when available)
   const groupedPulse = React.useMemo(() => {
@@ -1400,9 +1131,9 @@ function WatchlistPageContent() {
 
                     <button
                       onClick={() => {
-                        retryCountRef.current = 0; // Reset retry count for manual retry
+                        // TODO: Will be replaced with per-tab fetch logic
                         setRetryCount(0);
-                        fetchMarketData();
+                        setError(null);
                       }}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                       disabled={loading}
@@ -1803,9 +1534,9 @@ function WatchlistPageContent() {
                   )}
                   <button
                     onClick={() => {
-                      retryCountRef.current = 0;
+                      // TODO: Will be replaced with per-tab fetch logic
                       setRetryCount(0);
-                      fetchMarketData();
+                      setError(null);
                     }}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
@@ -2042,9 +1773,9 @@ function WatchlistPageContent() {
                   )}
                   <button
                     onClick={() => {
-                      retryCountRef.current = 0;
+                      // TODO: Will be replaced with per-tab fetch logic
                       setRetryCount(0);
-                      fetchMarketData();
+                      setError(null);
                     }}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
