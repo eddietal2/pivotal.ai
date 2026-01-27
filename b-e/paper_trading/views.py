@@ -1084,3 +1084,147 @@ def options_chain_view(request):
         
     except Exception as e:
         return cors_response({'error': str(e)}, status=500)
+
+
+# ============================================
+# OPTION CONTRACT DETAIL - FETCH SINGLE CONTRACT
+# ============================================
+
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
+def option_contract_detail_view(request):
+    """
+    Fetch detailed data for a single option contract from Yahoo Finance.
+    
+    GET /api/paper-trading/options/contract/?symbol=AAPL250221C00200000
+    
+    Returns bid/ask/volume/greeks and underlying price for a specific contract.
+    """
+    if request.method == "OPTIONS":
+        return options_response()
+    
+    contract_symbol = request.GET.get('symbol', '')
+    if not contract_symbol:
+        return cors_response({'error': 'Contract symbol parameter required'}, status=400)
+    
+    try:
+        import yfinance as yf
+        import pandas as pd
+        import re
+        
+        # Parse the OCC contract symbol to extract details
+        # Format: AAPL250221C00200000 = AAPL Feb 21 2025 $200 Call
+        # Underlying (1-6 chars) + Date (6 digits YYMMDD) + Type (C/P) + Strike (8 digits, strike*1000)
+        match = re.match(r'^([A-Z]{1,6})(\d{6})([CP])(\d{8})$', contract_symbol)
+        
+        if not match:
+            return cors_response({
+                'error': f'Invalid contract symbol format: {contract_symbol}',
+                'expected_format': 'AAPL250221C00200000'
+            }, status=400)
+        
+        underlying_symbol = match.group(1)
+        date_str = match.group(2)  # YYMMDD
+        option_type_char = match.group(3)  # C or P
+        strike_raw = match.group(4)  # 8 digits
+        
+        # Parse date
+        year = int('20' + date_str[:2])
+        month = int(date_str[2:4])
+        day = int(date_str[4:6])
+        expiration_date = f'{year}-{month:02d}-{day:02d}'
+        
+        # Parse strike (divide by 1000)
+        strike = int(strike_raw) / 1000
+        
+        # Parse type
+        option_type = 'call' if option_type_char == 'C' else 'put'
+        
+        # Get underlying ticker for current price
+        underlying_ticker = yf.Ticker(underlying_symbol)
+        underlying_info = underlying_ticker.info
+        underlying_price = underlying_info.get('regularMarketPrice') or underlying_info.get('currentPrice') or 0
+        
+        # Fetch the options chain for this expiration
+        try:
+            expirations = underlying_ticker.options
+            if expiration_date not in expirations:
+                # Find closest expiration
+                closest_exp = min(expirations, key=lambda x: abs((pd.to_datetime(x) - pd.to_datetime(expiration_date)).days)) if expirations else None
+                if closest_exp:
+                    expiration_date = closest_exp
+                else:
+                    return cors_response({
+                        'error': f'No options available for {underlying_symbol}',
+                        'contract_symbol': contract_symbol,
+                    }, status=404)
+            
+            opt_chain = underlying_ticker.option_chain(expiration_date)
+            chain_df = opt_chain.calls if option_type == 'call' else opt_chain.puts
+        except Exception as e:
+            return cors_response({
+                'error': f'Failed to fetch options chain: {str(e)}',
+                'contract_symbol': contract_symbol,
+            }, status=500)
+        
+        # Find the specific contract
+        contract_row = chain_df[chain_df['contractSymbol'] == contract_symbol]
+        
+        if contract_row.empty:
+            # Try to find by strike
+            contract_row = chain_df[chain_df['strike'] == strike]
+        
+        if contract_row.empty:
+            return cors_response({
+                'error': f'Contract not found: {contract_symbol}',
+                'underlying': underlying_symbol,
+                'strike': strike,
+                'expiration': expiration_date,
+                'type': option_type,
+            }, status=404)
+        
+        row = contract_row.iloc[0]
+        
+        # Extract data
+        bid = float(row['bid']) if pd.notna(row.get('bid')) else 0
+        ask = float(row['ask']) if pd.notna(row.get('ask')) else 0
+        last = float(row['lastPrice']) if pd.notna(row.get('lastPrice')) else 0
+        volume = int(row['volume']) if pd.notna(row.get('volume')) else 0
+        open_interest = int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
+        iv = float(row['impliedVolatility']) if pd.notna(row.get('impliedVolatility')) else 0
+        in_the_money = row.get('inTheMoney', False)
+        
+        # Calculate mark price
+        mark = round((bid + ask) / 2, 2) if bid and ask else last
+        
+        # Determine if ITM
+        if option_type == 'call':
+            in_the_money = underlying_price > strike
+        else:
+            in_the_money = underlying_price < strike
+        
+        return cors_response({
+            'contract_symbol': contract_symbol,
+            'underlying_symbol': underlying_symbol,
+            'underlying_price': round(underlying_price, 2),
+            'option_type': option_type,
+            'strike': strike,
+            'expiration': expiration_date,
+            'bid': bid,
+            'ask': ask,
+            'last': last,
+            'mark': mark,
+            'volume': volume,
+            'open_interest': open_interest,
+            'implied_volatility': round(iv * 100, 2),
+            'in_the_money': in_the_money,
+            # Greeks are not directly available from yfinance basic API
+            # Would need additional calculation or a different data source
+        })
+        
+    except Exception as e:
+        import traceback
+        return cors_response({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)

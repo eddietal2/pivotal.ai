@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   TrendingUp, TrendingDown, Loader2, AlertCircle, 
   Calendar, DollarSign, 
-  ArrowUpRight, ArrowDownRight, RefreshCw
+  ArrowUpRight, ArrowDownRight, RefreshCw, ExternalLink
 } from 'lucide-react';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -47,6 +48,7 @@ export default function OptionsChainSection({
   currentPrice,
   onTradeComplete,
 }: OptionsChainSectionProps) {
+  const router = useRouter();
   const { isEnabled, account, refreshAccount, optionPositions } = usePaperTrading();
   const { showToast } = useToast();
 
@@ -322,29 +324,50 @@ export default function OptionsChainSection({
                   CALLS
                 </h4>
                 <div className="space-y-2">
-                  {chainData.calls
-                    .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15) // Show strikes within 15% of current price
-                    .map((contract) => {
+                  {(() => {
+                    const filteredCalls = chainData.calls
+                      .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15)
+                      .sort((a, b) => a.strike - b.strike);
+                    
+                    // Find where to insert the current price marker
+                    let priceMarkerInserted = false;
+                    const elements: React.ReactNode[] = [];
+                    
+                    filteredCalls.forEach((contract, index) => {
+                      // Insert price marker before the first OTM call (strike > currentPrice)
+                      if (!priceMarkerInserted && contract.strike > currentPrice) {
+                        elements.push(
+                          <div key="price-marker-calls" className="flex items-center gap-2 py-2 my-1">
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-yellow-500 to-yellow-500"></div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-full">
+                              <DollarSign className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+                              <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
+                                Current: ${currentPrice.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-yellow-500 to-yellow-500"></div>
+                          </div>
+                        );
+                        priceMarkerInserted = true;
+                      }
+                      
                       const position = getPosition(contract.contract_symbol);
                       const isITM = contract.in_the_money;
                       
-                      return (
-                        <button
+                      elements.push(
+                        <div
                           key={contract.contract_symbol}
-                          onClick={() => {
-                            setSelectedContract(contract);
-                            setShowTradeModal(true);
-                            setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
-                            setCustomPrice(''); // Reset custom price when selecting new contract
-                          }}
-                          className={`w-full p-3 rounded-lg text-left transition-all hover:scale-[1.01] ${
+                          className={`w-full p-3 rounded-lg transition-all hover:scale-[1.01] ${
                             isITM 
                               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
                               : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                           } ${position ? 'ring-2 ring-purple-500' : ''}`}
                         >
                           <div className="flex items-center justify-between">
-                            <div>
+                            <button
+                              onClick={() => router.push(`/option/${encodeURIComponent(contract.contract_symbol)}`)}
+                              className="flex-1 text-left"
+                            >
                               <span className={`text-lg font-bold ${isITM ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
                                 ${contract.strike.toFixed(2)}
                               </span>
@@ -358,24 +381,45 @@ export default function OptionsChainSection({
                                   {position.quantity}x {position.position_type}
                                 </span>
                               )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-mono font-semibold text-gray-900 dark:text-white">
-                                ${contract.mark.toFixed(2)}
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <div className="font-mono font-semibold text-gray-900 dark:text-white">
+                                  ${contract.mark.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {contract.bid.toFixed(2)} / {contract.ask.toFixed(2)}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                {contract.bid.toFixed(2)} / {contract.ask.toFixed(2)}
-                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedContract(contract);
+                                  setShowTradeModal(true);
+                                  setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
+                                  setCustomPrice('');
+                                }}
+                                className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                                title="Trade"
+                              >
+                                <TrendingUp className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          <button
+                            onClick={() => router.push(`/option/${encodeURIComponent(contract.contract_symbol)}`)}
+                            className="w-full flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400"
+                          >
                             <span>Vol: {contract.volume.toLocaleString()}</span>
                             <span>OI: {contract.open_interest.toLocaleString()}</span>
                             <span>IV: {contract.implied_volatility.toFixed(1)}%</span>
-                          </div>
-                        </button>
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </button>
+                        </div>
                       );
-                    })}
+                    });
+                    
+                    return elements;
+                  })()}
                 </div>
               </div>
             )}
@@ -388,29 +432,51 @@ export default function OptionsChainSection({
                   PUTS
                 </h4>
                 <div className="space-y-2">
-                  {chainData.puts
-                    .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15)
-                    .map((contract) => {
+                  {(() => {
+                    const filteredPuts = chainData.puts
+                      .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15)
+                      .sort((a, b) => a.strike - b.strike);
+                    
+                    // Find where to insert the current price marker
+                    let priceMarkerInserted = false;
+                    const elements: React.ReactNode[] = [];
+                    
+                    filteredPuts.forEach((contract) => {
+                      // Insert price marker before the first OTM put (strike < currentPrice means ITM for puts)
+                      // For puts, OTM is when strike < currentPrice, so we insert marker after the last ITM put
+                      if (!priceMarkerInserted && contract.strike > currentPrice) {
+                        elements.push(
+                          <div key="price-marker-puts" className="flex items-center gap-2 py-2 my-1">
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-yellow-500 to-yellow-500"></div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-full">
+                              <DollarSign className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+                              <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
+                                Current: ${currentPrice.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-yellow-500 to-yellow-500"></div>
+                          </div>
+                        );
+                        priceMarkerInserted = true;
+                      }
+                      
                       const position = getPosition(contract.contract_symbol);
                       const isITM = contract.in_the_money;
                       
-                      return (
-                        <button
+                      elements.push(
+                        <div
                           key={contract.contract_symbol}
-                          onClick={() => {
-                            setSelectedContract(contract);
-                            setShowTradeModal(true);
-                            setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
-                            setCustomPrice(''); // Reset custom price when selecting new contract
-                          }}
-                          className={`w-full p-3 rounded-lg text-left transition-all hover:scale-[1.01] ${
+                          className={`w-full p-3 rounded-lg transition-all hover:scale-[1.01] ${
                             isITM 
                               ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
                               : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                           } ${position ? 'ring-2 ring-purple-500' : ''}`}
                         >
                           <div className="flex items-center justify-between">
-                            <div>
+                            <button
+                              onClick={() => router.push(`/option/${encodeURIComponent(contract.contract_symbol)}`)}
+                              className="flex-1 text-left"
+                            >
                               <span className={`text-lg font-bold ${isITM ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                                 ${contract.strike.toFixed(2)}
                               </span>
@@ -424,24 +490,45 @@ export default function OptionsChainSection({
                                   {position.quantity}x {position.position_type}
                                 </span>
                               )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-mono font-semibold text-gray-900 dark:text-white">
-                                ${contract.mark.toFixed(2)}
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <div className="font-mono font-semibold text-gray-900 dark:text-white">
+                                  ${contract.mark.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {contract.bid.toFixed(2)} / {contract.ask.toFixed(2)}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                {contract.bid.toFixed(2)} / {contract.ask.toFixed(2)}
-                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedContract(contract);
+                                  setShowTradeModal(true);
+                                  setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
+                                  setCustomPrice('');
+                                }}
+                                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                                title="Trade"
+                              >
+                                <TrendingDown className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          <button
+                            onClick={() => router.push(`/option/${encodeURIComponent(contract.contract_symbol)}`)}
+                            className="w-full flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400"
+                          >
                             <span>Vol: {contract.volume.toLocaleString()}</span>
                             <span>OI: {contract.open_interest.toLocaleString()}</span>
                             <span>IV: {contract.implied_volatility.toFixed(1)}%</span>
-                          </div>
-                        </button>
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </button>
+                        </div>
                       );
-                    })}
+                    });
+                    
+                    return elements;
+                  })()}
                 </div>
               </div>
             )}

@@ -1090,7 +1090,7 @@ export default function StockPreviewModal({
             </div>
           )}
 
-          {/* Paper Trading Section - Collapsible */}
+          {/* Paper Trading Section - Stocks & Option Positions */}
           <div className="border border-orange-200 dark:border-orange-800 rounded-xl overflow-hidden bg-orange-50 dark:bg-orange-900/20">
             <button
               onClick={() => setIsPaperTradingExpanded(!isPaperTradingExpanded)}
@@ -1099,39 +1099,104 @@ export default function StockPreviewModal({
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-orange-500" />
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">Paper Trading</span>
+                {isPaperTradingEnabled && (optionPositions.length > 0 || position) && (
+                  <span className="text-xs bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                    {(position ? 1 : 0) + optionPositions.length} position{((position ? 1 : 0) + optionPositions.length) !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 {/* Position summary when collapsed */}
-                {!isPaperTradingExpanded && isPaperTradingEnabled && position && (
+                {!isPaperTradingExpanded && isPaperTradingEnabled && (position || optionPositions.length > 0) && (
                   <div className="flex flex-col items-end text-xs">
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">
-                      {parseFloat(position.quantity).toLocaleString()} shares
-                    </span>
-                    <span className={`font-semibold ${
-                      parseFloat(position.unrealized_pl) >= 0 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {parseFloat(position.unrealized_pl) >= 0 ? '+' : ''}${parseFloat(position.unrealized_pl).toFixed(2)} ({parseFloat(position.unrealized_pl_percent).toFixed(1)}%)
-                    </span>
+                    {position && (
+                      <span className="text-gray-600 dark:text-gray-400 font-medium">
+                        {parseFloat(position.quantity).toLocaleString()} shares
+                      </span>
+                    )}
+                    {optionPositions.length > 0 && (
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                        {optionPositions.length} option{optionPositions.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
                 )}
                 <ChevronDown className={`w-5 h-5 text-orange-500 transition-transform duration-200 ${isPaperTradingExpanded ? 'rotate-180' : ''}`} />
               </div>
             </button>
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isPaperTradingExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="border-t border-orange-200 dark:border-orange-800">
+            <div className={`transition-all duration-300 ease-in-out ${isPaperTradingExpanded ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="border-t border-orange-200 dark:border-orange-800 max-h-[65vh] overflow-y-auto">
+                {/* Stock Trading */}
                 <PaperTradingSection
                   symbol={symbol}
                   name={name}
                   currentPrice={numericPrice}
                   hideHeader
                 />
+                
+                {/* Options Positions for this Stock */}
+                {isPaperTradingEnabled && optionPositions.length > 0 && (
+                  <div className="border-t border-orange-200 dark:border-orange-800 p-3">
+                    <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Your {symbol} Options
+                    </h4>
+                    <div className="space-y-2">
+                      {optionPositions.map((pos) => {
+                        const isCall = pos.contract.option_type === 'call';
+                        const isProfit = parseFloat(pos.unrealized_pl) >= 0;
+                        return (
+                          <button
+                            key={pos.id}
+                            onClick={() => router.push(`/option/${encodeURIComponent(pos.contract.contract_symbol)}`)}
+                            className={`w-full p-3 rounded-lg text-left transition-all hover:scale-[1.01] ${
+                              isCall 
+                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  {isCall ? (
+                                    <TrendingUp className="w-4 h-4 text-green-600" />
+                                  ) : (
+                                    <TrendingDown className="w-4 h-4 text-red-600" />
+                                  )}
+                                  <span className={`font-bold ${isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                    ${parseFloat(pos.contract.strike_price).toFixed(2)} {pos.contract.option_type.toUpperCase()}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {pos.quantity}x {pos.position_type}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Exp: {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  {pos.contract.days_to_expiration <= 7 && (
+                                    <span className="ml-1 text-red-500">({pos.contract.days_to_expiration} DTE)</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono font-semibold text-gray-900 dark:text-white">
+                                  ${parseFloat(pos.current_price).toFixed(2)}
+                                </div>
+                                <div className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                                  {isProfit ? '+' : ''}${parseFloat(pos.unrealized_pl).toFixed(2)} ({parseFloat(pos.unrealized_pl_percent).toFixed(1)}%)
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Options Chain Section - Collapsible */}
+          {/* Options Chain Section - Always visible, separate from Paper Trading */}
           <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-purple-50 dark:bg-purple-900/20">
             <button
               onClick={() => setIsOptionsExpanded(!isOptionsExpanded)}
@@ -1140,19 +1205,68 @@ export default function StockPreviewModal({
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-purple-500" />
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">Options Chain</span>
+                {isPaperTradingEnabled && (
+                  <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                    Paper Trade
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3">
-                {/* Options positions summary when collapsed */}
-                {!isOptionsExpanded && isPaperTradingEnabled && optionPositions.length > 0 && (
-                  <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
-                    {optionPositions.length} position{optionPositions.length !== 1 ? 's' : ''}
+                {isPaperTradingEnabled && optionPositions.length > 0 && (
+                  <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                    {optionPositions.length} owned
                   </span>
                 )}
                 <ChevronDown className={`w-5 h-5 text-purple-500 transition-transform duration-200 ${isOptionsExpanded ? 'rotate-180' : ''}`} />
               </div>
             </button>
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOptionsExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="border-t border-purple-200 dark:border-purple-800 p-3">
+            <div className={`transition-all duration-300 ease-in-out ${isOptionsExpanded ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="border-t border-purple-200 dark:border-purple-800 p-3 max-h-[65vh] overflow-y-auto">
+                {/* Show owned options at the top of Options Chain */}
+                {isPaperTradingEnabled && optionPositions.length > 0 && (
+                  <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                    <h4 className="text-xs font-semibold text-orange-700 dark:text-orange-300 mb-2 flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      Your {symbol} Options (Paper Trading)
+                    </h4>
+                    <div className="space-y-2">
+                      {optionPositions.map((pos) => {
+                        const isCall = pos.contract.option_type === 'call';
+                        const isProfit = parseFloat(pos.unrealized_pl) >= 0;
+                        return (
+                          <button
+                            key={pos.id}
+                            onClick={() => router.push(`/option/${encodeURIComponent(pos.contract.contract_symbol)}`)}
+                            className={`w-full p-2 rounded-lg text-left transition-all hover:scale-[1.01] ${
+                              isCall 
+                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {isCall ? (
+                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                ) : (
+                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                )}
+                                <span className={`text-sm font-bold ${isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                  ${parseFloat(pos.contract.strike_price).toFixed(0)} {pos.contract.option_type.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {pos.quantity}x • {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                              </div>
+                              <span className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                                {isProfit ? '+' : ''}{parseFloat(pos.unrealized_pl_percent).toFixed(1)}%
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <OptionsChainSection
                   symbol={symbol}
                   currentPrice={numericPrice}
