@@ -19,6 +19,9 @@ import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
 import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
 import { useMarketPulseData, MARKET_PULSE_TICKER_NAMES, MARKET_PULSE_ASSET_CLASSES } from '@/hooks/useMarketPulseData';
 import { useLiveScreensData } from '@/hooks/useLiveScreensData';
+import { useWatchlistData } from '@/hooks/useWatchlistData';
+import { useMyScreensData } from '@/hooks/useMyScreensData';
+import { usePaperTradingData } from '@/hooks/usePaperTradingData';
 
 // Alias imports for backward compatibility with existing code
 const tickerNames = MARKET_PULSE_TICKER_NAMES;
@@ -228,14 +231,99 @@ function WatchlistPageContent() {
     pollingInterval: 60000, // 1 minute (screens don't change as often)
   });
 
+  // My Watchlist data hook - only fetches/polls when Tab 2 is active
+  const watchlistSymbols = React.useMemo(() => watchlist.map(w => w.symbol), [watchlist]);
+  const {
+    data: watchlistMarketData,
+    loading: watchlistLoading,
+    error: watchlistError,
+    retryCount: watchlistRetryCount,
+    backendReady: watchlistBackendReady,
+    refresh: refreshWatchlist,
+  } = useWatchlistData({
+    isActive: activeTab === 2,
+    symbols: watchlistSymbols,
+    pollingInterval: 30000, // 30 seconds
+  });
+
+  // My Screens data hook - only fetches/polls when Tab 3 is active
+  const favoritesSymbols = React.useMemo(() => favorites.map(f => f.symbol), [favorites]);
+  const {
+    data: myScreensData,
+    loading: myScreensLoading,
+    error: myScreensError,
+    retryCount: myScreensRetryCount,
+    refresh: refreshMyScreens,
+  } = useMyScreensData({
+    isActive: activeTab === 3,
+    symbols: favoritesSymbols,
+    pollingInterval: 60000, // 1 minute (indicators refresh less frequently)
+  });
+
+  // Paper Trading data hook - only fetches/polls when Tab 4 is active
+  const positionSymbols = React.useMemo(
+    () => paperTradingPositions.map(p => p.symbol),
+    [paperTradingPositions]
+  );
+  const {
+    data: paperTradingMarketData,
+    loading: paperTradingDataLoading,
+    error: paperTradingDataError,
+    refresh: refreshPaperTradingData,
+  } = usePaperTradingData({
+    isActive: activeTab === 4 && isPaperTradingEnabled,
+    positionSymbols,
+    pollingInterval: 30000, // 30 seconds
+  });
+
   // Derive state for Market Pulse tab (Tab 0)
-  // For now, only Market Pulse uses the hook; other tabs will get their own hooks later
-  // Cast to Record<string, any> for backward compatibility with existing code
-  const marketData: Record<string, any> = activeTab === 0 ? marketPulseData : {};
-  const loading = activeTab === 0 ? marketPulseLoading : false;
-  const error = activeTab === 0 ? marketPulseError : null;
-  const retryCount = activeTab === 0 ? marketPulseRetryCount : 0;
-  const backendReady = activeTab === 0 ? marketPulseBackendReady : true;
+  // Use appropriate data source based on active tab
+  const marketData: Record<string, any> = React.useMemo(() => {
+    if (activeTab === 0) return marketPulseData;
+    if (activeTab === 2) return watchlistMarketData;
+    if (activeTab === 4) return paperTradingMarketData;
+    return {};
+  }, [activeTab, marketPulseData, watchlistMarketData, paperTradingMarketData]);
+  
+  const loading = React.useMemo(() => {
+    if (activeTab === 0) return marketPulseLoading;
+    if (activeTab === 2) return watchlistLoading;
+    if (activeTab === 3) return myScreensLoading;
+    if (activeTab === 4) return paperTradingDataLoading;
+    return false;
+  }, [activeTab, marketPulseLoading, watchlistLoading, myScreensLoading, paperTradingDataLoading]);
+  
+  const error = React.useMemo(() => {
+    if (activeTab === 0) return marketPulseError;
+    if (activeTab === 2) return watchlistError;
+    if (activeTab === 3) return myScreensError;
+    if (activeTab === 4) return paperTradingDataError;
+    return null;
+  }, [activeTab, marketPulseError, watchlistError, myScreensError, paperTradingDataError]);
+  
+  const retryCount = React.useMemo(() => {
+    if (activeTab === 0) return marketPulseRetryCount;
+    if (activeTab === 2) return watchlistRetryCount;
+    if (activeTab === 3) return myScreensRetryCount;
+    return 0;
+  }, [activeTab, marketPulseRetryCount, watchlistRetryCount, myScreensRetryCount]);
+  
+  const backendReady = React.useMemo(() => {
+    if (activeTab === 0) return marketPulseBackendReady;
+    if (activeTab === 2) return watchlistBackendReady;
+    return true;
+  }, [activeTab, marketPulseBackendReady, watchlistBackendReady]);
+
+  // Unified refresh function for current tab
+  const handleRefresh = useCallback(() => {
+    switch (activeTab) {
+      case 0: refreshMarketPulse(); break;
+      case 1: refreshLiveScreens(); break;
+      case 2: refreshWatchlist(); break;
+      case 3: refreshMyScreens(); break;
+      case 4: refreshPaperTradingData(); break;
+    }
+  }, [activeTab, refreshMarketPulse, refreshLiveScreens, refreshWatchlist, refreshMyScreens, refreshPaperTradingData]);
 
   const [mounted, setMounted] = useState(false);
 
@@ -1107,7 +1195,7 @@ function WatchlistPageContent() {
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{error}</p>
 
                     <button
-                      onClick={() => refreshMarketPulse()}
+                      onClick={handleRefresh}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                       disabled={loading}
                     >
@@ -1510,7 +1598,7 @@ function WatchlistPageContent() {
                     </p>
                   )}
                   <button
-                    onClick={() => refreshMarketPulse()}
+                    onClick={handleRefresh}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
                   >
@@ -1745,7 +1833,7 @@ function WatchlistPageContent() {
                     </p>
                   )}
                   <button
-                    onClick={() => refreshMarketPulse()}
+                    onClick={handleRefresh}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
                   >
