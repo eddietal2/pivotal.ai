@@ -1495,6 +1495,40 @@ def option_contract_detail_view(request):
         else:
             in_the_money = underlying_price < strike
         
+        # Get period parameter for historical data (default: 1mo)
+        period_param = request.GET.get('period', '1M').upper()
+        
+        # Map period to yfinance parameters
+        period_map = {
+            '1D': ('1d', '5m'),    # 1 day, 5-minute intervals
+            '1W': ('5d', '15m'),   # 5 days, 15-minute intervals  
+            '1M': ('1mo', '1d'),   # 1 month, daily intervals
+            '1Y': ('1y', '1d'),    # 1 year, daily intervals
+        }
+        
+        yf_period, yf_interval = period_map.get(period_param, ('1mo', '1d'))
+        
+        # Fetch historical price data for the option contract
+        historical_prices = []
+        timestamps = []
+        try:
+            option_ticker = yf.Ticker(contract_symbol)
+            # Get historical data based on period
+            hist = option_ticker.history(period=yf_period, interval=yf_interval)
+            if not hist.empty and 'Close' in hist.columns:
+                historical_prices = [round(float(p), 2) for p in hist['Close'].dropna().tolist()]
+                timestamps = [str(ts) for ts in hist.index.tolist()]
+        except Exception as hist_err:
+            print(f"Could not fetch historical data for {contract_symbol}: {hist_err}")
+            # Try with shorter period if the requested one fails
+            try:
+                hist = option_ticker.history(period="5d", interval="1h")
+                if not hist.empty and 'Close' in hist.columns:
+                    historical_prices = [round(float(p), 2) for p in hist['Close'].dropna().tolist()]
+                    timestamps = [str(ts) for ts in hist.index.tolist()]
+            except:
+                pass
+        
         return cors_response({
             'contract_symbol': contract_symbol,
             'underlying_symbol': underlying_symbol,
@@ -1510,6 +1544,8 @@ def option_contract_detail_view(request):
             'open_interest': open_interest,
             'implied_volatility': round(iv * 100, 2),
             'in_the_money': in_the_money,
+            'historical_prices': historical_prices,
+            'timestamps': timestamps,
             # Greeks are not directly available from yfinance basic API
             # Would need additional calculation or a different data source
         })

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import { useToast } from '@/components/context/ToastContext';
+import AnimatedPrice from '@/components/ui/AnimatedPrice';
 
 // Option contract data structure from API
 interface OptionContractData {
@@ -65,6 +66,17 @@ export default function OptionContractPage() {
   const { isEnabled, account, refreshAccount, optionPositions } = usePaperTrading();
   const { showToast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // Scrubbing state for interactive chart
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+
+  // Timeframe state for chart
+  type PeriodType = '1D' | '1W' | '1M' | '1Y';
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('1M');
+  const [chartLoading, setChartLoading] = useState(false);
+  const [historicalData, setHistoricalData] = useState<{ prices: number[]; timestamps: string[] }>({ prices: [], timestamps: [] });
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
 
@@ -83,6 +95,56 @@ export default function OptionContractPage() {
   const position = useMemo(() => {
     return optionPositions?.find(p => p.contract.contract_symbol === contractSymbol);
   }, [optionPositions, contractSymbol]);
+
+  // Fetch chart data for selected period
+  const fetchChartData = useCallback(async (period: PeriodType) => {
+    setChartLoading(true);
+    try {
+      const url = `${BACKEND_URL}/api/paper-trading/options/contract/?symbol=${encodeURIComponent(contractSymbol)}&period=${period}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (response.ok && data.historical_prices) {
+        setHistoricalData({
+          prices: data.historical_prices,
+          timestamps: data.timestamps || [],
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch chart data:', err);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [contractSymbol, BACKEND_URL]);
+
+  // Track if we've initialized historical data
+  const initializedRef = useRef(false);
+
+  // Fetch chart data when period changes (not for initial 1D load)
+  useEffect(() => {
+    if (contractData && selectedPeriod !== '1D') {
+      fetchChartData(selectedPeriod);
+    }
+    // Reset to use contract data when switching back to 1D
+    if (selectedPeriod === '1D' && contractData?.historical_prices) {
+      setHistoricalData({
+        prices: contractData.historical_prices,
+        timestamps: contractData.timestamps || [],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeriod]);
+
+  // Initialize historical data from contract data on first load
+  useEffect(() => {
+    if (contractData?.historical_prices && !initializedRef.current) {
+      initializedRef.current = true;
+      setHistoricalData({
+        prices: contractData.historical_prices,
+        timestamps: contractData.timestamps || [],
+      });
+    }
+  }, [contractData]);
 
   // Fetch contract data
   const fetchContractData = useCallback(async (showRefreshing = false) => {
@@ -156,6 +218,48 @@ export default function OptionContractPage() {
     exp.setHours(0, 0, 0, 0);
     return exp < today;
   };
+
+  // Get scrubbed price when touching chart
+  const scrubPrice = useMemo(() => {
+    if (scrubIndex === null || !historicalData.prices || historicalData.prices.length === 0) return null;
+    const idx = Math.max(0, Math.min(scrubIndex, historicalData.prices.length - 1));
+    return historicalData.prices[idx];
+  }, [scrubIndex, historicalData.prices]);
+
+  // Calculate change from first data point to scrubbed point
+  const scrubChange = useMemo(() => {
+    if (scrubPrice === null || !historicalData.prices || historicalData.prices.length === 0) return null;
+    const firstPrice = historicalData.prices[0];
+    const valueChange = scrubPrice - firstPrice;
+    const percentChange = firstPrice !== 0 ? ((scrubPrice - firstPrice) / firstPrice) * 100 : 0;
+    return { valueChange, percentChange };
+  }, [scrubPrice, historicalData.prices]);
+
+  // Handle chart scrubbing
+  const handleChartScrub = useCallback((clientX: number) => {
+    if (!chartRef.current || !historicalData.prices || historicalData.prices.length === 0) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    const index = Math.round(percent * (historicalData.prices.length - 1));
+    setScrubIndex(index);
+  }, [historicalData.prices]);
+
+  const handleScrubStart = useCallback((e: React.PointerEvent) => {
+    setIsScrubbing(true);
+    handleChartScrub(e.clientX);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [handleChartScrub]);
+
+  const handleScrubMove = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbing) return;
+    handleChartScrub(e.clientX);
+  }, [isScrubbing, handleChartScrub]);
+
+  const handleScrubEnd = useCallback(() => {
+    setIsScrubbing(false);
+    setScrubIndex(null);
+  }, []);
 
   // Close expired position
   const closeExpiredPosition = async () => {
@@ -284,10 +388,18 @@ export default function OptionContractPage() {
 
   // Render simple price chart (if historical data available)
   const renderPriceChart = () => {
-    const data = contractData?.historical_prices || [];
+    if (chartLoading) {
+      return (
+        <div className="h-40 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
+        </div>
+      );
+    }
+    
+    const data = historicalData.prices;
     if (data.length < 2) {
       return (
-        <div className="h-32 flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
+        <div className="h-40 flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
           Historical price data not available
         </div>
       );
@@ -302,7 +414,9 @@ export default function OptionContractPage() {
     
     const firstPrice = data[0];
     const lastPrice = data[data.length - 1];
-    const isPositive = lastPrice >= firstPrice;
+    const chartIsPositive = isScrubbing && scrubChange 
+      ? scrubChange.percentChange >= 0 
+      : lastPrice >= firstPrice;
 
     const points = data
       .map((val, i) => {
@@ -313,14 +427,28 @@ export default function OptionContractPage() {
       .join(' ');
 
     const fillPoints = `0,100 ${points} 100,100`;
+    
+    // Calculate scrub indicator position
+    const scrubX = scrubIndex !== null ? (scrubIndex / (data.length - 1)) * 100 : null;
+    const scrubY = scrubIndex !== null && data[scrubIndex] !== undefined
+      ? 100 - ((data[scrubIndex] - paddedMin) / paddedRange) * 100
+      : null;
 
     return (
-      <div className="h-32 relative">
+      <div 
+        ref={chartRef}
+        className={`h-40 relative touch-none ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+        onPointerDown={handleScrubStart}
+        onPointerMove={handleScrubMove}
+        onPointerUp={handleScrubEnd}
+        onPointerCancel={handleScrubEnd}
+        onPointerLeave={handleScrubEnd}
+      >
         <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
           <defs>
             <linearGradient id="optionChartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
+              <stop offset="0%" stopColor={chartIsPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={chartIsPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
             </linearGradient>
           </defs>
           {/* Grid lines */}
@@ -330,13 +458,47 @@ export default function OptionContractPage() {
           <polygon fill="url(#optionChartGradient)" points={fillPoints} />
           <polyline
             fill="none"
-            stroke={isPositive ? '#22c55e' : '#ef4444'}
+            stroke={chartIsPositive ? '#22c55e' : '#ef4444'}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             points={points}
           />
+          {/* Scrub indicator line and dot */}
+          {isScrubbing && scrubX !== null && scrubY !== null && (
+            <>
+              <line
+                x1={scrubX}
+                y1="0"
+                x2={scrubX}
+                y2="100"
+                stroke={chartIsPositive ? '#22c55e' : '#ef4444'}
+                strokeWidth="0.5"
+                strokeDasharray="2,2"
+              />
+              <circle
+                cx={scrubX}
+                cy={scrubY}
+                r="2"
+                fill={chartIsPositive ? '#22c55e' : '#ef4444'}
+                stroke="white"
+                strokeWidth="0.5"
+              />
+            </>
+          )}
         </svg>
+        {/* Scrub timestamp label */}
+        {isScrubbing && scrubIndex !== null && historicalData.timestamps[scrubIndex] && (
+          <div 
+            className="absolute bottom-0 transform -translate-x-1/2 text-[10px] text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 px-1 rounded"
+            style={{ left: `${(scrubIndex / (data.length - 1)) * 100}%` }}
+          >
+            {selectedPeriod === '1D' 
+              ? new Date(historicalData.timestamps[scrubIndex]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+              : new Date(historicalData.timestamps[scrubIndex]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            }
+          </div>
+        )}
       </div>
     );
   };
@@ -485,13 +647,42 @@ export default function OptionContractPage() {
         <div className={`${premiumBg} border ${premiumBorder} rounded-xl p-4`}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Mark Price</p>
-              <p className={`text-3xl font-bold ${premiumColor}`}>
-                ${contractData.mark.toFixed(2)}
-              </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                = ${(contractData.mark * 100).toFixed(0)} per contract
+                {isScrubbing ? 'Historical Price' : 'Mark Price'}
               </p>
+              <div className={`text-3xl font-bold ${
+                isScrubbing && scrubChange 
+                  ? (scrubChange.percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')
+                  : premiumColor
+              }`}>
+                {isScrubbing && scrubPrice !== null ? (
+                  <AnimatedPrice 
+                    value={scrubPrice} 
+                    prefix="$" 
+                    duration={150}
+                  />
+                ) : (
+                  <>${contractData.mark.toFixed(2)}</>
+                )}
+              </div>
+              {isScrubbing && scrubChange ? (
+                <div className={`text-sm flex items-center gap-1 ${
+                  scrubChange.percentChange >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {scrubChange.percentChange >= 0 ? (
+                    <TrendingUp className="w-3 h-3" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3" />
+                  )}
+                  <span>
+                    {scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.valueChange.toFixed(2)} ({scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.percentChange.toFixed(1)}%)
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  = ${(contractData.mark * 100).toFixed(0)} per contract
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-500 dark:text-gray-400">Underlying</p>
@@ -526,10 +717,27 @@ export default function OptionContractPage() {
 
         {/* Price Chart */}
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Price History
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Price History
+            </h3>
+            <div className="flex gap-1">
+              {(['1D', '1W', '1M', '1Y'] as PeriodType[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSelectedPeriod(period)}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                    selectedPeriod === period
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+          </div>
           {renderPriceChart()}
         </div>
 
