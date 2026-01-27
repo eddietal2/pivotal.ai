@@ -131,7 +131,6 @@ function WatchlistPageContent() {
   const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
   const searchAbortRef = React.useRef<AbortController | null>(null);
   // Track collapsible section states
-  const [section1Expanded, setSection1Expanded] = useState(true);
   const [section2Expanded, setSection2Expanded] = useState(false);
   const [section3Expanded, setSection3Expanded] = useState(false);
   // Track selected Live Screen IDs (individual screens)
@@ -1105,15 +1104,60 @@ function WatchlistPageContent() {
             <div>
               {/* Section Header */}
               {!isRearrangeMode && (
-                <div className="flex items-center justify-between py-4">
-                  <div className="flex flex-col gap-1">
+                <div className="py-4">
+                  {/* Row 1: Title + Timeframe Selector + Info button */}
+                  <div className="flex items-center justify-between mb-2">
                     <span className="flex items-center gap-2 text-lg font-semibold">
                       <Activity className="w-5 h-5 text-green-500" />
                       Market Pulse
                     </span>
+                    <div className="flex items-center gap-2">
+                      {/* Timeframe Selector */}
+                      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                        {(['D', 'W', 'M', 'Y'] as const).map((tf) => {
+                          const tfMap = { D: 'day', W: 'week', M: 'month', Y: 'year' } as const;
+                          const isSelected = selectedTimeframe === tfMap[tf];
+                          return (
+                            <button
+                              key={tf}
+                              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white shadow-sm'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                              }`}
+                              onClick={() => {
+                                const newTimeframe = tfMap[tf];
+                                if (newTimeframe !== selectedTimeframe) {
+                                  setTimeframeSwitching(true);
+                                  setSelectedTimeframe(newTimeframe);
+                                  setTimeout(() => setTimeframeSwitching(false), 500);
+                                }
+                              }}
+                            >
+                              {tf}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!loading && !error && (
+                        <button
+                          type="button"
+                          className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                          title="Learn more about Market Overview"
+                          aria-label="More info about Market Overview"
+                          onClick={() => setIsMarketPulseInfoOpen(true)}
+                        >
+                          <Info className="w-5 h-5 text-gray-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Row 2: Top Indicators */}
+                  <div className="flex items-center">
                     {/* Top Market Indicators - skeleton when loading, data when loaded */}
                     {loading ? (
-                      <div className="flex items-center gap-3 text-xs font-normal">
+                      <div className="flex items-center gap-3 text-xs">
                         <span className="flex items-center gap-1">
                           <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
                           <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
@@ -1125,8 +1169,8 @@ function WatchlistPageContent() {
                           <div className="w-12 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
                         </span>
                       </div>
-                    ) : (topIndicators.bullish || topIndicators.bearish) && (
-                      <div className="flex items-center gap-3 text-xs font-normal">
+                    ) : (topIndicators.bullish || topIndicators.bearish) ? (
+                      <div className="flex items-center gap-3 text-xs">
                         {topIndicators.bullish && (
                           <span className="flex items-center gap-1 text-green-500">
                             <TrendingUp className="w-3 h-3" />
@@ -1142,19 +1186,8 @@ function WatchlistPageContent() {
                           </span>
                         )}
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                  {!loading && !error && (
-                    <button
-                      type="button"
-                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                      title="Learn more about Market Overview"
-                      aria-label="More info about Market Overview"
-                      onClick={() => setIsMarketPulseInfoOpen(true)}
-                    >
-                      <Info className="w-5 h-5 text-gray-400" />
-                    </button>
-                  )}
                 </div>
               )}
               {/* Toggle between slider and list view for Market Pulse items */}
@@ -1570,15 +1603,44 @@ function WatchlistPageContent() {
                       My Watchlist
                       <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({watchlist.length}/{MAX_WATCHLIST})</span>
                     </span>
-                    <button
-                      type="button"
-                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                      title="Learn more about My Watchlist"
-                      aria-label="More info about My Watchlist"
-                      onClick={() => setIsMyWatchlistInfoOpen(true)}
-                    >
-                      <Info className="w-5 h-5 text-gray-400" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Timeframe Selector */}
+                      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                        {(['D', 'W', 'M', 'Y'] as const).map((tf) => {
+                          const tfMap = { D: 'day', W: 'week', M: 'month', Y: 'year' } as const;
+                          const isSelected = selectedTimeframe === tfMap[tf];
+                          return (
+                            <button
+                              key={tf}
+                              className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white shadow-sm'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                              }`}
+                              onClick={() => {
+                                const newTimeframe = tfMap[tf];
+                                if (newTimeframe !== selectedTimeframe) {
+                                  setTimeframeSwitching(true);
+                                  setSelectedTimeframe(newTimeframe);
+                                  setTimeout(() => setTimeframeSwitching(false), 500);
+                                }
+                              }}
+                            >
+                              {tf}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        title="Learn more about My Watchlist"
+                        aria-label="More info about My Watchlist"
+                        onClick={() => setIsMyWatchlistInfoOpen(true)}
+                      >
+                        <Info className="w-5 h-5 text-gray-400" />
+                      </button>
+                    </div>
                   </div>
                   {/* Caption explaining limit */}
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
@@ -2242,63 +2304,11 @@ function WatchlistPageContent() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {/* Timeframes */}
-              <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded ? 'opacity-50' : ''}`}
-                onClick={() => {
-                  setSection1Expanded(!section1Expanded);
-                  setSection2Expanded(false);
-                  setSection3Expanded(false);
-                }}
-              >
-                <h3 className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                  Timeframes
-                </h3>
-                <ChevronDown className={`w-5 h-5 transition-transform ${section1Expanded ? 'rotate-180' : ''}`} />
-              </button>
-              {section1Expanded && (
-                <div className="mt-2">
-                  {/* Timeframe Mode Buttons */}
-                  <div className="flex gap-2 mb-4 w-full">
-                    {(['Day', 'Week', 'Month', 'Year'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        className={`flex-1 px-3 py-1 text-sm rounded transition-colors ${
-                          selectedTimeframe === mode.toLowerCase()
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                        onClick={() => {
-                          const newTimeframe = mode.toLowerCase() as 'day' | 'week' | 'month' | 'year';
-                          if (newTimeframe !== selectedTimeframe) {
-                            setTimeframeSwitching(true);
-                            setSelectedTimeframe(newTimeframe);
-                            setTimeout(() => setTimeframeSwitching(false), 500);
-                          }
-                          setIsDrawerOpen(false);
-                        }}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Description */}
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <div>Day - 5 Minute Chart</div>
-                    <div>Week - 1 Hour Chart</div>
-                    <div>Month - 4 Hour Chart</div>
-                    <div>Year - 1 Day Chart</div>
-                  </div>
-                </div>
-              )}
-
               {/* Arrange */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded || section3Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section3Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
-                  setSection1Expanded(false);
                   setSection3Expanded(false);
                 }}
               >
@@ -2327,10 +2337,9 @@ function WatchlistPageContent() {
 
               {/* Live Screen Categories */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section1Expanded || section2Expanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded ? 'opacity-50' : ''}`}
                 onClick={() => {
                   setSection3Expanded(!section3Expanded);
-                  setSection1Expanded(false);
                   setSection2Expanded(false);
                 }}
               >
@@ -2853,7 +2862,7 @@ function WatchlistPageContent() {
           </div>
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              <strong>Tip:</strong> Use the settings button to change timeframes (Day, Week, Month, Year) or rearrange asset classes to your preference.
+              <strong>Tip:</strong> Use the D/W/M/Y buttons to switch timeframes, or the settings button to rearrange asset classes.
             </p>
           </div>
         </div>
