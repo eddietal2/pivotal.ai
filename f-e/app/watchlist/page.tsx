@@ -408,6 +408,12 @@ function WatchlistPageContent() {
   }, [marketData, selectedTimeframe, pulseItemOrder]);
 
   // Calculate top bullish and bearish indicators from market data
+  // Exclude sentiment indices and futures (contract rollovers cause misleading % changes)
+  const EXCLUDED_FROM_TOP_INDICATORS = [
+    'CRYPTO-FEAR-GREED', '^VIX', 'CALL/PUT Ratio',  // Sentiment indices
+    'NG=F', 'CL=F', 'GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F',  // Futures (rollover issues)
+  ];
+  
   type TopIndicator = { ticker: string; symbol: string; change: number } | null;
   const topIndicators = React.useMemo<{ bullish: TopIndicator; bearish: TopIndicator }>(() => {
     const entries = Object.entries(marketData || {});
@@ -419,6 +425,9 @@ function WatchlistPageContent() {
     let bearishItem: TopIndicator = null;
 
     entries.forEach(([ticker, tickerData]: [string, any]) => {
+      // Skip sentiment indices and futures - their change % can be misleading
+      if (EXCLUDED_FROM_TOP_INDICATORS.includes(ticker)) return;
+      
       const dayTimeframe = tickerData?.timeframes?.day;
       const change = dayTimeframe?.latest?.change ?? tickerData?.change ?? 0;
       
