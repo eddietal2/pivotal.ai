@@ -109,10 +109,17 @@ function WatchlistPageContent() {
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  // Alert visibility state
+  // Alert visibility state - persisted in localStorage (check after hydration to avoid mismatch)
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
   const [showAlertDismissConfirm, setShowAlertDismissConfirm] = useState(false);
+  
+  // Check localStorage for alert dismissal after hydration
+  useEffect(() => {
+    if (localStorage.getItem('pivyWatchlistAlertDismissed') === 'true') {
+      setIsAlertVisible(false);
+    }
+  }, []);
   // Market Pulse info modal state
   const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
   // My Watchlist info modal state
@@ -1128,6 +1135,7 @@ function WatchlistPageContent() {
                       onClick={() => {
                         setShowAlertDismissConfirm(false);
                         setIsAlertClosing(true);
+                        localStorage.setItem('pivyWatchlistAlertDismissed', 'true');
                         setTimeout(() => setIsAlertVisible(false), 300);
                       }}
                       className="px-3 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
