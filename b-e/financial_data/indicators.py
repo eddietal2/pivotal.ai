@@ -383,7 +383,10 @@ def technical_indicators(request, symbol):
     cache_key = f"indicators_{symbol.upper()}_{period}_{interval}_{indicator}"
     cached_data = _cache.get(cache_key)
     if cached_data and time.time() - cached_data['timestamp'] < CACHE_DURATION:
+        print(f"[indicators] Cache HIT for {symbol} period={period} interval={interval} (yf_period={cached_data['data'].get('yf_period')}, yf_interval={cached_data['data'].get('yf_interval')}, dataPoints={cached_data['data'].get('dataPoints')})")
         return JsonResponse(cached_data['data'])
+    
+    print(f"[indicators] Cache MISS for {symbol} period={period} interval={interval} - fetching with yf_period={yf_period}, yf_interval={yf_interval}")
     
     try:
         ticker = yf.Ticker(symbol.upper())

@@ -17,6 +17,11 @@ interface LiveScreensContainerProps {
   recentlyAdded: Set<string>;
   recentlyAddedToScreens: Set<string>;
   selectedScreenIds?: ScreenId[];
+  // New props from hook
+  screens?: LiveScreen[];
+  loading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }
 
 export default function LiveScreensContainer({
@@ -30,20 +35,32 @@ export default function LiveScreensContainer({
   recentlyAdded,
   recentlyAddedToScreens,
   selectedScreenIds,
+  screens: externalScreens,
+  loading: externalLoading,
+  error: externalError,
+  onRefresh,
 }: LiveScreensContainerProps) {
   // Track which screens are expanded (multiple can be open)
   const [expandedScreens, setExpandedScreens] = useState<Set<string>>(new Set(['morning-movers']));
   
-  // API state
-  const [screens, setScreens] = useState<LiveScreen[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Internal API state (used when no external data provided - backward compatibility)
+  const [internalScreens, setInternalScreens] = useState<LiveScreen[]>([]);
+  const [internalLoading, setInternalLoading] = useState(true);
+  const [internalError, setInternalError] = useState<string | null>(null);
 
-  // Fetch screens from API
+  // Use external data if provided, otherwise use internal state
+  const screens = externalScreens ?? internalScreens;
+  const loading = externalLoading ?? internalLoading;
+  const error = externalError ?? internalError;
+  const isUsingExternalData = externalScreens !== undefined;
+
+  // Fetch screens from API (only used when no external data provided)
   const fetchScreens = useCallback(async () => {
+    if (isUsingExternalData) return; // Skip internal fetch when using hook data
+    
     try {
-      setLoading(true);
-      setError(null);
+      setInternalLoading(true);
+      setInternalError(null);
       
       const screensParam = selectedScreenIds && selectedScreenIds.length > 0
         ? `?screens=${selectedScreenIds.join(',')}`
@@ -59,7 +76,7 @@ export default function LiveScreensContainer({
       }
       
       const data = await response.json();
-      setScreens(data.screens || []);
+      setInternalScreens(data.screens || []);
       
       // Auto-expand first screen if none expanded
       if (data.screens?.length > 0 && expandedScreens.size === 0) {
@@ -67,16 +84,25 @@ export default function LiveScreensContainer({
       }
     } catch (err) {
       console.error('Error fetching live screens:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load screens');
+      setInternalError(err instanceof Error ? err.message : 'Failed to load screens');
     } finally {
-      setLoading(false);
+      setInternalLoading(false);
     }
-  }, [selectedScreenIds]);
+  }, [selectedScreenIds, isUsingExternalData]);
 
-  // Fetch on mount and when screen selection changes
+  // Fetch on mount and when screen selection changes (only if not using external data)
   useEffect(() => {
-    fetchScreens();
-  }, [fetchScreens]);
+    if (!isUsingExternalData) {
+      fetchScreens();
+    }
+  }, [fetchScreens, isUsingExternalData]);
+  
+  // Auto-expand first screen when external data loads
+  useEffect(() => {
+    if (isUsingExternalData && screens.length > 0 && expandedScreens.size === 0) {
+      setExpandedScreens(new Set([screens[0].id]));
+    }
+  }, [screens, isUsingExternalData]);
 
   // Calculate next global refresh time
   const nextRefresh = useMemo(() => {
@@ -135,7 +161,7 @@ export default function LiveScreensContainer({
           {error}
         </p>
         <button
-          onClick={fetchScreens}
+          onClick={onRefresh ?? fetchScreens}
           className="px-4 py-2 text-sm bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
         >
           Try Again
@@ -165,7 +191,7 @@ export default function LiveScreensContainer({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <button
-            onClick={fetchScreens}
+            onClick={onRefresh ?? fetchScreens}
             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
             title="Refresh screens"
           >

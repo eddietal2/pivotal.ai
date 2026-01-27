@@ -18,6 +18,7 @@ import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
 import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
 import { useMarketPulseData, MARKET_PULSE_TICKER_NAMES, MARKET_PULSE_ASSET_CLASSES } from '@/hooks/useMarketPulseData';
+import { useLiveScreensData } from '@/hooks/useLiveScreensData';
 
 // Alias imports for backward compatibility with existing code
 const tickerNames = MARKET_PULSE_TICKER_NAMES;
@@ -213,6 +214,18 @@ function WatchlistPageContent() {
   } = useMarketPulseData({
     isActive: activeTab === 0,
     pollingInterval: 30000, // 30 seconds
+  });
+
+  // Live Screens data hook - only fetches/polls when Tab 1 is active
+  const {
+    data: liveScreensData,
+    loading: liveScreensLoading,
+    error: liveScreensError,
+    refresh: refreshLiveScreens,
+  } = useLiveScreensData({
+    isActive: activeTab === 1,
+    selectedScreenIds,
+    pollingInterval: 60000, // 1 minute (screens don't change as often)
   });
 
   // Derive state for Market Pulse tab (Tab 0)
@@ -1431,6 +1444,10 @@ function WatchlistPageContent() {
                 recentlyAdded={recentlyAdded}
                 recentlyAddedToScreens={recentlyAddedToScreens}
                 selectedScreenIds={selectedScreenIds}
+                screens={liveScreensData}
+                loading={liveScreensLoading}
+                error={liveScreensError}
+                onRefresh={refreshLiveScreens}
               />
             </div>
           </div>

@@ -202,42 +202,59 @@ export default function StockDetailPage() {
     };
   }, [symbol, selectedPeriod]);
 
-  // Fetch interval-specific chart data when period or interval changes
+  // Fetch interval-specific chart data when period or interval changes (debounced)
   useEffect(() => {
-    // Abort any in-flight interval request
-    if (intervalAbortRef.current) {
-      intervalAbortRef.current.abort();
-    }
+    // Set loading state immediately
+    setIntervalChartData(prev => ({ ...prev, loading: true }));
     
-    const controller = new AbortController();
-    intervalAbortRef.current = controller;
-    
-    // Clear old data and start loading
-    setIntervalChartData({ sparkline: [], loading: true });
-    
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
-    
-    fetch(
-      `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`,
-      { signal: controller.signal }
-    )
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.closes && data.closes.length > 0) {
-          setIntervalChartData({
-            sparkline: data.closes,
-            loading: false,
-          });
-        } else {
+    // Debounce the fetch to prevent rapid requests (429 errors)
+    const debounceTimer = setTimeout(() => {
+      // Abort any in-flight interval request
+      if (intervalAbortRef.current) {
+        intervalAbortRef.current.abort();
+      }
+      
+      const controller = new AbortController();
+      intervalAbortRef.current = controller;
+      
+      const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+      const url = `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`;
+      
+      console.log(`[StockDetailPage] Fetching chart data: ${symbol} period=${selectedPeriod} interval=${selectedInterval}`);
+      
+      fetch(url, { signal: controller.signal })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.closes && data.closes.length > 0) {
+            console.log(`[StockDetailPage] Received ${data.closes.length} data points for ${symbol}:`, {
+              period: data.period,
+              interval: data.interval,
+              yf_period: data.yf_period,
+              yf_interval: data.yf_interval,
+              dataPoints: data.dataPoints,
+              firstClose: data.closes[0],
+              lastClose: data.closes[data.closes.length - 1],
+              firstTimestamp: data.timestamps?.[0],
+              lastTimestamp: data.timestamps?.[data.timestamps.length - 1],
+            });
+            setIntervalChartData({
+              sparkline: data.closes,
+              loading: false,
+            });
+          } else {
+            console.log(`[StockDetailPage] No closes data for ${symbol}`, data);
+            setIntervalChartData({ sparkline: [], loading: false });
+          }
+        })
+        .catch(err => {
+          if (err.name === 'AbortError') return;
+          console.error(`[StockDetailPage] Error fetching chart data:`, err);
           setIntervalChartData({ sparkline: [], loading: false });
-        }
-      })
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        setIntervalChartData({ sparkline: [], loading: false });
-      });
+        });
+    }, 300); // 300ms debounce
     
     return () => {
+      clearTimeout(debounceTimer);
       if (intervalAbortRef.current) {
         intervalAbortRef.current.abort();
       }

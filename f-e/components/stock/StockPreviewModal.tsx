@@ -400,35 +400,56 @@ export default function StockPreviewModal({
     return () => controller.abort();
   }, [isOpen, symbol, timeframes, sparkline]);
 
-  // Fetch interval-specific chart data when period or interval changes
+  // Fetch interval-specific chart data when period or interval changes (debounced)
   React.useEffect(() => {
     if (!isOpen || !symbol) return;
     
     const controller = new AbortController();
-    // Clear old data and start loading
-    setIntervalChartData({ sparkline: [], loading: true });
+    // Set loading state immediately
+    setIntervalChartData(prev => ({ ...prev, loading: true }));
     
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
-    const url = `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`;
-    
-    fetch(url, { signal: controller.signal })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.closes && data.closes.length > 0) {
-          setIntervalChartData({
-            sparkline: data.closes,
-            loading: false,
-          });
-        } else {
+    // Debounce the fetch to prevent rapid requests (429 errors)
+    const debounceTimer = setTimeout(() => {
+      const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+      const url = `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=${selectedPeriod}&interval=${selectedInterval}&indicator=ALL`;
+      
+      console.log(`[StockPreviewModal] Fetching chart data: ${symbol} period=${selectedPeriod} interval=${selectedInterval}`);
+      
+      fetch(url, { signal: controller.signal })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.closes && data.closes.length > 0) {
+            console.log(`[StockPreviewModal] Received ${data.closes.length} data points for ${symbol}:`, {
+              period: data.period,
+              interval: data.interval,
+              yf_period: data.yf_period,
+              yf_interval: data.yf_interval,
+              dataPoints: data.dataPoints,
+              firstClose: data.closes[0],
+              lastClose: data.closes[data.closes.length - 1],
+              firstTimestamp: data.timestamps?.[0],
+              lastTimestamp: data.timestamps?.[data.timestamps.length - 1],
+            });
+            setIntervalChartData({
+              sparkline: data.closes,
+              loading: false,
+            });
+          } else {
+            console.log(`[StockPreviewModal] No closes data for ${symbol}`, data);
+            setIntervalChartData({ sparkline: [], loading: false });
+          }
+        })
+        .catch(err => {
+          if (err.name === 'AbortError') return;
+          console.error(`[StockPreviewModal] Error fetching chart data:`, err);
           setIntervalChartData({ sparkline: [], loading: false });
-        }
-      })
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        setIntervalChartData({ sparkline: [], loading: false });
-      });
+        });
+    }, 300); // 300ms debounce
     
-    return () => controller.abort();
+    return () => {
+      clearTimeout(debounceTimer);
+      controller.abort();
+    };
   }, [isOpen, symbol, selectedPeriod, selectedInterval]);
 
   // Use fetched timeframes if props don't have valid data
