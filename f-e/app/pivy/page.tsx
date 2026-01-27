@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import SlideViewIllustration from '../../components/illustrations/SlideViewIllustration';
 import ListViewIllustration from '../../components/illustrations/ListViewIllustration';
 import CandleStickAnim from '../../components/ui/CandleStickAnim';
+import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
 
 const PivyPageContent: React.FC = () => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -112,6 +113,7 @@ const PivyPageContent: React.FC = () => {
           <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-sm font-medium rounded">
             {timeframeType === 'week' ? `Week ${selectedWeek}, ${months[selectedMonth - 1]}` : `${months[selectedMonth - 1]}, ${selectedYear}`}
           </span>
+          <MarketStatusIndicator variant="pill" showNextEvent={false} />
         </div>
         <div>
           <button 

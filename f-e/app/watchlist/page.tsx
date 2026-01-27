@@ -10,6 +10,7 @@ import StockPreviewModal from '../../components/stock/StockPreviewModal';
 import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
+import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
 import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
@@ -987,6 +988,8 @@ function WatchlistPageContent() {
                 <CandleStickAnim />
               </span>
               <h1 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
+              {/* Market Status Pill - responsive: shows dot+time on mobile, full pill on desktop */}
+              <MarketStatusIndicator variant="pill" showNextEvent={false} />
               {/* Top Market Indicators - hidden on very small screens */}
               {loading ? (
                 <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">

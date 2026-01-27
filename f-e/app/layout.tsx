@@ -7,6 +7,7 @@ import { PivyChatProvider } from "@/components/context/PivyChatContext";
 import { FavoritesProvider } from "@/components/context/FavoritesContext";
 import { WatchlistProvider } from "@/components/context/WatchlistContext";
 import { PaperTradingProvider } from "@/components/context/PaperTradingContext";
+import { MarketStatusProvider } from "@/components/context/MarketStatusContext";
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import NavigationWrapper from "@/components/navigation/NavigationWrapper";
 import { UIProvider } from "@/components/context/UIContext";
@@ -43,6 +44,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ToastProvider>
+            <MarketStatusProvider>
             <PostLoginToastHandler />
             {/* UIProvider for global modal state */}
             <UIProvider>
@@ -63,6 +65,7 @@ export default function RootLayout({
               </FavoritesProvider>
               </PivyChatProvider>
             </UIProvider>
+            </MarketStatusProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

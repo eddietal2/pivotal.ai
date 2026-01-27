@@ -6,6 +6,7 @@ import { Sun, Moon, Bell, BellOff, X } from 'lucide-react';
 // Added for Market Overview Voice selection
 import { useState, useEffect } from 'react';
 import { redirectTo } from '@/lib/redirect';
+import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
 
@@ -475,6 +476,11 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:pt-24">
+      
+      {/* Market Status Banner */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <MarketStatusIndicator variant="banner" className="rounded-xl" />
+      </div>
       
       {/* Error Message */}
       {loadError && (

@@ -20,6 +20,7 @@ import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
 import DisclaimersSection from '@/components/home/DisclaimersSection';
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import StockPreviewModal from '@/components/stock/StockPreviewModal';
+import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
 
 // Ticker to name mapping for Market Pulse (same as watchlist)
 const tickerNames: Record<string, string> = {
@@ -486,7 +487,10 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto lg:px-64">
-        <div className="space-y-8 p-4 sm:p-8 md:mt-10">
+        <div className="space-y-8 px-4 sm:p-8 md:mt-10">
+
+          {/* Market Status Banner */}
+          <MarketStatusIndicator variant="banner" className="-mx-4 sm:-mx-8 md:mx-0" />
 
           {/* Current Day Pivy Chat */}
           <div className="mb-4">
