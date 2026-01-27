@@ -80,6 +80,41 @@ def account_view(request):
         account = get_or_create_account(user)
         positions = account.positions.all()
         
+        # Update positions with current market prices
+        if positions.exists():
+            try:
+                import yfinance as yf
+                symbols = [p.symbol for p in positions]
+                
+                # Fetch current prices for all symbols at once
+                for position in positions:
+                    try:
+                        ticker = yf.Ticker(position.symbol)
+                        # Try to get price from fast_info first, then history
+                        price = None
+                        try:
+                            fast_info = ticker.fast_info
+                            price = float(fast_info.get('lastPrice', 0) or fast_info.get('last_price', 0) or fast_info.get('regularMarketPrice', 0))
+                        except Exception:
+                            pass
+                        
+                        if not price or price <= 0:
+                            # Fallback to history
+                            hist = ticker.history(period='1d')
+                            if not hist.empty:
+                                price = float(hist['Close'].iloc[-1])
+                        
+                        if price and price > 0:
+                            position.current_price = Decimal(str(price))
+                            position.save()
+                    except Exception as e:
+                        print(f"Error updating price for {position.symbol}: {e}")
+                        # Continue with other positions even if one fails
+                        pass
+            except Exception as e:
+                print(f"Error updating position prices: {e}")
+                # Continue with stored prices if update fails
+        
         return cors_response({
             'account': {
                 'id': account.id,
@@ -578,6 +613,68 @@ def option_positions_view(request):
         return cors_response({'error': 'Authentication required'}, status=401)
     
     account = get_or_create_account(user)
+    positions = account.option_positions.select_related('contract').all()
+    
+    # Update option positions with current market prices
+    if positions.exists():
+        try:
+            import yfinance as yf
+            
+            # Group positions by underlying symbol to minimize API calls
+            underlying_symbols = set(p.contract.underlying_symbol for p in positions)
+            
+            for underlying in underlying_symbols:
+                try:
+                    ticker = yf.Ticker(underlying)
+                    # Get all option chains for this underlying
+                    expirations = ticker.options
+                    
+                    # Build a map of contract_symbol -> current premium for positions we have
+                    contract_prices = {}
+                    
+                    for position in positions:
+                        if position.contract.underlying_symbol != underlying:
+                            continue
+                        
+                        exp_date = position.contract.expiration_date.strftime('%Y-%m-%d')
+                        if exp_date in expirations:
+                            try:
+                                chain = ticker.option_chain(exp_date)
+                                option_type = position.contract.option_type
+                                strike = float(position.contract.strike_price)
+                                
+                                if option_type == 'call':
+                                    df = chain.calls
+                                else:
+                                    df = chain.puts
+                                
+                                # Find the contract with matching strike
+                                matching = df[abs(df['strike'] - strike) < 0.01]
+                                if not matching.empty:
+                                    row = matching.iloc[0]
+                                    # Use mark price (mid of bid/ask) or last price
+                                    bid = float(row.get('bid', 0) or 0)
+                                    ask = float(row.get('ask', 0) or 0)
+                                    last = float(row.get('lastPrice', 0) or 0)
+                                    
+                                    if bid > 0 and ask > 0:
+                                        premium = (bid + ask) / 2
+                                    elif last > 0:
+                                        premium = last
+                                    else:
+                                        premium = None
+                                    
+                                    if premium and premium > 0:
+                                        position.current_price = Decimal(str(round(premium, 2)))
+                                        position.save()
+                            except Exception as e:
+                                print(f"Error fetching option price for {position.contract.contract_symbol}: {e}")
+                except Exception as e:
+                    print(f"Error fetching options for {underlying}: {e}")
+        except Exception as e:
+            print(f"Error updating option prices: {e}")
+    
+    # Refresh positions after price updates
     positions = account.option_positions.select_related('contract').all()
     
     # Calculate totals
