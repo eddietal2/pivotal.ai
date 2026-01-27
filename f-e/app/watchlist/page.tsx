@@ -112,6 +112,7 @@ function WatchlistPageContent() {
   // Alert visibility state
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
+  const [showAlertDismissConfirm, setShowAlertDismissConfirm] = useState(false);
   // Market Pulse info modal state
   const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
   // My Watchlist info modal state
@@ -1054,15 +1055,27 @@ function WatchlistPageContent() {
           {/* Getting Started Alert */}
           {isAlertVisible && (
             <div 
-              className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-96 p-4'}`}
+              className={`relative bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-[500px] p-4'}`}
               style={{ overflow: 'hidden' }}
             >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
-                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
+              {/* Close button - top right */}
+              <button 
+                onClick={() => setShowAlertDismissConfirm(true)}
+                className="absolute top-3 right-3 p-1 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </button>
+              
+              {/* Centered Logo */}
+            <div className="flex justify-center mb-3">
+              <div className="scale-75">
+                <CandleStickAnim />
+              </div>
+            </div>
+            
+            <div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 text-center">
                     How Pivy Watchlist Works
                   </h3>
                   <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1.5">
@@ -1084,17 +1097,45 @@ function WatchlistPageContent() {
                         <TrendingUp className="w-3.5 h-3.5 mx-1 relative bottom-0.5 inline text-purple-500" />
                         to add them to My Screens for swing trade analysis</span>
                     </li>
+                    <li className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-4 h-4 bg-blue-200 dark:bg-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-200">5</span>
+                      <span><strong>Paper Trading</strong> — Practice trading with virtual funds. Buy & sell stocks risk-free to test your strategies</span>
+                    </li>
                   </ol>
                 </div>
-                <button 
-                  onClick={() => {
-                    setIsAlertClosing(true);
-                    setTimeout(() => setIsAlertVisible(false), 300);
-                  }}
-                  className="flex-shrink-0 p-1 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </button>
+              </div>
+              
+              {/* Dismiss Confirmation - animated expand/collapse */}
+              <div 
+                className={`overflow-hidden transition-all duration-300 ease-out ${
+                  showAlertDismissConfirm 
+                    ? 'max-h-24 opacity-100 mt-3' 
+                    : 'max-h-0 opacity-0 mt-0'
+                }`}
+              >
+                <div className="pt-3 border-t border-blue-200 dark:border-blue-700">
+                  <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
+                    Are you sure you want to close these instructions? This cannot be undone.
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => setShowAlertDismissConfirm(false)}
+                      className="px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAlertDismissConfirm(false);
+                        setIsAlertClosing(true);
+                        setTimeout(() => setIsAlertVisible(false), 300);
+                      }}
+                      className="px-3 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                    >
+                      Yes, Close
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
