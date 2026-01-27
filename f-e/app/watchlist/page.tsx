@@ -109,16 +109,16 @@ function WatchlistPageContent() {
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  // Alert visibility state - persisted in localStorage (check after hydration to avoid mismatch)
-  const [isAlertVisible, setIsAlertVisible] = useState(true);
+  // Alert visibility state - persisted in localStorage
+  // Start with null to indicate "not yet checked" - prevents skeleton flash
+  const [isAlertVisible, setIsAlertVisible] = useState<boolean | null>(null);
   const [isAlertClosing, setIsAlertClosing] = useState(false);
   const [showAlertDismissConfirm, setShowAlertDismissConfirm] = useState(false);
   
   // Check localStorage for alert dismissal after hydration
   useEffect(() => {
-    if (localStorage.getItem('pivyWatchlistAlertDismissed') === 'true') {
-      setIsAlertVisible(false);
-    }
+    const dismissed = localStorage.getItem('pivyWatchlistAlertDismissed') === 'true';
+    setIsAlertVisible(!dismissed);
   }, []);
   // Market Pulse info modal state
   const [isMarketPulseInfoOpen, setIsMarketPulseInfoOpen] = useState(false);
@@ -1083,8 +1083,8 @@ function WatchlistPageContent() {
               {/* Tab 0: Market Pulse */}
               <div className="w-full flex-shrink-0 px-4 sm:px-8">
 
-          {/* Getting Started Alert */}
-          {isAlertVisible && (
+          {/* Getting Started Alert - only render after hydration check (isAlertVisible !== null) */}
+          {isAlertVisible === true && (
             <div 
               className={`relative bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl transform transition-all duration-300 ${isAlertClosing ? 'max-h-0 p-0 opacity-0 border-0' : 'max-h-[500px] p-4'}`}
               style={{ overflow: 'hidden' }}
