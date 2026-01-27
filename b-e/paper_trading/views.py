@@ -503,9 +503,9 @@ def serialize_option_contract(contract):
     }
 
 
-def serialize_option_position(position):
+def serialize_option_position(position, daily_change_data=None):
     """Serialize an OptionPosition to dict"""
-    return {
+    data = {
         'id': position.id,
         'contract': serialize_option_contract(position.contract),
         'position_type': position.position_type,
@@ -517,7 +517,17 @@ def serialize_option_position(position):
         'unrealized_pl': str(position.unrealized_pl),
         'unrealized_pl_percent': str(position.unrealized_pl_percent),
         'opened_at': position.opened_at.isoformat(),
+        'daily_change': '0',
+        'daily_change_percent': '0',
     }
+    
+    # Add daily change data if available
+    if daily_change_data and position.contract.contract_symbol in daily_change_data:
+        change_info = daily_change_data[position.contract.contract_symbol]
+        data['daily_change'] = str(change_info.get('change', 0))
+        data['daily_change_percent'] = str(change_info.get('change_percent', 0))
+    
+    return data
 
 
 def serialize_option_trade(trade):
@@ -615,10 +625,14 @@ def option_positions_view(request):
     account = get_or_create_account(user)
     positions = account.option_positions.select_related('contract').all()
     
+    # Dictionary to store daily change data for each contract
+    daily_change_data = {}
+    
     # Update option positions with current market prices
     if positions.exists():
         try:
             import yfinance as yf
+            from datetime import date
             
             # Group positions by underlying symbol to minimize API calls
             underlying_symbols = set(p.contract.underlying_symbol for p in positions)
@@ -629,14 +643,45 @@ def option_positions_view(request):
                     # Get all option chains for this underlying
                     expirations = ticker.options
                     
-                    # Build a map of contract_symbol -> current premium for positions we have
-                    contract_prices = {}
-                    
                     for position in positions:
                         if position.contract.underlying_symbol != underlying:
                             continue
                         
                         exp_date = position.contract.expiration_date.strftime('%Y-%m-%d')
+                        
+                        # Check if option is expired
+                        if position.contract.expiration_date < date.today():
+                            # Option has expired - set current_price to 0 for expired worthless, or intrinsic value
+                            # For simplicity, we'll set expired OTM options to 0
+                            try:
+                                # Get current underlying price
+                                underlying_price = float(ticker.fast_info.get('lastPrice', 0) or 0)
+                                if not underlying_price:
+                                    hist = ticker.history(period='1d')
+                                    if not hist.empty:
+                                        underlying_price = float(hist['Close'].iloc[-1])
+                                
+                                strike = float(position.contract.strike_price)
+                                if position.contract.option_type == 'call':
+                                    # Call: intrinsic = max(0, underlying - strike)
+                                    intrinsic = max(0, underlying_price - strike)
+                                else:
+                                    # Put: intrinsic = max(0, strike - underlying)
+                                    intrinsic = max(0, strike - underlying_price)
+                                
+                                position.current_price = Decimal(str(round(intrinsic, 2)))
+                                position.save()
+                                
+                                # Mark as expired with 0 daily change
+                                daily_change_data[position.contract.contract_symbol] = {
+                                    'change': 0,
+                                    'change_percent': 0,
+                                    'expired': True,
+                                }
+                            except Exception as e:
+                                print(f"Error calculating intrinsic for expired option {position.contract.contract_symbol}: {e}")
+                            continue
+                        
                         if exp_date in expirations:
                             try:
                                 chain = ticker.option_chain(exp_date)
@@ -667,6 +712,21 @@ def option_positions_view(request):
                                     if premium and premium > 0:
                                         position.current_price = Decimal(str(round(premium, 2)))
                                         position.save()
+                                    
+                                    # Capture daily change data from yfinance
+                                    change = float(row.get('change', 0) or 0)
+                                    percent_change = float(row.get('percentChange', 0) or 0)
+                                    
+                                    # If percentChange not available, calculate from previous close
+                                    if percent_change == 0 and last > 0:
+                                        prev_close = last - change
+                                        if prev_close > 0:
+                                            percent_change = (change / prev_close) * 100
+                                    
+                                    daily_change_data[position.contract.contract_symbol] = {
+                                        'change': round(change, 2),
+                                        'change_percent': round(percent_change, 2),
+                                    }
                             except Exception as e:
                                 print(f"Error fetching option price for {position.contract.contract_symbol}: {e}")
                 except Exception as e:
@@ -682,7 +742,7 @@ def option_positions_view(request):
     total_pl = sum(p.unrealized_pl for p in positions)
     
     return cors_response({
-        'positions': [serialize_option_position(p) for p in positions],
+        'positions': [serialize_option_position(p, daily_change_data) for p in positions],
         'summary': {
             'total_positions': positions.count(),
             'total_market_value': str(total_value),

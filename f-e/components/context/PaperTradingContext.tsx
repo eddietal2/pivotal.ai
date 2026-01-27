@@ -45,6 +45,8 @@ interface OptionPosition {
   cost_basis: string;
   unrealized_pl: string;
   unrealized_pl_percent: string;
+  daily_change: string;
+  daily_change_percent: string;
   opened_at: string;
 }
 

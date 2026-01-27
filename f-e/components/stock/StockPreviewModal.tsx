@@ -1145,44 +1145,61 @@ export default function StockPreviewModal({
                       {optionPositions.map((pos) => {
                         const isCall = pos.contract.option_type === 'call';
                         const isProfit = parseFloat(pos.unrealized_pl) >= 0;
+                        const dailyChange = parseFloat(pos.daily_change_percent || '0');
+                        const isDailyPositive = dailyChange >= 0;
+                        const isExpired = pos.contract.is_expired || pos.contract.days_to_expiration < 0;
                         return (
                           <button
                             key={pos.id}
                             onClick={() => router.push(`/option/${encodeURIComponent(pos.contract.contract_symbol)}`)}
                             className={`w-full p-3 rounded-lg text-left transition-all hover:scale-[1.01] ${
-                              isCall 
-                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                              isExpired
+                                ? 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 opacity-75'
+                                : isCall 
+                                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <div>
                                 <div className="flex items-center gap-2">
                                   {isCall ? (
-                                    <TrendingUp className="w-4 h-4 text-green-600" />
+                                    <TrendingUp className={`w-4 h-4 ${isExpired ? 'text-gray-400' : 'text-green-600'}`} />
                                   ) : (
-                                    <TrendingDown className="w-4 h-4 text-red-600" />
+                                    <TrendingDown className={`w-4 h-4 ${isExpired ? 'text-gray-400' : 'text-red-600'}`} />
                                   )}
-                                  <span className={`font-bold ${isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                  <span className={`font-bold ${isExpired ? 'text-gray-500' : isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                                     ${parseFloat(pos.contract.strike_price).toFixed(2)} {pos.contract.option_type.toUpperCase()}
                                   </span>
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {pos.quantity}x {pos.position_type}
                                   </span>
+                                  {isExpired && (
+                                    <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                                      EXPIRED
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                   Exp: {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  {pos.contract.days_to_expiration <= 7 && (
+                                  {!isExpired && pos.contract.days_to_expiration <= 7 && pos.contract.days_to_expiration >= 0 && (
                                     <span className="ml-1 text-red-500">({pos.contract.days_to_expiration} DTE)</span>
                                   )}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-mono font-semibold text-gray-900 dark:text-white">
-                                  ${parseFloat(pos.current_price).toFixed(2)}
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className="font-mono font-semibold text-gray-900 dark:text-white">
+                                    ${parseFloat(pos.current_price).toFixed(2)}
+                                  </span>
+                                  {!isExpired && (
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
+                                      {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
+                                    </span>
+                                  )}
                                 </div>
                                 <div className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                                  {isProfit ? '+' : ''}${parseFloat(pos.unrealized_pl).toFixed(2)} ({parseFloat(pos.unrealized_pl_percent).toFixed(1)}%)
+                                  P/L: {isProfit ? '+' : ''}${parseFloat(pos.unrealized_pl).toFixed(2)} ({parseFloat(pos.unrealized_pl_percent).toFixed(1)}%)
                                 </div>
                               </div>
                             </div>
@@ -1233,33 +1250,50 @@ export default function StockPreviewModal({
                       {optionPositions.map((pos) => {
                         const isCall = pos.contract.option_type === 'call';
                         const isProfit = parseFloat(pos.unrealized_pl) >= 0;
+                        const dailyChange = parseFloat(pos.daily_change_percent || '0');
+                        const isDailyPositive = dailyChange >= 0;
+                        const isExpired = pos.contract.is_expired || pos.contract.days_to_expiration < 0;
                         return (
                           <button
                             key={pos.id}
                             onClick={() => router.push(`/option/${encodeURIComponent(pos.contract.contract_symbol)}`)}
                             className={`w-full p-2 rounded-lg text-left transition-all hover:scale-[1.01] ${
-                              isCall 
-                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                              isExpired
+                                ? 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 opacity-75'
+                                : isCall 
+                                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 {isCall ? (
-                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                  <TrendingUp className={`w-3 h-3 ${isExpired ? 'text-gray-400' : 'text-green-600'}`} />
                                 ) : (
-                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                  <TrendingDown className={`w-3 h-3 ${isExpired ? 'text-gray-400' : 'text-red-600'}`} />
                                 )}
-                                <span className={`text-sm font-bold ${isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                                  ${parseFloat(pos.contract.strike_price).toFixed(0)} {pos.contract.option_type.charAt(0).toUpperCase()}
+                                <span className={`text-sm font-bold ${isExpired ? 'text-gray-500' : isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                  ${parseFloat(pos.contract.strike_price).toFixed(2)} {pos.contract.option_type.charAt(0).toUpperCase()}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   {pos.quantity}x • {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
+                                {isExpired && (
+                                  <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
+                                    EXP
+                                  </span>
+                                )}
                               </div>
-                              <span className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                                {isProfit ? '+' : ''}{parseFloat(pos.unrealized_pl_percent).toFixed(1)}%
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {!isExpired && (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
+                                    {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
+                                  </span>
+                                )}
+                                <span className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                                  P/L: {isProfit ? '+' : ''}{parseFloat(pos.unrealized_pl_percent).toFixed(1)}%
+                                </span>
+                              </div>
                             </div>
                           </button>
                         );
