@@ -63,6 +63,8 @@ interface LiveScreenProps {
   isInWatchlist?: (symbol: string) => boolean;
   onSwipeRemove?: (symbol: string, name: string) => void;
   enableSwipe?: boolean;
+  /** If true, fetches data. If false, pauses fetching but keeps cached data. Default: true */
+  isActive?: boolean;
 }
 
 // Mini TrendPulse component for My Screens items
@@ -173,7 +175,7 @@ function MiniTrendPulse({
   );
 }
 
-export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist, onSwipeRemove, enableSwipe = false }: LiveScreenProps) {
+export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWatchlist, onSwipeRemove, enableSwipe = false, isActive = true }: LiveScreenProps) {
   const router = useRouter();
   
   // Period and interval state
@@ -423,10 +425,11 @@ export default function LiveScreen({ favorites, onLongPress, onDoubleTap, isInWa
     setIsRefreshing(false);
   }, [favorites, period, interval]);
 
-  // Fetch data on mount and when period/interval changes
+  // Fetch data on mount and when period/interval changes - only when active
   useEffect(() => {
+    if (!isActive) return; // Skip fetch if tab is not active
     fetchAllIndicatorData();
-  }, [fetchAllIndicatorData]);
+  }, [fetchAllIndicatorData, isActive]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, symbol: string, name: string) => {
     if (!onLongPress) return;

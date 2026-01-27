@@ -17,63 +17,11 @@ import { useToast } from '@/components/context/ToastContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import LiveScreensContainer from '@/components/screens/LiveScreensContainer';
 import { LiveScreen as LiveScreenType, LiveScreenStock, allScreenCategories, categoryConfig, ScreenCategory, allScreenIds, screenTemplates, ScreenId } from '@/types/screens';
+import { useMarketPulseData, MARKET_PULSE_TICKER_NAMES, MARKET_PULSE_ASSET_CLASSES } from '@/hooks/useMarketPulseData';
 
-// Ticker to name mapping for Market Pulse
-const tickerNames: Record<string, string> = {
-  '^GSPC': 'SP 500',
-  '^DJI': 'DOW',
-  '^IXIC': 'Nasdaq',
-  '^VIX': 'VIX (Fear Index)',
-  'DGS10': '10-Yr Yield',
-  'BTC-USD': 'Bitcoin',
-  'GC=F': 'Gold',
-  'SI=F': 'Silver',
-  'CL=F': 'Crude Oil',
-  '^RUT': 'Russell 2000',
-  'DGS2': '2-Yr Yield',
-  'ETH-USD': 'Ethereum',
-  'HG=F': 'Copper',
-  'NG=F': 'Natural Gas',
-  'CALL/PUT Ratio': 'Put/Call Ratio',
-  'SOL-USD': 'Solana',
-  'XRP-USD': 'Ripple',
-  'CRYPTO-FEAR-GREED': 'Crypto Fear & Greed',
-  'LIT': 'Lithium',
-  'PL=F': 'Platinum',
-  'PA=F': 'Palladium',
-  'TAN': 'Solar ETF',
-  'ICLN': 'Clean Energy ETF',
-  'HYDR': 'Hydrogen ETF'
-};
-
-// Asset class groupings
-const assetClasses: Record<string, { name: string; tickers: string[]; icon?: string }> = {
-  indexes: {
-    name: 'Stock Indexes',
-    tickers: ['^GSPC', '^DJI', '^IXIC', '^RUT'],
-    icon: '📈'
-  },
-  crypto: {
-    name: 'Cryptocurrency',
-    tickers: ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'CRYPTO-FEAR-GREED'],
-    icon: '₿'
-  },
-  minerals: {
-    name: 'Precious Metals',
-    tickers: ['GC=F', 'SI=F', 'HG=F', 'LIT', 'PL=F', 'PA=F'],
-    icon: '⛏️'
-  },
-  energy: {
-    name: 'Energy',
-    tickers: ['CL=F', 'NG=F', 'TAN', 'ICLN', 'HYDR'],
-    icon: '⚡'
-  },
-  indicators: {
-    name: 'Market Indicators',
-    tickers: ['^VIX', 'CALL/PUT Ratio', 'DGS10', 'DGS2'],
-    icon: '📊'
-  }
-};
+// Alias imports for backward compatibility with existing code
+const tickerNames = MARKET_PULSE_TICKER_NAMES;
+const assetClasses = MARKET_PULSE_ASSET_CLASSES;
 
 function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
@@ -254,13 +202,29 @@ function WatchlistPageContent() {
     };
   } | null>(null);
 
-  // Market data state - will be populated by individual tab hooks
-  const [marketData, setMarketData] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Market Pulse data hook - only fetches/polls when Tab 0 is active
+  const {
+    data: marketPulseData,
+    loading: marketPulseLoading,
+    error: marketPulseError,
+    retryCount: marketPulseRetryCount,
+    backendReady: marketPulseBackendReady,
+    refresh: refreshMarketPulse,
+  } = useMarketPulseData({
+    isActive: activeTab === 0,
+    pollingInterval: 30000, // 30 seconds
+  });
+
+  // Derive state for Market Pulse tab (Tab 0)
+  // For now, only Market Pulse uses the hook; other tabs will get their own hooks later
+  // Cast to Record<string, any> for backward compatibility with existing code
+  const marketData: Record<string, any> = activeTab === 0 ? marketPulseData : {};
+  const loading = activeTab === 0 ? marketPulseLoading : false;
+  const error = activeTab === 0 ? marketPulseError : null;
+  const retryCount = activeTab === 0 ? marketPulseRetryCount : 0;
+  const backendReady = activeTab === 0 ? marketPulseBackendReady : true;
+
   const [mounted, setMounted] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [backendReady, setBackendReady] = useState(true);
 
   const collapsibleSectionRef = React.useRef<HTMLDivElement>(null);
 
@@ -1130,11 +1094,7 @@ function WatchlistPageContent() {
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{error}</p>
 
                     <button
-                      onClick={() => {
-                        // TODO: Will be replaced with per-tab fetch logic
-                        setRetryCount(0);
-                        setError(null);
-                      }}
+                      onClick={() => refreshMarketPulse()}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                       disabled={loading}
                     >
@@ -1533,11 +1493,7 @@ function WatchlistPageContent() {
                     </p>
                   )}
                   <button
-                    onClick={() => {
-                      // TODO: Will be replaced with per-tab fetch logic
-                      setRetryCount(0);
-                      setError(null);
-                    }}
+                    onClick={() => refreshMarketPulse()}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
                   >
@@ -1772,11 +1728,7 @@ function WatchlistPageContent() {
                     </p>
                   )}
                   <button
-                    onClick={() => {
-                      // TODO: Will be replaced with per-tab fetch logic
-                      setRetryCount(0);
-                      setError(null);
-                    }}
+                    onClick={() => refreshMarketPulse()}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                     disabled={loading}
                   >
@@ -1841,6 +1793,7 @@ function WatchlistPageContent() {
                   favorites={favorites}
                   isInWatchlist={isInWatchlist}
                   enableSwipe
+                  isActive={activeSection === 'swingScreening'}
                   onSwipeRemove={(symbol, name) => {
                     // Check if this is the last item - show confirmation
                     if (favorites.length === 1) {
