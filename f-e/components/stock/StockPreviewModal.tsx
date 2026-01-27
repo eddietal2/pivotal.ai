@@ -1163,10 +1163,14 @@ export default function StockPreviewModal({
                             <div className="flex items-center justify-between">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  {isCall ? (
-                                    <TrendingUp className={`w-4 h-4 ${isExpired ? 'text-gray-400' : 'text-green-600'}`} />
+                                  {isExpired ? (
+                                    <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 px-1.5 py-0.5 rounded font-medium">
+                                      EXP
+                                    </span>
                                   ) : (
-                                    <TrendingDown className={`w-4 h-4 ${isExpired ? 'text-gray-400' : 'text-red-600'}`} />
+                                    <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
+                                      {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
+                                    </span>
                                   )}
                                   <span className={`font-bold ${isExpired ? 'text-gray-500' : isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                                     ${parseFloat(pos.contract.strike_price).toFixed(2)} {pos.contract.option_type.toUpperCase()}
@@ -1174,11 +1178,6 @@ export default function StockPreviewModal({
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {pos.quantity}x {pos.position_type}
                                   </span>
-                                  {isExpired && (
-                                    <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
-                                      EXPIRED
-                                    </span>
-                                  )}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                   Exp: {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1188,15 +1187,8 @@ export default function StockPreviewModal({
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="flex items-center gap-2 justify-end">
-                                  <span className="font-mono font-semibold text-gray-900 dark:text-white">
-                                    ${parseFloat(pos.current_price).toFixed(2)}
-                                  </span>
-                                  {!isExpired && (
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
-                                      {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
-                                    </span>
-                                  )}
+                                <div className="font-mono font-semibold text-gray-900 dark:text-white">
+                                  ${parseFloat(pos.current_price).toFixed(2)}
                                 </div>
                                 <div className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
                                   P/L: {isProfit ? '+' : ''}${parseFloat(pos.unrealized_pl).toFixed(2)} ({parseFloat(pos.unrealized_pl_percent).toFixed(1)}%)
@@ -1267,10 +1259,14 @@ export default function StockPreviewModal({
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                {isCall ? (
-                                  <TrendingUp className={`w-3 h-3 ${isExpired ? 'text-gray-400' : 'text-green-600'}`} />
+                                {isExpired ? (
+                                  <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-500 px-1 py-0.5 rounded font-medium">
+                                    EXP
+                                  </span>
                                 ) : (
-                                  <TrendingDown className={`w-3 h-3 ${isExpired ? 'text-gray-400' : 'text-red-600'}`} />
+                                  <span className={`text-[10px] px-1 py-0.5 rounded font-semibold ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
+                                    {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
+                                  </span>
                                 )}
                                 <span className={`text-sm font-bold ${isExpired ? 'text-gray-500' : isCall ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                                   ${parseFloat(pos.contract.strike_price).toFixed(2)} {pos.contract.option_type.charAt(0).toUpperCase()}
@@ -1278,22 +1274,10 @@ export default function StockPreviewModal({
                                 <span className="text-xs text-gray-500">
                                   {pos.quantity}x • {new Date(pos.contract.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
-                                {isExpired && (
-                                  <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
-                                    EXP
-                                  </span>
-                                )}
                               </div>
-                              <div className="flex items-center gap-2">
-                                {!isExpired && (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded ${isDailyPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-600'}`}>
-                                    {isDailyPositive ? '+' : ''}{dailyChange.toFixed(1)}%
-                                  </span>
-                                )}
-                                <span className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                                  P/L: {isProfit ? '+' : ''}{parseFloat(pos.unrealized_pl_percent).toFixed(1)}%
-                                </span>
-                              </div>
+                              <span className={`text-xs font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                                P/L: {isProfit ? '+' : ''}{parseFloat(pos.unrealized_pl_percent).toFixed(1)}%
+                              </span>
                             </div>
                           </button>
                         );

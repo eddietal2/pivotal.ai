@@ -1152,6 +1152,8 @@ def options_chain_view(request):
             volume = int(row['volume']) if pd.notna(row.get('volume')) else 0
             open_interest = int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
             iv = float(row['impliedVolatility']) if pd.notna(row.get('impliedVolatility')) else 0
+            change = float(row['change']) if pd.notna(row.get('change')) else 0
+            percent_change = float(row['percentChange']) if pd.notna(row.get('percentChange')) else 0
             
             # Auto-create contract in database (get_or_create to avoid duplicates)
             contract_obj, created = OptionContract.objects.get_or_create(
@@ -1179,6 +1181,8 @@ def options_chain_view(request):
                 'open_interest': open_interest,
                 'implied_volatility': round(iv * 100, 2),  # Convert to percentage
                 'in_the_money': row.get('inTheMoney', False),
+                'change': round(change, 2),
+                'percent_change': round(percent_change, 2),
                 'created': created,
             })
         
@@ -1195,6 +1199,8 @@ def options_chain_view(request):
             volume = int(row['volume']) if pd.notna(row.get('volume')) else 0
             open_interest = int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
             iv = float(row['impliedVolatility']) if pd.notna(row.get('impliedVolatility')) else 0
+            change = float(row['change']) if pd.notna(row.get('change')) else 0
+            percent_change = float(row['percentChange']) if pd.notna(row.get('percentChange')) else 0
             
             # Auto-create contract in database
             contract_obj, created = OptionContract.objects.get_or_create(
@@ -1222,6 +1228,8 @@ def options_chain_view(request):
                 'open_interest': open_interest,
                 'implied_volatility': round(iv * 100, 2),
                 'in_the_money': row.get('inTheMoney', False),
+                'change': round(change, 2),
+                'percent_change': round(percent_change, 2),
                 'created': created,
             })
         

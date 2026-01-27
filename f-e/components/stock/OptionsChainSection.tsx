@@ -24,6 +24,8 @@ interface OptionContract {
   open_interest: number;
   implied_volatility: number;
   in_the_money: boolean;
+  change: number;
+  percent_change: number;
 }
 
 interface OptionsChainData {
@@ -353,6 +355,8 @@ export default function OptionsChainSection({
                       
                       const position = getPosition(contract.contract_symbol);
                       const isITM = contract.in_the_money;
+                      const pctChange = contract.percent_change || 0;
+                      const isPositive = pctChange >= 0;
                       
                       elements.push(
                         <div
@@ -398,10 +402,14 @@ export default function OptionsChainSection({
                                   setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
                                   setCustomPrice('');
                                 }}
-                                className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                                className={`px-2 py-2 rounded-lg transition-colors text-white font-semibold text-xs min-w-[52px] ${
+                                  isPositive 
+                                    ? 'bg-green-500 hover:bg-green-600' 
+                                    : 'bg-red-500 hover:bg-red-600'
+                                }`}
                                 title="Trade"
                               >
-                                <TrendingUp className="w-4 h-4" />
+                                {isPositive ? '+' : ''}{pctChange.toFixed(1)}%
                               </button>
                             </div>
                           </div>
@@ -462,6 +470,8 @@ export default function OptionsChainSection({
                       
                       const position = getPosition(contract.contract_symbol);
                       const isITM = contract.in_the_money;
+                      const pctChange = contract.percent_change || 0;
+                      const isPositive = pctChange >= 0;
                       
                       elements.push(
                         <div
@@ -507,10 +517,14 @@ export default function OptionsChainSection({
                                   setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
                                   setCustomPrice('');
                                 }}
-                                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                                className={`px-2 py-2 rounded-lg transition-colors text-white font-semibold text-xs min-w-[52px] ${
+                                  isPositive 
+                                    ? 'bg-green-500 hover:bg-green-600' 
+                                    : 'bg-red-500 hover:bg-red-600'
+                                }`}
                                 title="Trade"
                               >
-                                <TrendingDown className="w-4 h-4" />
+                                {isPositive ? '+' : ''}{pctChange.toFixed(1)}%
                               </button>
                             </div>
                           </div>
