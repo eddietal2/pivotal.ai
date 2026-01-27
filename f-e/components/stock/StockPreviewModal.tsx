@@ -740,7 +740,7 @@ export default function StockPreviewModal({
     // Candlestick mode rendering
     if (chartMode === 'candle') {
       // Generate OHLC data from closes - group into candles
-      const candleCount = Math.min(20, Math.floor(chartData.length / 3));
+      const candleCount = Math.min(40, Math.floor(chartData.length / 2)); // More candles = thinner
       const pointsPerCandle = Math.floor(chartData.length / candleCount);
       const candles: { open: number; high: number; low: number; close: number }[] = [];
       
@@ -759,7 +759,7 @@ export default function StockPreviewModal({
       }
 
       const candleWidth = 80 / candleCount;
-      const gap = candleWidth * 0.2;
+      const gap = candleWidth * 0.4; // Larger gap for thinner candles
 
       return (
         <div className="flex h-full overflow-hidden">

@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, TrendingUp, TrendingDown, ExternalLink, RefreshCw, 
   Calendar, DollarSign, Activity, BarChart3, Clock, Info,
-  Loader2, AlertCircle
+  Loader2, AlertCircle, LineChart, BarChart2
 } from 'lucide-react';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -77,6 +77,7 @@ export default function OptionContractPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('1M');
   const [chartLoading, setChartLoading] = useState(false);
   const [historicalData, setHistoricalData] = useState<{ prices: number[]; timestamps: string[] }>({ prices: [], timestamps: [] });
+  const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
 
@@ -218,14 +219,21 @@ export default function OptionContractPage() {
     return { valueChange, percentChange };
   }, [scrubPrice, historicalData.prices]);
 
-  // Handle chart scrubbing
+  // Handle chart scrubbing (accounting for buffer)
   const handleChartScrub = useCallback((clientX: number) => {
     if (!chartRef.current || !historicalData.prices || historicalData.prices.length === 0) return;
     const rect = chartRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percent = Math.max(0, Math.min(1, x / rect.width));
-    const index = Math.round(percent * (historicalData.prices.length - 1));
-    setScrubIndex(index);
+    
+    // Account for buffer: 15% of data length or min 5 points
+    const bufferSize = Math.max(Math.floor(historicalData.prices.length * 0.15), 5);
+    const totalLength = historicalData.prices.length + bufferSize;
+    const chartIndex = Math.round(percent * (totalLength - 1));
+    
+    // Map chart index to actual data index (clamp to 0 if in buffer zone)
+    const dataIndex = Math.max(0, chartIndex - bufferSize);
+    setScrubIndex(dataIndex);
   }, [historicalData.prices]);
 
   const handleScrubStart = useCallback((e: React.PointerEvent) => {
@@ -388,6 +396,13 @@ export default function OptionContractPage() {
       );
     }
 
+    // Add buffer at the beginning (flat line at first price, like Robinhood)
+    const bufferSize = Math.max(Math.floor(data.length * 0.15), 5); // 15% of data length or min 5 points
+    const firstPrice = data[0];
+    const bufferPoints = Array(bufferSize).fill(firstPrice);
+    const chartData = [...bufferPoints, ...data];
+    
+    // Calculate min/max from actual data (not buffer)
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1;
@@ -395,27 +410,153 @@ export default function OptionContractPage() {
     const paddedMax = max + range * 0.1;
     const paddedRange = paddedMax - paddedMin;
     
-    const firstPrice = data[0];
     const lastPrice = data[data.length - 1];
     const chartIsPositive = isScrubbing && scrubChange 
       ? scrubChange.percentChange >= 0 
       : lastPrice >= firstPrice;
 
-    const points = data
+    // Calculate scrub indicator position (accounting for buffer offset)
+    const adjustedScrubIndex = scrubIndex !== null ? scrubIndex + bufferSize : null;
+    const scrubX = adjustedScrubIndex !== null ? (adjustedScrubIndex / (chartData.length - 1)) * 100 : null;
+    const scrubY = scrubIndex !== null && data[scrubIndex] !== undefined
+      ? 100 - ((data[scrubIndex] - paddedMin) / paddedRange) * 100
+      : null;
+
+    // Candlestick mode
+    if (chartMode === 'candle') {
+      // Generate OHLC data from closes - group into candles
+      const candleCount = Math.min(40, Math.floor(chartData.length / 2)); // More candles = thinner
+      const pointsPerCandle = Math.floor(chartData.length / candleCount);
+      const candles: { open: number; high: number; low: number; close: number }[] = [];
+      
+      for (let i = 0; i < candleCount; i++) {
+        const start = i * pointsPerCandle;
+        const end = Math.min(start + pointsPerCandle, chartData.length);
+        const segment = chartData.slice(start, end);
+        if (segment.length > 0) {
+          candles.push({
+            open: segment[0],
+            high: Math.max(...segment),
+            low: Math.min(...segment),
+            close: segment[segment.length - 1],
+          });
+        }
+      }
+
+      const candleWidth = 80 / candleCount;
+      const gap = candleWidth * 0.4; // Larger gap for thinner candles
+
+      return (
+        <div 
+          ref={chartRef}
+          className={`h-40 relative touch-none ${isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+          onPointerDown={handleScrubStart}
+          onPointerMove={handleScrubMove}
+          onPointerUp={handleScrubEnd}
+          onPointerCancel={handleScrubEnd}
+          onPointerLeave={handleScrubEnd}
+        >
+          <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+            {/* Grid lines */}
+            {[25, 50, 75].map((y) => (
+              <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+            ))}
+            {/* Candlesticks */}
+            {candles.map((candle, i) => {
+              const x = 10 + (i / candleCount) * 80;
+              const isBullish = candle.close >= candle.open;
+              const color = isBullish ? '#22c55e' : '#ef4444';
+              
+              const highY = 100 - ((candle.high - paddedMin) / paddedRange) * 100;
+              const lowY = 100 - ((candle.low - paddedMin) / paddedRange) * 100;
+              const openY = 100 - ((candle.open - paddedMin) / paddedRange) * 100;
+              const closeY = 100 - ((candle.close - paddedMin) / paddedRange) * 100;
+              
+              const bodyTop = Math.min(openY, closeY);
+              const bodyHeight = Math.max(Math.abs(closeY - openY), 0.5);
+              
+              return (
+                <g key={i}>
+                  {/* Wick */}
+                  <line
+                    x1={x + candleWidth / 2 - gap / 2}
+                    y1={highY}
+                    x2={x + candleWidth / 2 - gap / 2}
+                    y2={lowY}
+                    stroke={color}
+                    strokeWidth="0.5"
+                  />
+                  {/* Body */}
+                  <rect
+                    x={x}
+                    y={bodyTop}
+                    width={candleWidth - gap}
+                    height={bodyHeight}
+                    fill={color}
+                    stroke={color}
+                    strokeWidth="0.3"
+                  />
+                </g>
+              );
+            })}
+            {/* Scrub indicator */}
+            {isScrubbing && scrubX !== null && scrubY !== null && (
+              <>
+                <line
+                  x1={scrubX}
+                  y1="0"
+                  x2={scrubX}
+                  y2="100"
+                  stroke="#6b7280"
+                  strokeWidth="0.5"
+                  strokeDasharray="2,2"
+                />
+                <line
+                  x1="0"
+                  y1={scrubY}
+                  x2="100"
+                  y2={scrubY}
+                  stroke="#6b7280"
+                  strokeWidth="0.5"
+                  strokeDasharray="2,2"
+                />
+                <circle
+                  cx={scrubX}
+                  cy={scrubY}
+                  r="2"
+                  fill={chartIsPositive ? '#22c55e' : '#ef4444'}
+                  stroke="white"
+                  strokeWidth="0.5"
+                />
+              </>
+            )}
+          </svg>
+          {/* Scrub timestamp label */}
+          {isScrubbing && scrubIndex !== null && historicalData.timestamps[scrubIndex] && (
+            <div 
+              className="absolute bottom-0 transform -translate-x-1/2 text-[10px] text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 px-1 rounded"
+              style={{ left: `${(adjustedScrubIndex! / (chartData.length - 1)) * 100}%` }}
+            >
+              {selectedPeriod === '1D' 
+                ? new Date(historicalData.timestamps[scrubIndex]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                : new Date(historicalData.timestamps[scrubIndex]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              }
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Line chart mode (default)
+    const points = chartData
       .map((val, i) => {
-        const x = (i / (data.length - 1)) * 100;
+        const x = (i / (chartData.length - 1)) * 100;
         const y = 100 - ((val - paddedMin) / paddedRange) * 100;
         return `${x},${y}`;
       })
       .join(' ');
 
     const fillPoints = `0,100 ${points} 100,100`;
-    
-    // Calculate scrub indicator position
-    const scrubX = scrubIndex !== null ? (scrubIndex / (data.length - 1)) * 100 : null;
-    const scrubY = scrubIndex !== null && data[scrubIndex] !== undefined
-      ? 100 - ((data[scrubIndex] - paddedMin) / paddedRange) * 100
-      : null;
 
     return (
       <div 
@@ -474,7 +615,7 @@ export default function OptionContractPage() {
         {isScrubbing && scrubIndex !== null && historicalData.timestamps[scrubIndex] && (
           <div 
             className="absolute bottom-0 transform -translate-x-1/2 text-[10px] text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 px-1 rounded"
-            style={{ left: `${(scrubIndex / (data.length - 1)) * 100}%` }}
+            style={{ left: `${(adjustedScrubIndex! / (chartData.length - 1)) * 100}%` }}
           >
             {selectedPeriod === '1D' 
               ? new Date(historicalData.timestamps[scrubIndex]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -705,20 +846,34 @@ export default function OptionContractPage() {
               <BarChart3 className="w-4 h-4" />
               Price History
             </h3>
-            <div className="flex gap-1">
-              {(['1D', '1W', '1M', '1Y'] as PeriodType[]).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                    selectedPeriod === period
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {period}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {(['1D', '1W', '1M', '1Y'] as PeriodType[]).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                      selectedPeriod === period
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {period}
+                  </button>
+                ))}
+              </div>
+              {/* Chart mode toggle */}
+              <button
+                onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
+                className={`p-1.5 rounded transition-colors ${
+                  chartMode === 'candle'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+                title={chartMode === 'line' ? 'Switch to candlestick' : 'Switch to line chart'}
+              >
+                {chartMode === 'line' ? <BarChart2 className="w-4 h-4" /> : <LineChart className="w-4 h-4" />}
+              </button>
             </div>
           </div>
           {renderPriceChart()}
