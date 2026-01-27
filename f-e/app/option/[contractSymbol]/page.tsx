@@ -117,34 +117,17 @@ export default function OptionContractPage() {
     }
   }, [contractSymbol, BACKEND_URL]);
 
-  // Track if we've initialized historical data
-  const initializedRef = useRef(false);
+  // Track the last fetched period to avoid duplicate fetches
+  const lastFetchedPeriodRef = useRef<string | null>(null);
 
-  // Fetch chart data when period changes (not for initial 1D load)
+  // Fetch chart data when period changes or initial load
   useEffect(() => {
-    if (contractData && selectedPeriod !== '1D') {
+    if (contractData && lastFetchedPeriodRef.current !== selectedPeriod) {
+      lastFetchedPeriodRef.current = selectedPeriod;
       fetchChartData(selectedPeriod);
     }
-    // Reset to use contract data when switching back to 1D
-    if (selectedPeriod === '1D' && contractData?.historical_prices) {
-      setHistoricalData({
-        prices: contractData.historical_prices,
-        timestamps: contractData.timestamps || [],
-      });
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriod]);
-
-  // Initialize historical data from contract data on first load
-  useEffect(() => {
-    if (contractData?.historical_prices && !initializedRef.current) {
-      initializedRef.current = true;
-      setHistoricalData({
-        prices: contractData.historical_prices,
-        timestamps: contractData.timestamps || [],
-      });
-    }
-  }, [contractData]);
+  }, [selectedPeriod, contractData]);
 
   // Fetch contract data
   const fetchContractData = useCallback(async (showRefreshing = false) => {

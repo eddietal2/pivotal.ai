@@ -1495,18 +1495,19 @@ def option_contract_detail_view(request):
         else:
             in_the_money = underlying_price < strike
         
-        # Get period parameter for historical data (default: 1mo)
+        # Get period parameter for historical data (default: 1M)
         period_param = request.GET.get('period', '1M').upper()
         
         # Map period to yfinance parameters
+        # Options have shorter lifespans, so use appropriate intervals
         period_map = {
-            '1D': ('1d', '5m'),    # 1 day, 5-minute intervals
-            '1W': ('5d', '15m'),   # 5 days, 15-minute intervals  
-            '1M': ('1mo', '1d'),   # 1 month, daily intervals
-            '1Y': ('1y', '1d'),    # 1 year, daily intervals
+            '1D': ('1d', '5m'),     # 1 day, 5-minute intervals
+            '1W': ('5d', '1h'),     # 5 days, 1-hour intervals (matches stock week)
+            '1M': ('1mo', '1h'),    # 1 month, 1-hour intervals
+            '1Y': ('1y', '1d'),     # 1 year, daily intervals
         }
         
-        yf_period, yf_interval = period_map.get(period_param, ('1mo', '1d'))
+        yf_period, yf_interval = period_map.get(period_param, ('1mo', '1h'))
         
         # Fetch historical price data for the option contract
         historical_prices = []
