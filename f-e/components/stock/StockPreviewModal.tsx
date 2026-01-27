@@ -967,52 +967,53 @@ export default function StockPreviewModal({
 
       {/* Bottom Sheet Modal */}
       <div 
-        className={`fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[85dvh] sm:max-h-[90dvh] flex flex-col pb-safe ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="stock-preview-title"
+        style={{ maxHeight: 'min(85dvh, calc(100vh - 60px))' }}
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+        <div className="flex justify-center pt-2 pb-1.5 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{symbol}</p>
-            <h2 id="stock-preview-title" className="text-xl font-bold text-gray-900 dark:text-white">{name}</h2>
+        <div className="flex items-center justify-between px-3 sm:px-4 pb-2 sm:pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-mono">{symbol}</p>
+            <h2 id="stock-preview-title" className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{name}</h2>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
             <button
               onClick={handleToggleWatchlist}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               aria-label={isInWatchlist(symbol) ? 'Remove from watchlist' : 'Add to watchlist'}
             >
-              <Star className={`w-6 h-6 transition-colors ${isInWatchlist(symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
+              <Star className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${isInWatchlist(symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
             </button>
             <button
               onClick={handleToggleFavorite}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               aria-label={isFavorite(symbol) ? 'Remove from My Screens' : 'Add to My Screens'}
             >
-              <TrendingUp className={`w-6 h-6 transition-colors ${isFavorite(symbol) ? 'text-purple-500' : 'text-gray-400 hover:text-purple-400'}`} />
+              <TrendingUp className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${isFavorite(symbol) ? 'text-purple-500' : 'text-gray-400 hover:text-purple-400'}`} />
             </button>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               aria-label="Close preview"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
 
         {/* Content - scrollable */}
-        <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Price - shows scrub price when touching chart */}
-          <div className={`flex items-baseline gap-3 flex-wrap transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-            <span className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className={`flex items-baseline gap-2 sm:gap-3 flex-wrap transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               {isScrubbing && scrubPrice !== null ? (
                 <AnimatedPrice 
                   value={scrubPrice} 
