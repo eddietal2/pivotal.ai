@@ -39,9 +39,15 @@ type Props = {
   onDragOver?: () => void;
   onDrop?: () => void;
   onTouchDrag?: (touchY: number) => void; // Reports touch Y position during drag
+  // Display settings
+  compactMode?: boolean;
+  showSparkline?: boolean;
+  showAfterHoursIndicator?: boolean;
+  showRelativeVolume?: boolean;
+  priceChangeFormat?: 'percent' | 'dollar' | 'both';
 };
 
-export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, isPaperTrading = false, isRecentlyAdded = false, isRecentlyAddedToScreens = false, onSwipeRemove, enableSwipe = false, enableDrag = false, isDragging = false, isDragOver = false, dragIndex, onDragStart, onDragEnd, onDragOver, onDrop, onTouchDrag }: Props) {
+export default function WatchListItem({ name, symbol, price, change = 0, valueChange, sparkline = [], timeframe, afterHours, rv, onClick, onLongPress, onDoubleTap, showQuickActions = false, isInWatchlist = false, isInSwingScreens = false, isPaperTrading = false, isRecentlyAdded = false, isRecentlyAddedToScreens = false, onSwipeRemove, enableSwipe = false, enableDrag = false, isDragging = false, isDragOver = false, dragIndex, onDragStart, onDragEnd, onDragOver, onDrop, onTouchDrag, compactMode = false, showSparkline = true, showAfterHoursIndicator = true, showRelativeVolume = true, priceChangeFormat = 'both' }: Props) {
   const isDown = change < 0;
   const changeClass = isDown ? 'text-red-600' : 'text-green-600';
   const sparkStroke = isDown ? '#EF4444' : '#34d399';
@@ -396,7 +402,7 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
       
       {/* Main content (slides on swipe) */}
       <div
-        className={`flex items-stretch bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full h-24 ${isPressed ? 'scale-[0.98] opacity-90' : ''} relative z-20`}
+        className={`flex items-stretch bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition duration-200 w-full ${compactMode ? 'h-16' : 'h-24'} ${isPressed ? 'scale-[0.98] opacity-90' : ''} relative z-20`}
         style={{
           transform: `translateX(${swipeX}px)`,
           transition: isSwiping ? 'none' : 'transform 0.2s ease-out',
@@ -431,7 +437,58 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
           className={`flex-1 p-2 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 item-press ${enableDrag ? 'rounded-r-xl' : 'rounded-xl'}`}
           aria-label={`More info about ${name} (${symbol})${timeframe ? ', timeframe ' + timeframe : ''}${afterHours ? ', after hours' : ''}${showQuickActions ? '. Double-tap for quick actions menu.' : ''}${enableSwipe ? ' Swipe left to remove.' : ''}${enableDrag ? ' Long-press and drag to reorder.' : ''}`}
         >
-      <div className="item-press-inner relative">
+      {compactMode ? (
+        // Compact mode: single row layout
+        <div className="item-press-inner h-full flex items-center justify-between gap-2">
+          {/* Left: Symbol info + sparkline */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">{symbol}</span>
+                {/* Status indicators */}
+                {(isInWatchlist || isInSwingScreens || isPaperTrading) && (
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    {isPaperTrading && <FileText className="w-2.5 h-2.5 text-orange-500" />}
+                    {isInWatchlist && <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />}
+                    {isInSwingScreens && <TrendingUp className="w-2.5 h-2.5 text-purple-500" />}
+                  </div>
+                )}
+                {showAfterHoursIndicator && afterHours && (
+                  <span className="text-[9px] text-orange-400 font-bold flex-shrink-0">AH</span>
+                )}
+              </div>
+              <span className="text-[10px] text-gray-400 truncate">{name}</span>
+            </div>
+            {/* Sparkline */}
+            {showSparkline && sparkline && sparkline.length > 0 && (
+              <div className="flex-shrink-0 hidden xs:block">
+                <Sparkline data={sparkline} width={40} height={16} stroke={sparkStroke} className="rounded" gradient={true} fillOpacity={0.12} />
+              </div>
+            )}
+          </div>
+          
+          {/* Right: Price + change */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{pricePrefix}{price}{priceSuffix}</span>
+            <div className="flex flex-col items-end">
+              {(priceChangeFormat === 'percent' || priceChangeFormat === 'both') && (
+                <span className={`text-xs font-semibold ${changeClass} flex items-center`}>
+                  {isDown ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                  {change >= 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`}
+                </span>
+              )}
+              {priceChangeFormat === 'dollar' && valueChange !== undefined && valueChange !== 0 && (
+                <span className={`text-xs ${changeClass} flex items-center`}>
+                  {isDown ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                  {pricePrefix}{valueChange >= 0 ? `+${valueChange.toFixed(2)}` : `${valueChange.toFixed(2)}`}{priceSuffix}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Normal mode: two row layout
+        <div className="item-press-inner relative">
         <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-gray-400">{name} ({symbol})</p>
@@ -458,37 +515,44 @@ export default function WatchListItem({ name, symbol, price, change = 0, valueCh
         </div>
         {/* timeframe chip */}
         {timeframe && (
-          <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
+          <span title={timeframe === '24H' ? '24 hours (around the clock)' : `Last ${timeframe}`} className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">{timeframe}{showAfterHoursIndicator && afterHours ? <span className="ml-1 text-[10px] text-orange-300 font-bold">AH</span> : null}</span>
         )}
         </div>
-      </div>
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-3">
           {/* Sparkline */}
-          <div className="flex-shrink-0">
-            {sparkline && sparkline.length > 0 && (
-              <Sparkline data={sparkline} width={72} height={28} stroke={sparkStroke} className="rounded" gradient={true} fillOpacity={0.12} />
-            )}
-          </div>
+          {showSparkline && (
+            <div className="flex-shrink-0">
+              {sparkline && sparkline.length > 0 && (
+                <Sparkline data={sparkline} width={72} height={28} stroke={sparkStroke} className="rounded" gradient={true} fillOpacity={0.12} />
+              )}
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="text-md lg:text-xl font-bold text-gray-900 dark:text-white">{pricePrefix}{price}{priceSuffix}</span>
-            {typeof rv === 'number' && (
+            {showRelativeVolume && typeof rv === 'number' && (
               <span className="text-xs text-gray-500 dark:text-gray-400">RV: {rv.toFixed(2)}x</span>
             )}
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
-            {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}
-            {change >= 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`}
-          </span>
-          {valueChange !== undefined && valueChange !== 0 && (
-            <span className={`text-xs ${changeClass} mt-0.5`}>
+          {/* Price change - respects priceChangeFormat */}
+          {(priceChangeFormat === 'percent' || priceChangeFormat === 'both') && (
+            <span className={`text-sm font-semibold ${changeClass} flex items-center`}>
+              {isDown ? <ArrowDownRight className="w-4 h-4 mr-1" /> : <ArrowUpRight className="w-4 h-4 mr-1" />}
+              {change >= 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`}
+            </span>
+          )}
+          {(priceChangeFormat === 'dollar' || priceChangeFormat === 'both') && valueChange !== undefined && valueChange !== 0 && (
+            <span className={`text-xs ${changeClass} ${priceChangeFormat === 'dollar' ? 'flex items-center' : 'mt-0.5'}`}>
+              {priceChangeFormat === 'dollar' && (isDown ? <ArrowDownRight className="w-3 h-3 mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />)}
               {pricePrefix}{valueChange >= 0 ? `+${valueChange.toFixed(2)}` : `${valueChange.toFixed(2)}`}{priceSuffix}
             </span>
           )}
         </div>
       </div>
+        </div>
+      )}
     </button>
     </div>
     </div>

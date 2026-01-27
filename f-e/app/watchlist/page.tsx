@@ -142,6 +142,50 @@ function WatchlistPageContent() {
   // Track collapsible section states
   const [section2Expanded, setSection2Expanded] = useState(false);
   const [section3Expanded, setSection3Expanded] = useState(false);
+  const [displaySettingsExpanded, setDisplaySettingsExpanded] = useState(false);
+  
+  // Display Settings (persisted in localStorage)
+  const [compactMode, setCompactMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('watchlistCompactMode') === 'true';
+    }
+    return false;
+  });
+  
+  const [showSparklines, setShowSparklines] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistShowSparklines');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
+  const [showAfterHours, setShowAfterHours] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistShowAfterHours');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
+  const [showRelativeVolume, setShowRelativeVolume] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistShowRV');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
+  const [priceChangeFormat, setPriceChangeFormat] = useState<'percent' | 'dollar' | 'both'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('watchlistPriceChangeFormat');
+      if (['percent', 'dollar', 'both'].includes(saved || '')) {
+        return saved as 'percent' | 'dollar' | 'both';
+      }
+    }
+    return 'both';
+  });
+  
   // Track selected Live Screen IDs (individual screens)
   const [selectedScreenIds, setSelectedScreenIds] = useState<ScreenId[]>(() => {
     if (typeof window !== 'undefined') {
@@ -1436,6 +1480,11 @@ function WatchlistPageContent() {
                               isPaperTrading={isPaperTradingEnabled && hasPosition(pulseSymbol)}
                               isRecentlyAdded={recentlyAdded.has(pulseSymbol)}
                               isRecentlyAddedToScreens={recentlyAddedToScreens.has(pulseSymbol)}
+                              compactMode={compactMode}
+                              showSparkline={showSparklines}
+                              showAfterHoursIndicator={showAfterHours}
+                              showRelativeVolume={showRelativeVolume}
+                              priceChangeFormat={priceChangeFormat}
                               showQuickActions
                               enableDrag={items.length > 1}
                               dragIndex={index}
@@ -1819,6 +1868,11 @@ function WatchlistPageContent() {
                           isPaperTrading={isPaperTradingEnabled && hasPosition(item.symbol)}
                           isRecentlyAdded={recentlyAdded.has(item.symbol)}
                           isRecentlyAddedToScreens={recentlyAddedToScreens.has(item.symbol)}
+                          compactMode={compactMode}
+                          showSparkline={showSparklines}
+                          showAfterHoursIndicator={showAfterHours}
+                          showRelativeVolume={showRelativeVolume}
+                          priceChangeFormat={priceChangeFormat}
                           showQuickActions
                           enableSwipe
                           enableDrag={watchlist.length > 1}
@@ -2503,6 +2557,145 @@ function WatchlistPageContent() {
                   <p className="text-xs text-gray-400 dark:text-gray-500">
                     {selectedScreenIds.length} of {allScreenIds.length} screens selected
                   </p>
+                </div>
+              )}
+
+              {/* Display Settings */}
+              <button
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded ? 'opacity-50' : ''}`}
+                onClick={() => {
+                  setDisplaySettingsExpanded(!displaySettingsExpanded);
+                  setSection2Expanded(false);
+                  setSection3Expanded(false);
+                }}
+              >
+                <h3 className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-blue-500" />
+                  Display Settings
+                </h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${displaySettingsExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {displaySettingsExpanded && (
+                <div className="mt-3 space-y-4">
+                  {/* Compact Mode */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Compact Mode</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Smaller cards, more items visible</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newValue = !compactMode;
+                        setCompactMode(newValue);
+                        localStorage.setItem('watchlistCompactMode', String(newValue));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        compactMode ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        compactMode ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Show Sparklines */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Show Sparklines</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Display mini price charts</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newValue = !showSparklines;
+                        setShowSparklines(newValue);
+                        localStorage.setItem('watchlistShowSparklines', String(newValue));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showSparklines ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        showSparklines ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Show After-Hours Indicator */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">After-Hours Indicator</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Show extended hours badge</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newValue = !showAfterHours;
+                        setShowAfterHours(newValue);
+                        localStorage.setItem('watchlistShowAfterHours', String(newValue));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showAfterHours ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        showAfterHours ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Show Relative Volume */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Relative Volume (RV)</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Show volume vs average</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newValue = !showRelativeVolume;
+                        setShowRelativeVolume(newValue);
+                        localStorage.setItem('watchlistShowRV', String(newValue));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showRelativeVolume ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                        showRelativeVolume ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Price Change Format */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Price Change Format</p>
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                      {([
+                        { value: 'percent', label: '%' },
+                        { value: 'dollar', label: '$' },
+                        { value: 'both', label: 'Both' },
+                      ] as const).map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setPriceChangeFormat(value);
+                            localStorage.setItem('watchlistPriceChangeFormat', value);
+                          }}
+                          className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                            priceChangeFormat === value
+                              ? 'bg-blue-500 text-white'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {priceChangeFormat === 'percent' && 'Show percentage change only (+2.5%)'}
+                      {priceChangeFormat === 'dollar' && 'Show dollar change only (+$5.00)'}
+                      {priceChangeFormat === 'both' && 'Show both (+$5.00, +2.5%)'}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
