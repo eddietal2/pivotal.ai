@@ -580,6 +580,8 @@ export default function StockPreviewModal({
   }, [currentData.sparkline]);
 
   const handleScrubStart = React.useCallback((e: React.PointerEvent) => {
+    // Prevent default to avoid text selection and other browser behaviors
+    e.preventDefault();
     setIsScrubbing(true);
     handleChartScrub(e.clientX);
     // Capture pointer to track movement outside element
@@ -588,10 +590,14 @@ export default function StockPreviewModal({
 
   const handleScrubMove = React.useCallback((e: React.PointerEvent) => {
     if (!isScrubbing) return;
+    e.preventDefault();
     handleChartScrub(e.clientX);
   }, [isScrubbing, handleChartScrub]);
 
-  const handleScrubEnd = React.useCallback(() => {
+  const handleScrubEnd = React.useCallback((e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).hasPointerCapture?.(e.pointerId)) {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    }
     setIsScrubbing(false);
     setScrubIndex(null);
   }, []);
@@ -1053,11 +1059,11 @@ export default function StockPreviewModal({
               className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-50' : 'opacity-100'} ${
                 isZooming || isPanning ? 'cursor-move touch-none' : (isScrubbing ? 'cursor-grabbing touch-none' : 'cursor-crosshair')
               }`}
+              style={{ touchAction: 'none' }}
               onPointerDown={!isZooming && !isPanning ? handleScrubStart : undefined}
               onPointerMove={!isZooming && !isPanning ? handleScrubMove : undefined}
               onPointerUp={!isZooming && !isPanning ? handleScrubEnd : undefined}
               onPointerCancel={!isZooming && !isPanning ? handleScrubEnd : undefined}
-              onPointerLeave={!isZooming && !isPanning ? handleScrubEnd : undefined}
               onTouchStart={handleZoomTouchStart}
               onTouchMove={handleZoomTouchMove}
               onTouchEnd={handleZoomTouchEnd}
