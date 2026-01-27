@@ -703,7 +703,12 @@ export default function OptionContractPage() {
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4 max-w-4xl mx-auto">
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              // Navigate to watchlist with modal params to open the stock preview
+              const symbol = contractData?.underlying_symbol || underlyingFromUrl || '';
+              const price = contractData?.underlying_price || 0;
+              router.push(`/watchlist?modal=${encodeURIComponent(symbol)}&price=${price}`);
+            }}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />

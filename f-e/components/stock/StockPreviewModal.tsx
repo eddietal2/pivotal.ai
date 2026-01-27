@@ -1050,8 +1050,8 @@ export default function StockPreviewModal({
           <div className="relative">
             <div 
               ref={chartRef}
-              className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 touch-none ${isTransitioning || intervalChartData.loading ? 'opacity-50' : 'opacity-100'} ${
-                isZooming || isPanning ? 'cursor-move' : (isScrubbing ? 'cursor-grabbing' : 'cursor-crosshair')
+              className={`bg-gray-100 dark:bg-gray-700/50 rounded-xl p-3 h-48 overflow-hidden transition-opacity duration-150 ${isTransitioning || intervalChartData.loading ? 'opacity-50' : 'opacity-100'} ${
+                isZooming || isPanning ? 'cursor-move touch-none' : (isScrubbing ? 'cursor-grabbing touch-none' : 'cursor-crosshair')
               }`}
               onPointerDown={!isZooming && !isPanning ? handleScrubStart : undefined}
               onPointerMove={!isZooming && !isPanning ? handleScrubMove : undefined}

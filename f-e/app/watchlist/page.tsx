@@ -580,6 +580,21 @@ function WatchlistPageContent() {
       setActiveTab(0); // Market Pulse tab
       setActiveSection('marketPulse');
     }
+    
+    // Handle opening stock modal from URL params (e.g., from options page back button)
+    const modalSymbol = searchParams.get('modal');
+    if (modalSymbol) {
+      const modalPrice = parseFloat(searchParams.get('price') || '0');
+      setSelectedStock({
+        symbol: modalSymbol,
+        name: modalSymbol,
+        price: modalPrice,
+        change: 0,
+        valueChange: 0,
+        sparkline: [],
+        timeframe: 'day',
+      });
+    }
   }, [searchParams]);
 
   // Swipe gesture handling for tab navigation
