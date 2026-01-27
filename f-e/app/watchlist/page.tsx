@@ -104,7 +104,7 @@ function WatchlistPageContent() {
   const [touchStartYSwipe, setTouchStartYSwipe] = useState<number | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwipingTab, setIsSwipingTab] = useState(false);
-  const [isSwipeGestureLocked, setIsSwipeGestureLocked] = useState<'horizontal' | 'vertical' | null>(null);
+  const [isSwipeGestureLocked, setIsSwipeGestureLocked] = useState<'horizontal' | 'vertical' | 'disabled' | null>(null);
   // Track if fixed header should be shown
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   // Track drawer open state
@@ -598,21 +598,31 @@ function WatchlistPageContent() {
   }, [searchParams]);
 
   // Swipe gesture handling for tab navigation
-  // Increased threshold to reduce accidental swipes when interacting with inner sliders
-  const minSwipeDistance = 80;
-  // Threshold to lock the gesture direction (prevents accidental tab swipes during vertical scroll or inner slider interaction)
-  const gestureDirectionThreshold = 15;
+  // Edge-based detection: only trigger tab swipe when starting from screen edges
+  const minSwipeDistance = 100;
+  const edgeThreshold = 40; // Only allow tab swipe if starting within 40px of screen edge
+  const gestureDirectionThreshold = 20;
   
   const onTouchStart = (e: React.TouchEvent) => {
+    const touchX = e.targetTouches[0].clientX;
+    const screenWidth = window.innerWidth;
+    
+    // Check if touch started from an edge
+    const isFromLeftEdge = touchX <= edgeThreshold;
+    const isFromRightEdge = touchX >= screenWidth - edgeThreshold;
+    
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(touchX);
     setTouchStartYSwipe(e.targetTouches[0].clientY);
     setIsSwipingTab(false);
-    setIsSwipeGestureLocked(null);
+    // Only allow tab swipe if starting from an edge
+    setIsSwipeGestureLocked(isFromLeftEdge || isFromRightEdge ? null : 'disabled');
   };
   
   const onTouchMove = (e: React.TouchEvent) => {
     if (touchStart === null || touchStartYSwipe === null) return;
+    // If swipe is disabled (not from edge), don't process
+    if (isSwipeGestureLocked === 'disabled') return;
     
     const currentTouchX = e.targetTouches[0].clientX;
     const currentTouchY = e.targetTouches[0].clientY;
@@ -622,8 +632,7 @@ function WatchlistPageContent() {
     // Lock gesture direction once we've moved enough
     if (isSwipeGestureLocked === null && (deltaX > gestureDirectionThreshold || deltaY > gestureDirectionThreshold)) {
       // Only allow horizontal swipe if horizontal movement is significantly greater than vertical
-      // This prevents accidental tab swipes when scrolling or using inner horizontal sliders
-      if (deltaX > deltaY * 1.5) {
+      if (deltaX > deltaY * 2.0) {
         setIsSwipeGestureLocked('horizontal');
         setIsSwipingTab(true);
       } else {
