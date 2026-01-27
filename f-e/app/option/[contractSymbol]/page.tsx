@@ -571,19 +571,19 @@ export default function OptionContractPage() {
         <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
           <defs>
             <linearGradient id="optionChartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={chartIsPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
+              <stop offset="0%" stopColor={chartIsPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.15" />
               <stop offset="100%" stopColor={chartIsPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
             </linearGradient>
           </defs>
           {/* Grid lines */}
           {[25, 50, 75].map((y) => (
-            <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.3" />
+            <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.05" strokeWidth="0.2" />
           ))}
           <polygon fill="url(#optionChartGradient)" points={fillPoints} />
           <polyline
             fill="none"
             stroke={chartIsPositive ? '#22c55e' : '#ef4444'}
-            strokeWidth="1.5"
+            strokeWidth="0.6"
             strokeLinecap="round"
             strokeLinejoin="round"
             points={points}
@@ -597,16 +597,28 @@ export default function OptionContractPage() {
                 x2={scrubX}
                 y2="100"
                 stroke={chartIsPositive ? '#22c55e' : '#ef4444'}
-                strokeWidth="0.5"
-                strokeDasharray="2,2"
+                strokeWidth="0.3"
+                strokeDasharray="1.5,1.5"
               />
+              {/* Pulsating outer ring */}
               <circle
                 cx={scrubX}
                 cy={scrubY}
-                r="2"
+                r="2.5"
+                fill="none"
+                stroke={chartIsPositive ? '#22c55e' : '#ef4444'}
+                strokeWidth="0.3"
+                opacity="0.6"
+              >
+                <animate attributeName="r" values="2;3.5;2" dur="1s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1s" repeatCount="indefinite" />
+              </circle>
+              {/* Inner solid dot */}
+              <circle
+                cx={scrubX}
+                cy={scrubY}
+                r="1.2"
                 fill={chartIsPositive ? '#22c55e' : '#ef4444'}
-                stroke="white"
-                strokeWidth="0.5"
               />
             </>
           )}
