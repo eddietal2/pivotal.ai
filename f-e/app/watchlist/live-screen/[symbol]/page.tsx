@@ -1,13 +1,23 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart } from 'lucide-react';
+import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart, CandlestickChart } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
 import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
 import LiveScreenSettingsDrawer from '@/components/modals/LiveScreenSettingsDrawer';
-import StockPreviewModal from '@/components/stock/StockPreviewModal';
 import { useToast } from '@/components/context/ToastContext';
+import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
+
+type ChartPeriod = '1D' | '1W' | '1M' | '1Y';
+
+interface ChartDataState {
+  sparkline: number[];
+  change: number;
+  valueChange: number;
+  loading: boolean;
+  error: string | null;
+}
 
 // Settings interface
 interface LiveScreenSettings {
@@ -83,17 +93,21 @@ export default function LiveScreenDetailPage() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   
-  // Stock preview data state
-  const [previewData, setPreviewData] = useState<{
-    price: number;
-    change: number;
-    valueChange: number;
-    sparkline: number[];
-    name: string;
-  } | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  // Chart state
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('1D');
+  const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
+  const [chartData, setChartData] = useState<ChartDataState>({
+    sparkline: [],
+    change: 0,
+    valueChange: 0,
+    loading: true,
+    error: null,
+  });
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const lastFetchedPeriod = useRef<ChartPeriod | null>(null);
   
   // Settings state - initialized from localStorage
   const [settings, setSettings] = useState<LiveScreenSettings>(DEFAULT_SETTINGS);
@@ -204,39 +218,102 @@ export default function LiveScreenDetailPage() {
     }
   }, [decodedSymbol]);
 
-  // Fetch stock preview data when needed
-  const fetchPreviewData = useCallback(async () => {
-    if (previewData) {
-      setIsPreviewModalOpen(true);
+  // Fetch chart data for selected period
+  const fetchChartData = useCallback(async (period: ChartPeriod) => {
+    // Prevent duplicate fetches
+    if (lastFetchedPeriod.current === period && chartData.sparkline.length > 0) {
       return;
     }
+    lastFetchedPeriod.current = period;
     
-    setIsLoadingPreview(true);
+    setChartData(prev => ({ ...prev, loading: true, error: null }));
+    
+    const periodToTimeframe: Record<ChartPeriod, string> = {
+      '1D': 'day',
+      '1W': 'week',
+      '1M': 'month',
+      '1Y': 'year',
+    };
+    
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(decodedSymbol)}&timeframe=day`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/stock-detail/?symbol=${encodeURIComponent(decodedSymbol)}&timeframe=${periodToTimeframe[period]}`
       );
       
       if (response.ok) {
         const data = await response.json();
-        setPreviewData({
-          price: data.price || currentPrice || 0,
+        setChartData({
+          sparkline: data.sparkline || [],
           change: data.change || 0,
           valueChange: data.valueChange || 0,
-          sparkline: data.sparkline || [],
-          name: data.name || decodedSymbol,
+          loading: false,
+          error: null,
         });
-        setIsPreviewModalOpen(true);
+        // Also update price if available
+        if (data.price && currentPrice === null) {
+          setCurrentPrice(data.price);
+        }
       } else {
-        showToast('Failed to load stock data', 'error');
+        setChartData(prev => ({ ...prev, loading: false, error: 'Failed to load chart' }));
       }
     } catch (error) {
-      console.error('Error fetching preview data:', error);
-      showToast('Failed to load stock data', 'error');
-    } finally {
-      setIsLoadingPreview(false);
+      console.error('Error fetching chart data:', error);
+      setChartData(prev => ({ ...prev, loading: false, error: 'Failed to load chart' }));
     }
-  }, [decodedSymbol, currentPrice, previewData, showToast]);
+  }, [decodedSymbol, currentPrice, chartData.sparkline.length]);
+
+  // Fetch chart data on mount and when period changes
+  useEffect(() => {
+    fetchChartData(chartPeriod);
+  }, [chartPeriod, fetchChartData]);
+
+  // Handle period change
+  const handlePeriodChange = (period: ChartPeriod) => {
+    if (period === chartPeriod) return;
+    lastFetchedPeriod.current = null; // Force refetch
+    setChartPeriod(period);
+  };
+
+  // Chart scrubbing handlers
+  const handleChartScrub = useCallback((clientX: number) => {
+    if (!chartRef.current || !chartData.sparkline || chartData.sparkline.length === 0) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    const index = Math.round(percent * (chartData.sparkline.length - 1));
+    setScrubIndex(index);
+  }, [chartData.sparkline]);
+
+  const handleScrubStart = useCallback((e: React.PointerEvent) => {
+    setIsScrubbing(true);
+    handleChartScrub(e.clientX);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [handleChartScrub]);
+
+  const handleScrubMove = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbing) return;
+    handleChartScrub(e.clientX);
+  }, [isScrubbing, handleChartScrub]);
+
+  const handleScrubEnd = useCallback(() => {
+    setIsScrubbing(false);
+    setScrubIndex(null);
+  }, []);
+
+  // Calculate scrub price and change
+  const scrubPrice = React.useMemo(() => {
+    if (scrubIndex === null || !chartData.sparkline || chartData.sparkline.length === 0) return null;
+    const idx = Math.max(0, Math.min(scrubIndex, chartData.sparkline.length - 1));
+    return chartData.sparkline[idx];
+  }, [scrubIndex, chartData.sparkline]);
+
+  const scrubChange = React.useMemo(() => {
+    if (scrubPrice === null || !chartData.sparkline || chartData.sparkline.length === 0) return null;
+    const firstPrice = chartData.sparkline[0];
+    const valueChange = scrubPrice - firstPrice;
+    const percentChange = ((scrubPrice - firstPrice) / firstPrice) * 100;
+    return { valueChange, percentChange };
+  }, [scrubPrice, chartData.sparkline]);
 
   const formatVolume = (vol: number) => {
     if (vol >= 1_000_000_000) return (vol / 1_000_000_000).toFixed(2) + 'B';
@@ -259,13 +336,6 @@ export default function LiveScreenDetailPage() {
       case 'SELL': return 'from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800';
       default: return 'from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-800';
     }
-  };
-
-  const timeframeLabels: Record<string, string> = {
-    'D': '1 Day',
-    'W': '1 Week',
-    'M': '1 Month',
-    'Y': '1 Year',
   };
 
   return (
@@ -328,24 +398,202 @@ export default function LiveScreenDetailPage() {
           </span>
         </div>
 
-        {/* View Price Chart Button */}
-        <button
-          onClick={fetchPreviewData}
-          disabled={isLoadingPreview}
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoadingPreview ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Loading...
-            </>
-          ) : (
-            <>
-              <LineChart className="w-5 h-5" />
-              View Price Chart
-            </>
-          )}
-        </button>
+        {/* Price Chart Section */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3">
+          {/* Chart Header with Price */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {isScrubbing ? 'Scrubbing' : 'Price Chart'}
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold">
+                  {getPricePrefix(decodedSymbol)}
+                  {(isScrubbing && scrubPrice !== null ? scrubPrice : (currentPrice || 0)).toFixed(2)}
+                  {getPriceSuffix(decodedSymbol)}
+                </span>
+                {(isScrubbing && scrubChange) ? (
+                  <span className={`text-sm font-medium ${scrubChange.percentChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {scrubChange.percentChange >= 0 ? '+' : ''}{scrubChange.percentChange.toFixed(2)}%
+                    <span className="text-gray-400 ml-1">
+                      ({scrubChange.valueChange >= 0 ? '+' : ''}{getPricePrefix(decodedSymbol)}{scrubChange.valueChange.toFixed(2)})
+                    </span>
+                  </span>
+                ) : (
+                  chartData.change !== 0 && (
+                    <span className={`text-sm font-medium ${chartData.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {chartData.change >= 0 ? '+' : ''}{chartData.change.toFixed(2)}%
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+            {/* Chart mode toggle */}
+            <button
+              onClick={() => setChartMode(chartMode === 'line' ? 'candle' : 'line')}
+              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title={chartMode === 'line' ? 'Switch to candlestick' : 'Switch to line chart'}
+            >
+              {chartMode === 'line' ? (
+                <CandlestickChart className="w-5 h-5 text-gray-500" />
+              ) : (
+                <LineChart className="w-5 h-5 text-gray-500" />
+              )}
+            </button>
+          </div>
+
+          {/* Chart Area */}
+          <div 
+            ref={chartRef}
+            className={`h-40 relative ${isScrubbing ? 'touch-none' : ''}`}
+            onPointerDown={handleScrubStart}
+            onPointerMove={handleScrubMove}
+            onPointerUp={handleScrubEnd}
+            onPointerLeave={handleScrubEnd}
+          >
+            {chartData.loading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : chartData.error ? (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                {chartData.error}
+              </div>
+            ) : chartData.sparkline.length < 2 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                No chart data available
+              </div>
+            ) : (() => {
+              const data = chartData.sparkline;
+              const min = Math.min(...data);
+              const max = Math.max(...data);
+              const range = max - min || 1;
+              const paddedMin = min - range * 0.05;
+              const paddedMax = max + range * 0.05;
+              const paddedRange = paddedMax - paddedMin;
+              const isPositive = chartData.change >= 0;
+
+              if (chartMode === 'candle') {
+                // Candlestick chart
+                const candleCount = Math.min(40, Math.floor(data.length / 2));
+                const pointsPerCandle = Math.floor(data.length / candleCount);
+                const candles: { open: number; high: number; low: number; close: number }[] = [];
+                
+                for (let i = 0; i < candleCount; i++) {
+                  const start = i * pointsPerCandle;
+                  const end = Math.min(start + pointsPerCandle, data.length);
+                  const segment = data.slice(start, end);
+                  if (segment.length > 0) {
+                    candles.push({
+                      open: segment[0],
+                      high: Math.max(...segment),
+                      low: Math.min(...segment),
+                      close: segment[segment.length - 1],
+                    });
+                  }
+                }
+
+                const candleWidth = 80 / candleCount;
+                const gap = candleWidth * 0.4;
+
+                return (
+                  <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+                    {[0, 33, 66, 100].map((y) => (
+                      <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.5" />
+                    ))}
+                    {candles.map((candle, i) => {
+                      const x = 10 + (i / candleCount) * 80;
+                      const isBullish = candle.close >= candle.open;
+                      const color = isBullish ? '#22c55e' : '#ef4444';
+                      
+                      const highY = 100 - ((candle.high - paddedMin) / paddedRange) * 100;
+                      const lowY = 100 - ((candle.low - paddedMin) / paddedRange) * 100;
+                      const openY = 100 - ((candle.open - paddedMin) / paddedRange) * 100;
+                      const closeY = 100 - ((candle.close - paddedMin) / paddedRange) * 100;
+                      
+                      const bodyTop = Math.min(openY, closeY);
+                      const bodyHeight = Math.max(Math.abs(closeY - openY), 0.5);
+                      
+                      return (
+                        <g key={i}>
+                          <line x1={x + candleWidth / 2 - gap / 2} y1={highY} x2={x + candleWidth / 2 - gap / 2} y2={lowY} stroke={color} strokeWidth="0.5" />
+                          <rect x={x} y={bodyTop} width={candleWidth - gap} height={bodyHeight} fill={color} stroke={color} strokeWidth="0.3" />
+                        </g>
+                      );
+                    })}
+                    {isScrubbing && scrubIndex !== null && (() => {
+                      const scrubX = (scrubIndex / (data.length - 1)) * 100;
+                      const scrubValue = data[scrubIndex];
+                      const scrubY = 100 - ((scrubValue - paddedMin) / paddedRange) * 100;
+                      return (
+                        <>
+                          <line x1={scrubX} y1="0" x2={scrubX} y2="100" stroke="#6b7280" strokeWidth="0.5" strokeDasharray="2,2" />
+                          <line x1="0" y1={scrubY} x2="100" y2={scrubY} stroke="#6b7280" strokeWidth="0.5" strokeDasharray="2,2" />
+                          <circle cx={scrubX} cy={scrubY} r="2" fill={scrubValue >= data[0] ? '#22c55e' : '#ef4444'} stroke="white" strokeWidth="0.5" />
+                        </>
+                      );
+                    })()}
+                  </svg>
+                );
+              }
+
+              // Line chart (default)
+              const points = data.map((val, i) => {
+                const x = (i / (data.length - 1)) * 100;
+                const y = 100 - ((val - paddedMin) / paddedRange) * 100;
+                return `${x},${y}`;
+              }).join(' ');
+
+              const fillPoints = `0,100 ${points} 100,100`;
+              const scrubX = scrubIndex !== null ? (scrubIndex / (data.length - 1)) * 100 : null;
+              const scrubY = scrubIndex !== null ? 100 - ((data[scrubIndex] - paddedMin) / paddedRange) * 100 : null;
+
+              return (
+                <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="liveChartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0.15" />
+                      <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {[0, 33, 66, 100].map((y) => (
+                    <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" strokeOpacity="0.05" strokeWidth="0.3" />
+                  ))}
+                  <polygon fill="url(#liveChartGradient)" points={fillPoints} />
+                  <polyline fill="none" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" points={points} />
+                  {isScrubbing && scrubX !== null && scrubY !== null && (
+                    <>
+                      <line x1={scrubX} y1="0" x2={scrubX} y2="100" stroke="#6b7280" strokeWidth="0.3" strokeDasharray="1.5,1.5" />
+                      <line x1="0" y1={scrubY} x2="100" y2={scrubY} stroke="#6b7280" strokeWidth="0.3" strokeDasharray="1.5,1.5" />
+                      <circle cx={scrubX} cy={scrubY} r="2.5" fill="none" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth="0.3" opacity="0.6">
+                        <animate attributeName="r" values="2;3.5;2" dur="1s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx={scrubX} cy={scrubY} r="1.2" fill={isPositive ? '#22c55e' : '#ef4444'} />
+                    </>
+                  )}
+                </svg>
+              );
+            })()}
+          </div>
+
+          {/* Timeframe Selector */}
+          <div className="flex items-center justify-center gap-2">
+            {(['1D', '1W', '1M', '1Y'] as ChartPeriod[]).map((period) => (
+              <button
+                key={period}
+                onClick={() => handlePeriodChange(period)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  chartPeriod === period
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                {period}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Overall Signal Card */}
         {isLoadingAdditional ? (
@@ -629,19 +877,6 @@ export default function LiveScreenDetailPage() {
         onShowVolumeChange={handleShowVolumeChange}
         showMovingAverages={settings.showMovingAverages}
         onShowMovingAveragesChange={handleShowMovingAveragesChange}
-      />
-
-      {/* Stock Preview Modal */}
-      <StockPreviewModal
-        isOpen={isPreviewModalOpen}
-        onClose={() => setIsPreviewModalOpen(false)}
-        symbol={decodedSymbol}
-        name={previewData?.name || decodedSymbol}
-        price={previewData?.price || currentPrice || 0}
-        change={previewData?.change || 0}
-        valueChange={previewData?.valueChange || 0}
-        sparkline={previewData?.sparkline || []}
-        timeframe="day"
       />
     </div>
   );
