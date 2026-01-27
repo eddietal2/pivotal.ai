@@ -691,12 +691,25 @@ export default function StockDetailPage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4 max-w-4xl mx-auto">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold">{symbol}</h1>
+              {stockData && (
+                <span className={`text-lg font-bold ${stockData.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatPrice(stockData.price)}
+                </span>
+              )}
+              {loading && !stockData && (
+                <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggleWatchlist}
