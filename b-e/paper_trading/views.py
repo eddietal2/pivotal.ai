@@ -1035,6 +1035,133 @@ def option_trades_view(request):
 
 
 @csrf_exempt
+@require_http_methods(["POST", "OPTIONS"])
+def close_expired_position(request):
+    """
+    Close an expired option position at its settlement value.
+    For ITM options, settles at intrinsic value. For OTM options, settles at $0.
+    
+    POST /api/paper-trading/options/close-expired/
+    Body: {"position_id": 123} or {"contract_symbol": "RIOT260123C00016500"}
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return cors_response({'error': 'Invalid JSON'}, status=400)
+    
+    account = get_or_create_account(user)
+    
+    # Find the position by ID or contract symbol
+    position_id = data.get('position_id')
+    contract_symbol = data.get('contract_symbol')
+    
+    if position_id:
+        try:
+            position = OptionPosition.objects.get(id=position_id, account=account)
+        except OptionPosition.DoesNotExist:
+            return cors_response({'error': 'Position not found'}, status=404)
+    elif contract_symbol:
+        try:
+            position = OptionPosition.objects.get(
+                account=account,
+                contract__contract_symbol=contract_symbol
+            )
+        except OptionPosition.DoesNotExist:
+            return cors_response({'error': f'No position found for {contract_symbol}'}, status=404)
+    else:
+        return cors_response({'error': 'Provide position_id or contract_symbol'}, status=400)
+    
+    contract = position.contract
+    
+    # Verify the contract is expired
+    if not contract.is_expired:
+        return cors_response({'error': 'Contract is not expired. Use regular trade endpoint.'}, status=400)
+    
+    # Calculate settlement value
+    # Need to get the underlying's current/last price
+    settlement_price = Decimal('0')
+    intrinsic_value = Decimal('0')
+    
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(contract.underlying_symbol)
+        underlying_price = Decimal(str(ticker.info.get('regularMarketPrice', 0) or ticker.info.get('previousClose', 0)))
+        
+        if underlying_price > 0:
+            if contract.option_type == 'call':
+                intrinsic_value = max(Decimal('0'), underlying_price - contract.strike_price)
+            else:  # put
+                intrinsic_value = max(Decimal('0'), contract.strike_price - underlying_price)
+            
+            settlement_price = intrinsic_value
+    except Exception as e:
+        print(f"Error fetching underlying price for settlement: {e}")
+        # Default to 0 if we can't get the price
+        settlement_price = Decimal('0')
+    
+    # Calculate the settlement amount
+    multiplier = contract.multiplier
+    quantity = position.quantity
+    
+    # For long positions: receive the settlement value
+    # For short positions: pay the settlement value
+    if position.position_type == 'long':
+        settlement_amount = quantity * settlement_price * multiplier
+        account.balance += settlement_amount
+        realized_pl = settlement_amount - (quantity * position.average_cost * multiplier)
+    else:  # short
+        settlement_amount = quantity * settlement_price * multiplier
+        account.balance -= settlement_amount
+        realized_pl = (quantity * position.average_cost * multiplier) - settlement_amount
+    
+    account.save()
+    
+    # Record as a trade
+    action = 'sell_to_close' if position.position_type == 'long' else 'buy_to_close'
+    trade = OptionTrade.objects.create(
+        account=account,
+        contract=contract,
+        action=action,
+        order_type='market',
+        quantity=quantity,
+        premium=settlement_price,
+        total_amount=settlement_amount,
+        commission=Decimal('0'),
+        status='filled',
+        executed_at=timezone.now(),
+    )
+    
+    # Delete the position
+    position.delete()
+    
+    return cors_response({
+        'message': f'Expired position closed at ${settlement_price:.2f} per share (intrinsic value)',
+        'settlement': {
+            'contract_symbol': contract.contract_symbol,
+            'underlying_symbol': contract.underlying_symbol,
+            'option_type': contract.option_type,
+            'strike_price': str(contract.strike_price),
+            'settlement_price': str(settlement_price),
+            'quantity': quantity,
+            'total_settlement': str(settlement_amount),
+            'realized_pl': str(realized_pl),
+        },
+        'trade': serialize_option_trade(trade),
+        'account': {
+            'balance': str(account.balance),
+            'total_value': str(account.total_value),
+        }
+    })
+
+
+@csrf_exempt
 @require_http_methods(["GET", "OPTIONS"])
 def options_summary_view(request):
     """Get a summary of options positions and activity"""

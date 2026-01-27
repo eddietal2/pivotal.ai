@@ -15,6 +15,7 @@ urlpatterns = [
     path('options/contracts/', views.option_contracts_view, name='option_contracts'),
     path('options/positions/', views.option_positions_view, name='option_positions'),
     path('options/positions/update-prices/', views.update_option_positions_prices, name='update_option_positions_prices'),
+    path('options/close-expired/', views.close_expired_position, name='close_expired_position'),
     path('options/trades/', views.option_trades_view, name='option_trades'),
     path('options/summary/', views.options_summary_view, name='options_summary'),
 ]

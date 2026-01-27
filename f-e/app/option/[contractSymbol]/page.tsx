@@ -60,6 +60,7 @@ export default function OptionContractPage() {
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<string>('');
   const [isTrading, setIsTrading] = useState(false);
+  const [isClosingExpired, setIsClosingExpired] = useState(false);
   
   const { isEnabled, account, refreshAccount, optionPositions } = usePaperTrading();
   const { showToast } = useToast();
@@ -144,7 +145,65 @@ export default function OptionContractPage() {
     const exp = new Date(dateStr);
     const today = new Date();
     const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diff);
+    return diff; // Can be negative for expired
+  };
+
+  // Check if contract is expired
+  const isExpired = (dateStr: string) => {
+    const exp = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    exp.setHours(0, 0, 0, 0);
+    return exp < today;
+  };
+
+  // Close expired position
+  const closeExpiredPosition = async () => {
+    if (!position) return;
+
+    const email = getUserEmail();
+    if (!email) {
+      showToast('Please log in to close position', 'error', 5000);
+      return;
+    }
+
+    setIsClosingExpired(true);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/paper-trading/options/close-expired/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': email,
+        },
+        body: JSON.stringify({
+          contract_symbol: contractSymbol,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to close position');
+      }
+
+      const plText = parseFloat(data.settlement.realized_pl) >= 0 ? 'Profit' : 'Loss';
+      const plAmount = Math.abs(parseFloat(data.settlement.realized_pl)).toFixed(2);
+      showToast(
+        `Position closed at $${data.settlement.settlement_price}. ${plText}: $${plAmount}`,
+        parseFloat(data.settlement.realized_pl) >= 0 ? 'success' : 'info',
+        5000,
+        { link: '/watchlist?tab=4' }
+      );
+
+      await refreshAccount();
+      router.push('/watchlist?tab=4');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to close position';
+      showToast(errorMessage, 'error', 5000);
+    } finally {
+      setIsClosingExpired(false);
+    }
   };
 
   // Calculate trade cost
@@ -334,10 +393,11 @@ export default function OptionContractPage() {
 
   const isCall = contractData.option_type === 'call';
   const dte = getDTE(contractData.expiration);
+  const contractExpired = isExpired(contractData.expiration);
   const isITM = contractData.in_the_money;
-  const premiumColor = isCall ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-  const premiumBg = isCall ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20';
-  const premiumBorder = isCall ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800';
+  const premiumColor = contractExpired ? 'text-gray-500' : isCall ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+  const premiumBg = contractExpired ? 'bg-gray-100 dark:bg-gray-800' : isCall ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20';
+  const premiumBorder = contractExpired ? 'border-gray-300 dark:border-gray-600' : isCall ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800';
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 pb-28">
@@ -389,15 +449,21 @@ export default function OptionContractPage() {
               <Calendar className="w-4 h-4" />
               {formatExpiration(contractData.expiration)}
             </span>
-            <span className={`text-sm px-2 py-0.5 rounded-full ${
-              dte <= 7 
-                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' 
-                : dte <= 30 
-                ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-            }`}>
-              {dte} DTE
-            </span>
+            {contractExpired ? (
+              <span className="text-sm px-2 py-0.5 rounded-full bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 font-semibold">
+                EXPIRED
+              </span>
+            ) : (
+              <span className={`text-sm px-2 py-0.5 rounded-full ${
+                dte <= 7 
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' 
+                  : dte <= 30 
+                  ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+              }`}>
+                {dte} DTE
+              </span>
+            )}
             {isITM && (
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 isCall 
@@ -593,20 +659,45 @@ export default function OptionContractPage() {
         {isEnabled && (
           <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700">
             <div className="max-w-4xl mx-auto">
-              <button
-                onClick={() => {
-                  setShowTradeModal(true);
-                  setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
-                }}
-                className={`w-full py-4 font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors ${
-                  isCall
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-red-500 hover:bg-red-600 text-white'
-                }`}
-              >
-                {isCall ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                {position ? 'Trade Position' : 'Open Position'}
-              </button>
+              {contractExpired ? (
+                // Expired contract - show close button if user has position, or disabled message
+                position ? (
+                  <button
+                    onClick={closeExpiredPosition}
+                    disabled={isClosingExpired}
+                    className="w-full py-4 font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors bg-gray-700 hover:bg-gray-800 text-white disabled:opacity-50"
+                  >
+                    {isClosingExpired ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Clock className="w-5 h-5" />
+                        Close Expired Position
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-full py-4 text-center text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    <Clock className="w-5 h-5 inline mr-2" />
+                    Contract Expired - Cannot Trade
+                  </div>
+                )
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowTradeModal(true);
+                    setTradeAction(position ? 'sell_to_close' : 'buy_to_open');
+                  }}
+                  className={`w-full py-4 font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                    isCall
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-red-500 hover:bg-red-600 text-white'
+                  }`}
+                >
+                  {isCall ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                  {position ? 'Trade Position' : 'Open Position'}
+                </button>
+              )}
             </div>
           </div>
         )}
