@@ -2810,9 +2810,11 @@ function WatchlistPageContent() {
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            {/* Market Pulse Settings */}
+            {/* Market Pulse Settings - Only show when on Market Pulse tab */}
+            {activeTab === 0 && (
+              <>
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!section2Expanded && (paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
+                className={`text-lg flex items-center justify-between w-full text-left transition-opacity ${!section2Expanded && (displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
                   setSection3Expanded(false);
@@ -2934,18 +2936,18 @@ function WatchlistPageContent() {
                   </div>
                 </div>
               )}
+              </>
+            )}
 
-              {/* Paper Trading Settings */}
+            {/* Paper Trading Settings - Only show when on Paper Trading tab */}
+            {activeTab === 4 && (
+              <>
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!paperTradingSettingsExpanded && (section2Expanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
+                className={`text-lg flex items-center justify-between w-full text-left transition-opacity ${!paperTradingSettingsExpanded && (displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setPaperTradingSettingsExpanded(!paperTradingSettingsExpanded);
-                  setMarketPulseSettingsExpanded(false);
-                  setSection3Expanded(false);
-                  setSection2Expanded(false);
                   setDisplaySettingsExpanded(false);
                   setDataSettingsExpanded(false);
-                  setWatchlistSettingsExpanded(false);
                 }}
               >
                 <h3 className="flex items-center gap-2">
@@ -3104,17 +3106,18 @@ function WatchlistPageContent() {
                   </div>
                 </div>
               )}
+              </>
+            )}
 
-              {/* Live Screen Categories */}
+            {/* Live Screen Categories - Only show when on Live Screens tab */}
+            {activeTab === 1 && (
+              <>
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!section3Expanded && (section2Expanded || paperTradingSettingsExpanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
+                className={`text-lg flex items-center justify-between w-full text-left transition-opacity ${!section3Expanded && (displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setSection3Expanded(!section3Expanded);
-                  setPaperTradingSettingsExpanded(false);
-                  setSection2Expanded(false);
                   setDisplaySettingsExpanded(false);
                   setDataSettingsExpanded(false);
-                  setWatchlistSettingsExpanded(false);
                 }}
               >
                 <h3 className="flex items-center gap-2">
@@ -3203,18 +3206,159 @@ function WatchlistPageContent() {
                   </p>
                 </div>
               )}
+              </>
+            )}
 
-              {/* Display Settings */}
+            {/* Watchlist Settings - Only show when on My Watchlist or My Screens tabs */}
+            {(activeTab === 2 || activeTab === 3) && (
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!displaySettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
+                className={`text-lg flex items-center justify-between w-full text-left transition-opacity ${!watchlistSettingsExpanded && (displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
-                  setDisplaySettingsExpanded(!displaySettingsExpanded);
-                  setSection2Expanded(false);
-                  setSection3Expanded(false);
+                  setWatchlistSettingsExpanded(!watchlistSettingsExpanded);
+                  setDisplaySettingsExpanded(false);
                   setDataSettingsExpanded(false);
-                  setWatchlistSettingsExpanded(false);
                 }}
               >
+                <h3 className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  {activeTab === 3 ? 'My Screens Settings' : 'Watchlist Settings'}
+                </h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${watchlistSettingsExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+            {(activeTab === 2 || activeTab === 3) && watchlistSettingsExpanded && (
+              <div className="mt-3 space-y-4">
+                {/* Double-Tap Action */}
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Double-Tap Action</p>
+                  <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                    {([
+                      { value: 'screens', label: 'My Screens' },
+                      { value: 'detail', label: 'Detail' },
+                      { value: 'trade', label: 'Trade' },
+                    ] as const).map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => {
+                          setDoubleTapAction(value);
+                          localStorage.setItem('watchlistDoubleTapAction', value);
+                        }}
+                        className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                          doubleTapAction === value
+                            ? 'bg-yellow-500 text-white'
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {{
+                      screens: 'Double-tap adds/removes from My Screens',
+                      detail: 'Double-tap opens stock detail modal',
+                      trade: 'Double-tap opens quick trade panel',
+                    }[doubleTapAction]}
+                  </p>
+                </div>
+
+                {/* Swipe-to-Delete */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Swipe-to-Delete</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Swipe left to remove items</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newValue = !swipeToDeleteEnabled;
+                      setSwipeToDeleteEnabled(newValue);
+                      localStorage.setItem('watchlistSwipeToDelete', String(newValue));
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      swipeToDeleteEnabled ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                      swipeToDeleteEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Confirm Before Removing Last Item */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Confirm Last Item Removal</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Ask before removing the last item</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newValue = !confirmLastItemRemoval;
+                      setConfirmLastItemRemoval(newValue);
+                      localStorage.setItem('watchlistConfirmLastItem', String(newValue));
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      confirmLastItemRemoval ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                      confirmLastItemRemoval ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Auto-sort - only for My Watchlist */}
+                {activeTab === 2 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Auto-sort Watchlist</p>
+                    <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                      {([
+                        { value: 'manual', label: 'Manual' },
+                        { value: 'change', label: 'By Change %' },
+                        { value: 'name', label: 'By Name' },
+                        { value: 'recent', label: 'Recently Added' },
+                      ] as const).map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setAutoSortWatchlist(value);
+                            localStorage.setItem('watchlistAutoSort', value);
+                          }}
+                          className={`px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                            autoSortWatchlist === value
+                              ? 'bg-yellow-500 text-white'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {{
+                        manual: 'Drag to reorder manually',
+                        change: 'Sorted by price change % (highest first)',
+                        name: 'Sorted alphabetically by symbol',
+                        recent: 'Most recently added first',
+                      }[autoSortWatchlist]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Display Settings - Always show */}
+            <button
+              className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!displaySettingsExpanded && dataSettingsExpanded ? 'opacity-40' : ''}`}
+              onClick={() => {
+                setDisplaySettingsExpanded(!displaySettingsExpanded);
+                setDataSettingsExpanded(false);
+                // Close tab-specific sections
+                setSection2Expanded(false);
+                setSection3Expanded(false);
+                setPaperTradingSettingsExpanded(false);
+                setWatchlistSettingsExpanded(false);
+              }}
+            >
                 <h3 className="flex items-center gap-2">
                   <Settings className="w-4 h-4 text-blue-500" />
                   Display Settings
@@ -3345,17 +3489,19 @@ function WatchlistPageContent() {
                 </div>
               )}
 
-              {/* Data Settings */}
-              <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!dataSettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
-                onClick={() => {
-                  setDataSettingsExpanded(!dataSettingsExpanded);
-                  setSection2Expanded(false);
-                  setSection3Expanded(false);
-                  setDisplaySettingsExpanded(false);
-                  setWatchlistSettingsExpanded(false);
-                }}
-              >
+            {/* Data Settings - Always show */}
+            <button
+              className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!dataSettingsExpanded && displaySettingsExpanded ? 'opacity-40' : ''}`}
+              onClick={() => {
+                setDataSettingsExpanded(!dataSettingsExpanded);
+                setDisplaySettingsExpanded(false);
+                // Close tab-specific sections
+                setSection2Expanded(false);
+                setSection3Expanded(false);
+                setPaperTradingSettingsExpanded(false);
+                setWatchlistSettingsExpanded(false);
+              }}
+            >
                 <h3 className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-green-500" />
                   Data Settings
@@ -3468,141 +3614,6 @@ function WatchlistPageContent() {
                       {loading ? 'Refreshing...' : 'Refresh Data Now'}
                     </button>
                   )}
-                </div>
-              )}
-
-              {/* Watchlist Settings */}
-              <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!watchlistSettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
-                onClick={() => {
-                  setWatchlistSettingsExpanded(!watchlistSettingsExpanded);
-                  setSection2Expanded(false);
-                  setSection3Expanded(false);
-                  setDisplaySettingsExpanded(false);
-                  setDataSettingsExpanded(false);
-                }}
-              >
-                <h3 className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-500" />
-                  Watchlist Settings
-                </h3>
-                <ChevronDown className={`w-5 h-5 transition-transform ${watchlistSettingsExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              {watchlistSettingsExpanded && (
-                <div className="mt-3 space-y-4">
-                  {/* Double-Tap Action */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Double-Tap Action</p>
-                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                      {([
-                        { value: 'screens', label: 'My Screens' },
-                        { value: 'detail', label: 'Detail' },
-                        { value: 'trade', label: 'Trade' },
-                      ] as const).map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onClick={() => {
-                            setDoubleTapAction(value);
-                            localStorage.setItem('watchlistDoubleTapAction', value);
-                          }}
-                          className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
-                            doubleTapAction === value
-                              ? 'bg-yellow-500 text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {{
-                        screens: 'Double-tap adds/removes from My Screens',
-                        detail: 'Double-tap opens stock detail modal',
-                        trade: 'Double-tap opens quick trade panel',
-                      }[doubleTapAction]}
-                    </p>
-                  </div>
-
-                  {/* Swipe-to-Delete */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Swipe-to-Delete</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Swipe left to remove items</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const newValue = !swipeToDeleteEnabled;
-                        setSwipeToDeleteEnabled(newValue);
-                        localStorage.setItem('watchlistSwipeToDelete', String(newValue));
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        swipeToDeleteEnabled ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
-                        swipeToDeleteEnabled ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {/* Confirm Before Removing Last Item */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Confirm Last Item Removal</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Ask before removing the last item</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const newValue = !confirmLastItemRemoval;
-                        setConfirmLastItemRemoval(newValue);
-                        localStorage.setItem('watchlistConfirmLastItem', String(newValue));
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        confirmLastItemRemoval ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
-                        confirmLastItemRemoval ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {/* Auto-sort Watchlist */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Auto-sort Watchlist</p>
-                    <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                      {([
-                        { value: 'manual', label: 'Manual' },
-                        { value: 'change', label: 'By Change %' },
-                        { value: 'name', label: 'By Name' },
-                        { value: 'recent', label: 'Recently Added' },
-                      ] as const).map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onClick={() => {
-                            setAutoSortWatchlist(value);
-                            localStorage.setItem('watchlistAutoSort', value);
-                          }}
-                          className={`px-2 py-1.5 text-xs font-medium rounded transition-colors ${
-                            autoSortWatchlist === value
-                              ? 'bg-yellow-500 text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {{
-                        manual: 'Drag to reorder manually',
-                        change: 'Sorted by price change % (highest first)',
-                        name: 'Sorted alphabetically by symbol',
-                        recent: 'Most recently added first',
-                      }[autoSortWatchlist]}
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
