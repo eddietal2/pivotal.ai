@@ -6,12 +6,14 @@ import { lockScroll, unlockScroll } from '@/components/modals/scrollLock';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { useToast } from '@/components/context/ToastContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
+import { useFavorites } from '@/components/context/FavoritesContext';
 import SignalFeedItem from '@/components/ui/SignalFeedItem';
 import { useUI } from '@/components/context/UIContext';
-import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
+import { ListChecks, ArrowUpRight, ArrowDownRight, TrendingUp, Info, X, Cpu, List, Grid, AlertTriangle, FileText, ChevronRight, Star, Activity } from 'lucide-react';
 import SignalEducationCard from '@/components/ui/SignalEducationCard';
 import signalEducationCards from '@/components/ui/signalEducationData';
 import WatchListItem from '@/components/watchlist/WatchListItem';
+import LiveScreen from '@/components/watchlist/LiveScreen';
 import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, DisclaimersSkeleton, TopIndicatorsSkeleton } from '@/components/ui/skeletons';
 import Link from 'next/link';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
@@ -108,6 +110,7 @@ const mockSignals = [
 export default function App() {
   const { modalOpen, setModalOpen } = useUI();
   const { isEnabled: isPaperTradingEnabled, account: paperTradingAccount, positions: paperTradingPositions, isLoading: isPaperTradingLoading } = usePaperTrading();
+  const { favorites } = useFavorites();
   const [signalFeedInfoOpen, setSignalFeedInfoOpen] = React.useState(false);
   // Combined info modal (replaces Market Pulse and Market Overview modals)
   const [infoModalOpen, setInfoModalOpen] = React.useState(false);
@@ -612,6 +615,34 @@ export default function App() {
                   <p>Unable to load account</p>
                 </div>
               )}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* My Screens - User's Favorites with Live Technical Analysis */}
+          {favorites.length > 0 && (
+            <CollapsibleSection
+              title={
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-purple-500 fill-purple-500" />
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">My Screens</span>
+                  <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({favorites.length})</span>
+                </div>
+              }
+              defaultOpen={true}
+              borderBottom={false}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm dark:shadow-lg border border-purple-200 dark:border-purple-800/30">
+                <LiveScreen
+                  favorites={favorites}
+                  enableSwipe={false}
+                  isActive={true}
+                />
+                <div className="mt-4 text-center">
+                  <Link href="/watchlist?tab=2" className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 text-sm font-medium">
+                    Manage My Screens →
+                  </Link>
+                </div>
               </div>
             </CollapsibleSection>
           )}
