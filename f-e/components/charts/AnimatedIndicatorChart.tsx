@@ -957,22 +957,23 @@ export default function AnimatedIndicatorChart({
   };
 
   return (
-    <div 
-      ref={containerRef} 
-      className={`relative ${className} ${interactive ? 'touch-none cursor-crosshair' : ''}`} 
-      style={{ height }}
-      onPointerDown={interactive ? handleScrubStart : undefined}
-      onPointerMove={interactive ? handleScrubMove : undefined}
-      onPointerUp={interactive ? handleScrubEnd : undefined}
-      onPointerLeave={interactive ? handleScrubEnd : undefined}
-      onPointerCancel={interactive ? handleScrubEnd : undefined}
-    >
-      {/* Canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{ width: '100%', height, pointerEvents: 'none' }}
-        className="rounded-xl bg-white dark:bg-gray-900"
-      />
+    <div className={`${className}`}>
+      <div 
+        ref={containerRef} 
+        className={`relative ${interactive ? 'touch-none cursor-crosshair' : ''}`} 
+        style={{ height }}
+        onPointerDown={interactive ? handleScrubStart : undefined}
+        onPointerMove={interactive ? handleScrubMove : undefined}
+        onPointerUp={interactive ? handleScrubEnd : undefined}
+        onPointerLeave={interactive ? handleScrubEnd : undefined}
+        onPointerCancel={interactive ? handleScrubEnd : undefined}
+      >
+        {/* Canvas */}
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height, pointerEvents: 'none' }}
+          className="rounded-xl bg-white dark:bg-gray-900"
+        />
 
       {/* Scrub indicator */}
       {interactive && isScrubbing && scrubX !== null && (
@@ -1054,6 +1055,25 @@ export default function AnimatedIndicatorChart({
       {interactive && !isScrubbing && !compact && (
         <div className="absolute top-1.5 right-2 text-[9px] text-gray-400 dark:text-gray-500 pointer-events-none opacity-60">
           Touch to scrub
+        </div>
+      )}
+      </div>
+
+      {/* Time Axis Labels */}
+      {data?.timestamps && data.timestamps.length > 0 && !isLoading && (
+        <div className="flex justify-between px-1 mt-1 text-[10px] text-gray-400 dark:text-gray-500 select-none">
+          {(() => {
+            const timestamps = data.timestamps;
+            const totalLabels = 5; // Show 5 evenly spaced labels
+            const indices = Array.from({ length: totalLabels }, (_, i) => 
+              Math.floor((i / (totalLabels - 1)) * (timestamps.length - 1))
+            );
+            return indices.map((idx, i) => (
+              <span key={i} className="truncate max-w-[60px]">
+                {timestamps[idx]}
+              </span>
+            ));
+          })()}
         </div>
       )}
     </div>

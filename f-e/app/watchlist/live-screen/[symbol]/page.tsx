@@ -15,6 +15,7 @@ type ChartPeriod = PeriodType;
 
 interface ChartDataState {
   sparkline: number[];
+  timestamps: string[];
   change: number;
   valueChange: number;
   loading: boolean;
@@ -103,6 +104,7 @@ export default function LiveScreenDetailPage() {
   const [chartMode, setChartMode] = useState<'line' | 'candle'>('line');
   const [chartData, setChartData] = useState<ChartDataState>({
     sparkline: [],
+    timestamps: [],
     change: 0,
     valueChange: 0,
     loading: true,
@@ -273,6 +275,7 @@ export default function LiveScreenDetailPage() {
         const data = await response.json();
         setChartData({
           sparkline: data.sparkline || [],
+          timestamps: data.timestamps || [],
           change: data.change || 0,
           valueChange: data.valueChange || 0,
           loading: false,
@@ -687,6 +690,24 @@ export default function LiveScreenDetailPage() {
               );
             })()}
           </div>
+
+          {/* Time Axis Labels */}
+          {chartData.timestamps.length > 0 && !chartData.loading && (
+            <div className="flex justify-between px-1 text-[10px] text-gray-400 dark:text-gray-500 select-none">
+              {(() => {
+                const timestamps = chartData.timestamps;
+                const totalLabels = 5; // Show 5 evenly spaced labels
+                const indices = Array.from({ length: totalLabels }, (_, i) => 
+                  Math.floor((i / (totalLabels - 1)) * (timestamps.length - 1))
+                );
+                return indices.map((idx, i) => (
+                  <span key={i} className="truncate max-w-[60px]">
+                    {timestamps[idx]}
+                  </span>
+                ));
+              })()}
+            </div>
+          )}
 
           {/* Timeframe Selector */}
           <div className="flex items-center justify-center gap-2">

@@ -411,8 +411,22 @@ def technical_indicators(request, symbol):
                 'Volume': 'sum'
             }).dropna()
         
-        # Get timestamps
-        timestamps = df.index.strftime('%Y-%m-%d %H:%M').tolist()
+        # Get timestamps formatted based on period (not interval)
+        # This ensures the time axis matches the user's selected view
+        timestamps = []
+        for ts in df.index:
+            if period == '1D':
+                # For day view, show time only (h:MMam/pm)
+                timestamps.append(ts.strftime('%I:%M%p').lstrip('0').lower())
+            elif period == '1W':
+                # For week view, show day and time (Mon h:MMam)
+                timestamps.append(ts.strftime('%a %I:%M%p').replace(' 0', ' ').lower())
+            elif period == '1M':
+                # For month view, show date (Jan 15)
+                timestamps.append(ts.strftime('%b %d').replace(' 0', ' '))
+            else:
+                # For year view, show month and date (Jan 15)
+                timestamps.append(ts.strftime('%b %d').replace(' 0', ' '))
         
         # Get close prices for chart data
         closes = [round(v, 2) if not pd.isna(v) else None for v in df['Close'].tolist()]

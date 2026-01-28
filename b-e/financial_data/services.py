@@ -1339,7 +1339,7 @@ def fetch_stock_detail(symbol, timeframe='day'):
         timeframe (str): 'day', 'week', 'month', or 'year'
     
     Returns:
-        dict: Detailed stock information including price, change, statistics, and sparkline
+        dict: Detailed stock information including price, change, statistics, sparkline, and timestamps
     """
     import pandas as pd
     import yfinance as yf
@@ -1367,6 +1367,22 @@ def fetch_stock_detail(symbol, timeframe='day'):
             
             # Get closes for sparkline
             closes = hist['Close'].dropna().tolist()
+            
+            # Get timestamps for chart axis
+            timestamps = []
+            for ts in hist.index:
+                if timeframe == 'day':
+                    # For day view, show time only (h:MM am/pm)
+                    timestamps.append(ts.strftime('%I:%M%p').lstrip('0').lower())
+                elif timeframe == 'week':
+                    # For week view, show day and time (Mon h:MMam)
+                    timestamps.append(ts.strftime('%a %I:%M%p').replace(' 0', ' ').lower())
+                elif timeframe == 'month':
+                    # For month view, show date (Jan 15)
+                    timestamps.append(ts.strftime('%b %d').replace(' 0', ' '))
+                else:
+                    # For year view, show month and date (Jan 15)
+                    timestamps.append(ts.strftime('%b %d').replace(' 0', ' '))
             
             # Calculate change
             if len(closes) >= 2:
@@ -1426,6 +1442,7 @@ def fetch_stock_detail(symbol, timeframe='day'):
                 'week52High': info.get('fiftyTwoWeekHigh'),
                 'week52Low': info.get('fiftyTwoWeekLow'),
                 'sparkline': closes[-100:],  # Last 100 data points for chart
+                'timestamps': timestamps[-100:],  # Last 100 timestamps matching sparkline
             }
             
             return result
