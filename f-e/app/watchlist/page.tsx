@@ -256,6 +256,41 @@ function WatchlistPageContent() {
     return 'manual'; // Default: Manual ordering
   });
   
+  // Market Pulse Settings
+  const [marketPulseSettingsExpanded, setMarketPulseSettingsExpanded] = useState(false);
+  
+  // Hidden asset classes (persisted in localStorage)
+  const [hiddenAssetClasses, setHiddenAssetClasses] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('marketPulseHiddenClasses');
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved));
+        } catch {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
+  
+  // Collapsed by default setting (persisted in localStorage)
+  const [assetClassesCollapsedByDefault, setAssetClassesCollapsedByDefault] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('marketPulseCollapsedByDefault') === 'true';
+    }
+    return false;
+  });
+  
+  // Show top indicators in header (persisted in localStorage)
+  const [showTopIndicatorsInHeader, setShowTopIndicatorsInHeader] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('marketPulseShowTopIndicators');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
   // Track selected Live Screen IDs (individual screens)
   const [selectedScreenIds, setSelectedScreenIds] = useState<ScreenId[]>(() => {
     if (typeof window !== 'undefined') {
@@ -270,10 +305,16 @@ function WatchlistPageContent() {
   // Track brief loading state when switching timeframes
   const [timeframeSwitching, setTimeframeSwitching] = useState(false);
 
-  // Asset class dropdown expanded state - first one expanded by default
+  // Asset class dropdown expanded state - respects collapsedByDefault setting
   const [expandedAssetClasses, setExpandedAssetClasses] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const collapsedByDefault = localStorage.getItem('marketPulseCollapsedByDefault') === 'true';
+      if (collapsedByDefault) {
+        return new Set(); // All collapsed
+      }
+    }
     const keys = Object.keys(assetClasses);
-    return new Set(keys.length > 0 ? [keys[0]] : []);
+    return new Set(keys.length > 0 ? [keys[0]] : []); // First one expanded by default
   });
 
   const toggleAssetClassExpanded = useCallback((classKey: string) => {
@@ -1136,70 +1177,72 @@ function WatchlistPageContent() {
               {/* Market Status Pill - responsive: shows dot+time on mobile, full pill on desktop */}
               <MarketStatusIndicator variant="pill" showNextEvent={false} />
               {/* Top Market Indicators - hidden on very small screens */}
-              {loading ? (
-                <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
-                  <span className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                    <div className="w-6 sm:w-8 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                    <div className="w-8 sm:w-10 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                  </span>
-                  <span className="hidden sm:flex items-center gap-1">
-                    <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                    <div className="w-8 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                    <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
-                  </span>
-                </div>
-              ) : (topIndicators.bullish || topIndicators.bearish) && (
-                <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
-                  {topIndicators.bullish && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const itemData = marketData[topIndicators.bullish!.symbol];
-                        const tfData = itemData?.timeframes?.day;
-                        setSelectedStock({
-                          symbol: topIndicators.bullish!.symbol,
-                          name: topIndicators.bullish!.ticker,
-                          price: tfData?.latest?.close ?? itemData?.price ?? 0,
-                          change: topIndicators.bullish!.change,
-                          valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
-                          sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
-                          timeframe: 'day',
-                          timeframes: itemData?.timeframes,
-                        });
-                      }}
-                      className="flex items-center gap-0.5 sm:gap-1 text-green-500 hover:text-green-600 hover:underline transition-colors"
-                    >
-                      <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
-                      <span className="font-semibold">+{topIndicators.bullish.change.toFixed(1)}%</span>
-                    </button>
-                  )}
-                  {topIndicators.bearish && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const itemData = marketData[topIndicators.bearish!.symbol];
-                        const tfData = itemData?.timeframes?.day;
-                        setSelectedStock({
-                          symbol: topIndicators.bearish!.symbol,
-                          name: topIndicators.bearish!.ticker,
-                          price: tfData?.latest?.close ?? itemData?.price ?? 0,
-                          change: topIndicators.bearish!.change,
-                          valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
-                          sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
-                          timeframe: 'day',
-                          timeframes: itemData?.timeframes,
-                        });
-                      }}
-                      className="hidden sm:flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline transition-colors"
-                    >
-                      <TrendingDown className="w-3 h-3" />
-                      <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
-                      <span className="font-semibold">{topIndicators.bearish.change.toFixed(1)}%</span>
-                    </button>
-                  )}
-                </div>
+              {showTopIndicatorsInHeader && (
+                loading ? (
+                  <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
+                    <span className="flex items-center gap-1">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      <div className="w-6 sm:w-8 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      <div className="w-8 sm:w-10 h-2.5 sm:h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    </span>
+                    <span className="hidden sm:flex items-center gap-1">
+                      <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      <div className="w-8 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                      <div className="w-10 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    </span>
+                  </div>
+                ) : (topIndicators.bullish || topIndicators.bearish) && (
+                  <div className="hidden xs:flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-normal ml-1 sm:ml-2">
+                    {topIndicators.bullish && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const itemData = marketData[topIndicators.bullish!.symbol];
+                          const tfData = itemData?.timeframes?.day;
+                          setSelectedStock({
+                            symbol: topIndicators.bullish!.symbol,
+                            name: topIndicators.bullish!.ticker,
+                            price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                            change: topIndicators.bullish!.change,
+                            valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                            sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                            timeframe: 'day',
+                            timeframes: itemData?.timeframes,
+                          });
+                        }}
+                        className="flex items-center gap-0.5 sm:gap-1 text-green-500 hover:text-green-600 hover:underline transition-colors"
+                      >
+                        <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span className="text-gray-500 dark:text-gray-400">{topIndicators.bullish.ticker}</span>
+                        <span className="font-semibold">+{topIndicators.bullish.change.toFixed(1)}%</span>
+                      </button>
+                    )}
+                    {topIndicators.bearish && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const itemData = marketData[topIndicators.bearish!.symbol];
+                          const tfData = itemData?.timeframes?.day;
+                          setSelectedStock({
+                            symbol: topIndicators.bearish!.symbol,
+                            name: topIndicators.bearish!.ticker,
+                            price: tfData?.latest?.close ?? itemData?.price ?? 0,
+                            change: topIndicators.bearish!.change,
+                            valueChange: tfData?.latest?.value_change ?? itemData?.valueChange ?? 0,
+                            sparkline: tfData?.closes ?? itemData?.sparkline ?? [],
+                            timeframe: 'day',
+                            timeframes: itemData?.timeframes,
+                          });
+                        }}
+                        className="hidden sm:flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline transition-colors"
+                      >
+                        <TrendingDown className="w-3 h-3" />
+                        <span className="text-gray-500 dark:text-gray-400">{topIndicators.bearish.ticker}</span>
+                        <span className="font-semibold">{topIndicators.bearish.change.toFixed(1)}%</span>
+                      </button>
+                    )}
+                  </div>
+                )
               )}
             </div>
             {!isRearrangeMode && (
@@ -1597,6 +1640,9 @@ function WatchlistPageContent() {
                   assetClassOrder.map((classKey) => {
                     const classData = assetClasses[classKey];
                     const items = groupedPulse[classKey] || [];
+
+                    // Skip hidden asset classes
+                    if (hiddenAssetClasses.has(classKey)) return null;
 
                     // Only show sections that have items
                     if (items.length === 0) return null;
@@ -2645,7 +2691,7 @@ function WatchlistPageContent() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {/* Arrange */}
+              {/* Market Pulse Settings */}
               <button
                 className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded ? 'opacity-50' : ''}`}
                 onClick={() => {
@@ -2657,25 +2703,116 @@ function WatchlistPageContent() {
                 }}
               >
                 <h3 className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-purple-500" />
-                  Arrange Market Pulse Asset Classes
+                  <Activity className="w-4 h-4 text-green-500" />
+                  Market Pulse
                 </h3>
                 <ChevronDown className={`w-5 h-5 transition-transform ${section2Expanded ? 'rotate-180' : ''}`} />
               </button>
               {section2Expanded && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Arrange market indicators by asset class. On mobile devices, you can drag and drop asset class sections within the Market Pulse to reorder them.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setIsRearrangeMode(!isRearrangeMode);
-                      setIsDrawerOpen(false);
-                    }}
-                    className="px-4 py-2 bg-blue-500 text-white text-sm float-right rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    {isRearrangeMode ? 'Exit Re-arrange' : 'Re-arrange'}
-                  </button>
+                <div className="mt-3 space-y-4">
+                  {/* Arrange Asset Classes */}
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      Drag and drop to reorder asset class sections.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setIsRearrangeMode(!isRearrangeMode);
+                        setIsDrawerOpen(false);
+                      }}
+                      className="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors"
+                    >
+                      {isRearrangeMode ? 'Exit Re-arrange' : 'Re-arrange Asset Classes'}
+                    </button>
+                  </div>
+                  
+                  {/* Show/Hide Asset Classes */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Show/Hide Asset Classes</p>
+                    <div className="space-y-2">
+                      {Object.entries(assetClasses).map(([key, classData]) => {
+                        const isHidden = hiddenAssetClasses.has(key);
+                        return (
+                          <label key={key} className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!isHidden}
+                              onChange={() => {
+                                setHiddenAssetClasses(prev => {
+                                  const next = new Set(prev);
+                                  if (isHidden) {
+                                    next.delete(key);
+                                  } else {
+                                    next.add(key);
+                                  }
+                                  localStorage.setItem('marketPulseHiddenClasses', JSON.stringify([...next]));
+                                  return next;
+                                });
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <span>{classData.icon}</span>
+                              {classData.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Collapsed by Default */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Collapsed by Default</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Start with all asset classes collapsed</p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={assetClassesCollapsedByDefault}
+                        onClick={() => {
+                          const newValue = !assetClassesCollapsedByDefault;
+                          setAssetClassesCollapsedByDefault(newValue);
+                          localStorage.setItem('marketPulseCollapsedByDefault', String(newValue));
+                          // Apply immediately
+                          if (newValue) {
+                            setExpandedAssetClasses(new Set());
+                          } else {
+                            const keys = Object.keys(assetClasses);
+                            setExpandedAssetClasses(new Set(keys.length > 0 ? [keys[0]] : []));
+                          }
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${assetClassesCollapsedByDefault ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${assetClassesCollapsedByDefault ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </label>
+                  </div>
+                  
+                  {/* Show Top Indicators in Header */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Top Indicators in Header</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Show best/worst performers in the header</p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={showTopIndicatorsInHeader}
+                        onClick={() => {
+                          const newValue = !showTopIndicatorsInHeader;
+                          setShowTopIndicatorsInHeader(newValue);
+                          localStorage.setItem('marketPulseShowTopIndicators', String(newValue));
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showTopIndicatorsInHeader ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showTopIndicatorsInHeader ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </label>
+                  </div>
                 </div>
               )}
 
