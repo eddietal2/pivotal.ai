@@ -130,7 +130,18 @@ export default function LiveScreenDetailPage() {
       const saved = localStorage.getItem(SETTINGS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        // Merge with defaults, ensuring all indicator toggles default to true if not explicitly set
+        setSettings({ 
+          ...DEFAULT_SETTINGS, 
+          ...parsed,
+          // Ensure all indicator visibility defaults are true unless explicitly set to false
+          showMACD: parsed.showMACD !== false,
+          showRSI: parsed.showRSI !== false,
+          showStochastic: parsed.showStochastic !== false,
+          showBB: parsed.showBB !== false,
+          showVolume: parsed.showVolume !== false,
+          showMovingAverages: parsed.showMovingAverages !== false,
+        });
       }
     } catch (e) {
       console.error('Failed to load settings:', e);
@@ -786,7 +797,7 @@ export default function LiveScreenDetailPage() {
           onPeriodChange={handlePeriodChange}
           hidePeriodSelector={true}
           showMACD={settings.showMACD}
-          showRSI={settings.showRSI}
+          showRSI={true}
           showStochastic={settings.showStochastic}
           showBB={settings.showBB}
           showVolume={settings.showVolume}

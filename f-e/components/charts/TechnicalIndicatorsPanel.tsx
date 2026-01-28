@@ -704,6 +704,22 @@ export default function TechnicalIndicatorsPanel({
       {/* Indicator Cards */}
       {!error && (
         <div className="space-y-4">
+          {/* RSI - Placed first above MACD */}
+          {showRSI && (
+            <IndicatorCard
+              symbol={symbol}
+              indicator="RSI"
+              title="RSI (14)"
+              icon={<Gauge className="w-5 h-5" />}
+              iconColor="text-blue-500"
+              data={data}
+              isLoading={isLoading}
+              period={period}
+              interval={interval}
+              height={150}
+            />
+          )}
+
           {/* MACD */}
           {showMACD && (
             <IndicatorCard
@@ -717,22 +733,6 @@ export default function TechnicalIndicatorsPanel({
               period={period}
               interval={interval}
               height={150}
-            />
-          )}
-
-          {/* RSI */}
-          {showRSI && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="RSI"
-              title="RSI (14)"
-              icon={<Gauge className="w-5 h-5" />}
-              iconColor="text-blue-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={120}
             />
           )}
 
