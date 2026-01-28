@@ -356,6 +356,103 @@ def fetch_all_tickers_batch(tickers):
                 if ticker not in result:
                     result[ticker] = {'error': f'No data for {ticker}'}
     
+    # Fallback: Retry failed tickers individually using yf.Ticker()
+    failed_tickers = [t for t in yf_tickers if result.get(t, {}).get('error')]
+    if failed_tickers:
+        print(f"Retrying {len(failed_tickers)} failed tickers individually: {failed_tickers}")
+        for ticker in failed_tickers:
+            try:
+                yf_rate_limit_delay()
+                with yf_lock:
+                    old_stdout, old_stderr = sys.stdout, sys.stderr
+                    sys.stdout, sys.stderr = StringIO(), StringIO()
+                    try:
+                        t = yf.Ticker(ticker)
+                        hist = t.history(period='1y', interval='1d')
+                    finally:
+                        sys.stdout, sys.stderr = old_stdout, old_stderr
+                
+                if hist is not None and not hist.empty and 'Close' in hist.columns:
+                    hist = hist.dropna(subset=['Close'])
+                    if not hist.empty:
+                        closes = hist['Close'].tolist()
+                        latest_close = float(closes[-1])
+                        latest_datetime = hist.index[-1]
+                        latest_datetime_str = latest_datetime.strftime('%m/%d/%y') if hasattr(latest_datetime, 'strftime') else str(latest_datetime)[:10]
+                        
+                        # Get timezone info
+                        eastern = pytz.timezone('US/Eastern')
+                        now = pd.Timestamp.now(tz=eastern)
+                        market_open = pd.Timestamp(now.date(), tz=eastern).replace(hour=9, minute=30)
+                        market_close = pd.Timestamp(now.date(), tz=eastern).replace(hour=16, minute=0)
+                        is_after_hours = not (now.weekday() < 5 and market_open <= now <= market_close)
+                        
+                        timeframe_data = {}
+                        
+                        # Year
+                        year_closes = closes[-252:] if len(closes) >= 252 else closes
+                        year_change = round(((year_closes[-1] - year_closes[0]) / year_closes[0]) * 100, 2) if len(year_closes) >= 2 else 0
+                        year_value_change = round(year_closes[-1] - year_closes[0], 2) if len(year_closes) >= 2 else 0
+                        timeframe_data['year'] = {
+                            'closes': year_closes,
+                            'latest': {'datetime': latest_datetime_str, 'close': format_number_with_commas(latest_close), 'change': year_change, 'value_change': year_value_change, 'is_after_hours': is_after_hours}
+                        }
+                        
+                        # Month
+                        month_closes = closes[-21:] if len(closes) >= 21 else closes
+                        month_change = round(((month_closes[-1] - month_closes[0]) / month_closes[0]) * 100, 2) if len(month_closes) >= 2 else 0
+                        month_value_change = round(month_closes[-1] - month_closes[0], 2) if len(month_closes) >= 2 else 0
+                        timeframe_data['month'] = {
+                            'closes': month_closes,
+                            'latest': {'datetime': latest_datetime_str, 'close': format_number_with_commas(latest_close), 'change': month_change, 'value_change': month_value_change, 'is_after_hours': is_after_hours}
+                        }
+                        
+                        # Week
+                        week_closes = closes[-5:] if len(closes) >= 5 else closes
+                        week_change = round(((week_closes[-1] - week_closes[0]) / week_closes[0]) * 100, 2) if len(week_closes) >= 2 else 0
+                        week_value_change = round(week_closes[-1] - week_closes[0], 2) if len(week_closes) >= 2 else 0
+                        timeframe_data['week'] = {
+                            'closes': week_closes,
+                            'latest': {'datetime': latest_datetime_str, 'close': format_number_with_commas(latest_close), 'change': week_change, 'value_change': week_value_change, 'is_after_hours': is_after_hours}
+                        }
+                        
+                        # Day
+                        yesterday_close = closes[-2] if len(closes) >= 2 else closes[-1]
+                        day_change = round(((latest_close - yesterday_close) / yesterday_close) * 100, 2) if yesterday_close else 0
+                        day_value_change = round(latest_close - yesterday_close, 2) if yesterday_close else 0
+                        # For day sparkline, use last 5 daily closes if no intraday data available
+                        day_sparkline = intraday_data.get(ticker, closes[-5:] if len(closes) >= 5 else closes)
+                        
+                        # Debug: Print day calculation values
+                        print(f"[DEBUG {ticker}] Day calc: latest={latest_close}, yesterday={yesterday_close}, change={day_change}%, value_change={day_value_change}")
+                        
+                        timeframe_data['day'] = {
+                            'closes': day_sparkline,
+                            'latest': {'datetime': latest_datetime_str, 'close': format_number_with_commas(latest_close), 'change': day_change, 'value_change': day_value_change, 'is_after_hours': is_after_hours}
+                        }
+                        
+                        # Calculate RV
+                        rv = None
+                        rv_grade = None
+                        if 'Volume' in hist.columns:
+                            volumes = hist['Volume'].tolist()
+                            if len(volumes) >= 20:
+                                avg_vol = sum(volumes[-20:]) / 20
+                                last_vol = volumes[-1]
+                                if avg_vol > 0:
+                                    rv = round(last_vol / avg_vol, 2)
+                                    rv_grade = service.grade_rv(rv)
+                        
+                        result[ticker] = {
+                            'timeframes': timeframe_data,
+                            'rv': rv,
+                            'rv_grade': rv_grade
+                        }
+                        print(f"Successfully fetched {ticker} individually")
+            except Exception as e:
+                print(f"Individual fetch for {ticker} also failed: {e}")
+                # Keep the original error
+    
     # Handle FRED tickers (treasury yields) - these are fast
     for ticker in fred_tickers:
         try:

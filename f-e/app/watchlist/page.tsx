@@ -1132,7 +1132,7 @@ function WatchlistPageContent() {
               <span className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 relative bottom-6.5">
                 <CandleStickAnim />
               </span>
-              <h1 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
+              {/* <h1 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Watchlist</h1> */}
               {/* Market Status Pill - responsive: shows dot+time on mobile, full pill on desktop */}
               <MarketStatusIndicator variant="pill" showNextEvent={false} />
               {/* Top Market Indicators - hidden on very small screens */}
@@ -2025,6 +2025,19 @@ function WatchlistPageContent() {
                     const timeframeKey = selectedTimeframe as 'day' | 'week' | 'month' | 'year';
                     const tfData = itemData?.timeframes?.[timeframeKey];
                     
+                    // Debug: Log data for each watchlist item
+                    console.log(`[WATCHLIST DEBUG] ${item.symbol}:`, {
+                      hasItemData: !!itemData,
+                      hasTfData: !!tfData,
+                      timeframeKey,
+                      itemDataKeys: itemData ? Object.keys(itemData) : [],
+                      tfDataKeys: tfData ? Object.keys(tfData) : [],
+                      price: tfData?.latest?.close ?? itemData?.price,
+                      change: tfData?.latest?.change ?? itemData?.change,
+                      sparklineLength: (tfData?.closes ?? itemData?.sparkline ?? []).length,
+                      rawItemData: itemData,
+                    });
+                    
                     return (
                       <div key={`watchlist-${item.symbol}-${index}`} className="flex-shrink-0 w-full">
                         <WatchListItem
@@ -2180,15 +2193,15 @@ function WatchlistPageContent() {
               {/* Tab 3: My Screens */}
               <div className="w-full flex-shrink-0 px-4 sm:px-8">
 
-          {/* My Screens - hidden during rearrange mode */}
-          {!isRearrangeMode && (
-          <div id="my-screens" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
-            <div>
-              {/* Section Header - hidden when error */}
-              {!error && (
-                <>
-                  <div className="flex items-center justify-between py-4">
-                    <span className="flex items-center gap-2 text-lg font-semibold">
+                {/* My Screens - hidden during rearrange mode */}
+                {!isRearrangeMode && (
+                  <div id="my-screens" className="bg-white dark:bg-gray-900/20 backdrop-blur-md">
+                    <div>
+                      {/* Section Header - hidden when error */}
+                      {!error && (
+                        <>
+                          <div className="flex items-center justify-between py-4">
+                            <span className="flex items-center gap-2 text-lg font-semibold">
                       <TrendingUp className="w-5 h-5 text-purple-500" />
                       <span>My Screens</span>
                       {favorites.length > 0 && (
@@ -2196,25 +2209,24 @@ function WatchlistPageContent() {
                           {favorites.length}/{MAX_FAVORITES}
                         </span>
                       )}
-                    </span>
-                    <button
-                      type="button"
-                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                      title="Learn more about My Screens"
-                      aria-label="More info about My Screens"
-                      onClick={() => setIsMyScreensInfoOpen(true)}
-                    >
-                      <Info className="w-5 h-5 text-gray-400" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
-                  </p>
-                </>
-              )}
-              
-              {/* Error state for My Screens */}
-              {error ? (
+                            </span>
+                            <button
+                              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                              title="Learn more about My Screens"
+                              aria-label="More info about My Screens"
+                              onClick={() => setIsMyScreensInfoOpen(true)}
+                            >
+                              <Info className="w-5 h-5 text-gray-400" />
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Your top {MAX_FAVORITES} watchlist picks for advanced screening. Double-tap watchlist items to promote here.
+                          </p>
+                        </>
+                      )}
+
+                      {/* Error state for My Screens */}
+                      {error ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800/30">
                   <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
                     <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2250,7 +2262,7 @@ function WatchlistPageContent() {
                     ) : 'Try Again'}
                   </button>
                 </div>
-              ) : favorites.length === 0 ? (
+                      ) : favorites.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <TrendingUp className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -2295,7 +2307,7 @@ function WatchlistPageContent() {
                     </div>
                   )}
                 </div>
-              ) : (
+                      ) : (
                 <LiveScreen 
                   favorites={favorites}
                   isInWatchlist={isInWatchlist}
@@ -2334,10 +2346,10 @@ function WatchlistPageContent() {
                     });
                   }}
                 />
-              )}
-            </div>
-          </div>
-          )}
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               {/* End Tab 3: My Screens */}
 
