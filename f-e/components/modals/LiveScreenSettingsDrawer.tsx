@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Settings, X, Clock, BarChart3, Gauge, TrendingUp, Activity, Zap } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Settings, X, Clock, BarChart3, Gauge, TrendingUp, Activity, Zap, GripVertical, RotateCcw } from 'lucide-react';
 import { lockScroll, unlockScroll } from './scrollLock';
+import type { IndicatorKey } from '@/components/charts';
 
 // Toggle switch component - defined outside to prevent recreation on each render
 function ToggleSwitch({ checked, onChange, disabled = false }: { checked: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) {
@@ -46,6 +47,9 @@ interface LiveScreenSettingsDrawerProps {
   onShowVolumeChange?: (value: boolean) => void;
   showMovingAverages?: boolean;
   onShowMovingAveragesChange?: (value: boolean) => void;
+  // Indicator order
+  indicatorOrder?: IndicatorKey[];
+  onIndicatorOrderChange?: (order: IndicatorKey[]) => void;
 }
 
 export default function LiveScreenSettingsDrawer({ 
@@ -67,6 +71,8 @@ export default function LiveScreenSettingsDrawer({
   onShowVolumeChange,
   showMovingAverages: showMovingAveragesProp = true,
   onShowMovingAveragesChange,
+  indicatorOrder: indicatorOrderProp = ['RSI', 'MACD', 'STOCH', 'BB', 'VOL'],
+  onIndicatorOrderChange,
 }: LiveScreenSettingsDrawerProps) {
   const [rendered, setRendered] = useState(isOpen);
   const [closing, setClosing] = useState(false);
@@ -82,6 +88,9 @@ export default function LiveScreenSettingsDrawer({
   const [showBB, setShowBB] = useState(showBBProp);
   const [showVolume, setShowVolume] = useState(showVolumeProp);
   const [showMovingAverages, setShowMovingAverages] = useState(showMovingAveragesProp);
+  const [indicatorOrder, setIndicatorOrder] = useState<IndicatorKey[]>(indicatorOrderProp);
+  const [draggedItem, setDraggedItem] = useState<IndicatorKey | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<IndicatorKey | null>(null);
 
   // Sync internal state with props when they change (controlled component support)
   useEffect(() => { setAutoRefresh(autoRefreshProp); }, [autoRefreshProp]);
@@ -92,6 +101,7 @@ export default function LiveScreenSettingsDrawer({
   useEffect(() => { setShowBB(showBBProp); }, [showBBProp]);
   useEffect(() => { setShowVolume(showVolumeProp); }, [showVolumeProp]);
   useEffect(() => { setShowMovingAverages(showMovingAveragesProp); }, [showMovingAveragesProp]);
+  useEffect(() => { setIndicatorOrder(indicatorOrderProp); }, [indicatorOrderProp]);
 
   // Handlers that update internal state and call external callbacks
   const handleAutoRefreshChange = (value: boolean) => {
@@ -126,6 +136,50 @@ export default function LiveScreenSettingsDrawer({
     setShowMovingAverages(value);
     onShowMovingAveragesChange?.(value);
   };
+
+  // Drag and drop handlers for reordering indicators
+  const handleDragStart = useCallback((key: IndicatorKey) => {
+    setDraggedItem(key);
+  }, []);
+
+  const handleDragOver = useCallback((key: IndicatorKey) => {
+    if (draggedItem && draggedItem !== key) {
+      setDragOverItem(key);
+    }
+  }, [draggedItem]);
+
+  const handleDragEnd = useCallback(() => {
+    if (draggedItem && dragOverItem && draggedItem !== dragOverItem) {
+      const newOrder = [...indicatorOrder];
+      const draggedIdx = newOrder.indexOf(draggedItem);
+      const targetIdx = newOrder.indexOf(dragOverItem);
+      newOrder.splice(draggedIdx, 1);
+      newOrder.splice(targetIdx, 0, draggedItem);
+      setIndicatorOrder(newOrder);
+      onIndicatorOrderChange?.(newOrder);
+    }
+    setDraggedItem(null);
+    setDragOverItem(null);
+  }, [draggedItem, dragOverItem, indicatorOrder, onIndicatorOrderChange]);
+
+  const handleResetOrder = useCallback(() => {
+    const defaultOrder: IndicatorKey[] = ['RSI', 'MACD', 'STOCH', 'BB', 'VOL'];
+    setIndicatorOrder(defaultOrder);
+    onIndicatorOrderChange?.(defaultOrder);
+  }, [onIndicatorOrderChange]);
+
+  // Move indicator up/down with buttons (for accessibility)
+  const moveIndicator = useCallback((key: IndicatorKey, direction: 'up' | 'down') => {
+    const newOrder = [...indicatorOrder];
+    const idx = newOrder.indexOf(key);
+    if (direction === 'up' && idx > 0) {
+      [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+    } else if (direction === 'down' && idx < newOrder.length - 1) {
+      [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+    }
+    setIndicatorOrder(newOrder);
+    onIndicatorOrderChange?.(newOrder);
+  }, [indicatorOrder, onIndicatorOrderChange]);
 
   useEffect(() => {
     if (isOpen) {
@@ -170,14 +224,19 @@ export default function LiveScreenSettingsDrawer({
 
   if (!rendered) return null;
 
-  const indicators = [
-    { key: 'macd', label: 'MACD', icon: BarChart3, color: 'text-purple-500', checked: showMACD, onChange: handleShowMACDChange },
-    { key: 'rsi', label: 'RSI', icon: Gauge, color: 'text-blue-500', checked: showRSI, onChange: handleShowRSIChange },
-    { key: 'stoch', label: 'Stochastic', icon: TrendingUp, color: 'text-green-500', checked: showStochastic, onChange: handleShowStochasticChange },
-    { key: 'bb', label: 'Bollinger Bands', icon: Activity, color: 'text-cyan-500', checked: showBB, onChange: handleShowBBChange },
-    { key: 'ma', label: 'Moving Averages', icon: TrendingUp, color: 'text-emerald-500', checked: showMovingAverages, onChange: handleShowMovingAveragesChange },
-    { key: 'vol', label: 'Volume', icon: BarChart3, color: 'text-orange-500', checked: showVolume, onChange: handleShowVolumeChange },
-  ];
+  const indicatorConfig: Record<IndicatorKey, { label: string; icon: typeof BarChart3; color: string; checked: boolean; onChange: (v: boolean) => void }> = {
+    MACD: { label: 'MACD', icon: BarChart3, color: 'text-purple-500', checked: showMACD, onChange: handleShowMACDChange },
+    RSI: { label: 'RSI', icon: Gauge, color: 'text-blue-500', checked: showRSI, onChange: handleShowRSIChange },
+    STOCH: { label: 'Stochastic', icon: TrendingUp, color: 'text-green-500', checked: showStochastic, onChange: handleShowStochasticChange },
+    BB: { label: 'Bollinger Bands', icon: Activity, color: 'text-cyan-500', checked: showBB, onChange: handleShowBBChange },
+    VOL: { label: 'Volume', icon: BarChart3, color: 'text-orange-500', checked: showVolume, onChange: handleShowVolumeChange },
+  };
+
+  // Build indicators list in the current order
+  const indicators = indicatorOrder.map(key => ({
+    key,
+    ...indicatorConfig[key],
+  }));
 
   const refreshOptions = [15, 30, 60, 120];
 
@@ -290,18 +349,40 @@ export default function LiveScreenSettingsDrawer({
 
           {/* Indicators Section */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 px-1">
-              Visible Indicators
-            </h3>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Indicators (Drag to Reorder)
+              </h3>
+              <button
+                onClick={handleResetOrder}
+                className="flex items-center gap-1 text-xs text-purple-500 hover:text-purple-600 transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            </div>
             <div className="space-y-2">
-              {indicators.map((indicator) => {
+              {indicators.map((indicator, index) => {
                 const Icon = indicator.icon;
+                const isDragging = draggedItem === indicator.key;
+                const isDragOver = dragOverItem === indicator.key;
                 return (
                   <div 
                     key={indicator.key}
-                    className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50"
+                    draggable
+                    onDragStart={() => handleDragStart(indicator.key)}
+                    onDragOver={(e) => { e.preventDefault(); handleDragOver(indicator.key); }}
+                    onDragEnd={handleDragEnd}
+                    onDrop={handleDragEnd}
+                    className={`flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 cursor-grab active:cursor-grabbing transition-all ${
+                      isDragging ? 'opacity-50 scale-95' : ''
+                    } ${isDragOver ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900' : ''}`}
                   >
                     <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs text-gray-400 font-mono w-4">{index + 1}</span>
+                      </div>
                       <div className={`p-2 rounded-lg ${
                         indicator.checked 
                           ? 'bg-opacity-20 dark:bg-opacity-30' 
@@ -313,10 +394,53 @@ export default function LiveScreenSettingsDrawer({
                         {indicator.label}
                       </span>
                     </div>
-                    <ToggleSwitch checked={indicator.checked} onChange={indicator.onChange} />
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => moveIndicator(indicator.key, 'up')}
+                          disabled={index === 0}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+                          aria-label="Move up"
+                        >
+                          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => moveIndicator(indicator.key, 'down')}
+                          disabled={index === indicators.length - 1}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+                          aria-label="Move down"
+                        >
+                          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
+                      <ToggleSwitch checked={indicator.checked} onChange={indicator.onChange} />
+                    </div>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Moving Averages (separate, not reorderable) */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    showMovingAverages 
+                      ? 'bg-emerald-500/20' 
+                      : 'bg-gray-200 dark:bg-gray-700'
+                  }`}>
+                    <TrendingUp className={`w-5 h-5 ${showMovingAverages ? 'text-emerald-500' : 'text-gray-400'}`} />
+                  </div>
+                  <span className={`font-medium ${showMovingAverages ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                    Moving Averages
+                  </span>
+                </div>
+                <ToggleSwitch checked={showMovingAverages} onChange={handleShowMovingAveragesChange} />
+              </div>
             </div>
           </div>
 

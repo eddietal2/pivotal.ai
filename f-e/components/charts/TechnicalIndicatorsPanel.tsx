@@ -538,6 +538,9 @@ export interface ExtendedIndicatorData extends IndicatorData {
   };
 }
 
+// Indicator key type for ordering
+export type IndicatorKey = 'RSI' | 'MACD' | 'STOCH' | 'BB' | 'VOL';
+
 interface TechnicalIndicatorsPanelProps {
   symbol: string;
   className?: string;
@@ -553,6 +556,8 @@ interface TechnicalIndicatorsPanelProps {
   showVolume?: boolean;
   // Hide the period selector when controlled externally
   hidePeriodSelector?: boolean;
+  // Custom indicator order
+  indicatorOrder?: IndicatorKey[];
 }
 
 export default function TechnicalIndicatorsPanel({ 
@@ -567,6 +572,7 @@ export default function TechnicalIndicatorsPanel({
   showBB = true,
   showVolume = true,
   hidePeriodSelector = false,
+  indicatorOrder = ['RSI', 'MACD', 'STOCH', 'BB', 'VOL'],
 }: TechnicalIndicatorsPanelProps) {
   // Use external period if provided, otherwise internal state
   const [internalPeriod, setInternalPeriod] = useState<PeriodType>('1D');
@@ -704,85 +710,72 @@ export default function TechnicalIndicatorsPanel({
       {/* Indicator Cards */}
       {!error && (
         <div className="space-y-4">
-          {/* RSI - Placed first above MACD */}
-          {showRSI && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="RSI"
-              title="RSI (14)"
-              icon={<Gauge className="w-5 h-5" />}
-              iconColor="text-blue-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={150}
-            />
-          )}
+          {/* Render indicators in custom order */}
+          {indicatorOrder.map((indicatorKey) => {
+            // Check visibility for each indicator
+            const indicatorConfig: Record<IndicatorKey, { 
+              show: boolean; 
+              title: string; 
+              icon: JSX.Element; 
+              iconColor: string; 
+              height: number; 
+            }> = {
+              RSI: {
+                show: showRSI,
+                title: "RSI (14)",
+                icon: <Gauge className="w-5 h-5" />,
+                iconColor: "text-blue-500",
+                height: 150,
+              },
+              MACD: {
+                show: showMACD,
+                title: "MACD (12, 26, 9)",
+                icon: <BarChart3 className="w-5 h-5" />,
+                iconColor: "text-purple-500",
+                height: 150,
+              },
+              STOCH: {
+                show: showStochastic,
+                title: "Stochastic (14, 3)",
+                icon: <TrendingUp className="w-5 h-5" />,
+                iconColor: "text-green-500",
+                height: 130,
+              },
+              BB: {
+                show: showBB,
+                title: "Bollinger Bands (20, 2)",
+                icon: <Activity className="w-5 h-5" />,
+                iconColor: "text-cyan-500",
+                height: 130,
+              },
+              VOL: {
+                show: showVolume,
+                title: "Volume Analysis",
+                icon: <BarChart className="w-5 h-5" />,
+                iconColor: "text-orange-500",
+                height: 120,
+              },
+            };
 
-          {/* MACD */}
-          {showMACD && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="MACD"
-              title="MACD (12, 26, 9)"
-              icon={<BarChart3 className="w-5 h-5" />}
-              iconColor="text-purple-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={150}
-            />
-          )}
+            const config = indicatorConfig[indicatorKey];
+            if (!config.show) return null;
 
-          {/* Stochastic */}
-          {showStochastic && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="STOCH"
-              title="Stochastic (14, 3)"
-              icon={<TrendingUp className="w-5 h-5" />}
-              iconColor="text-green-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={130}
-            />
-          )}
-
-          {/* Bollinger Bands */}
-          {showBB && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="BB"
-              title="Bollinger Bands (20, 2)"
-              icon={<Activity className="w-5 h-5" />}
-              iconColor="text-cyan-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={130}
-            />
-          )}
-
-          {/* Volume Analysis */}
-          {showVolume && (
-            <IndicatorCard
-              symbol={symbol}
-              indicator="VOL"
-              title="Volume Analysis"
-              icon={<BarChart className="w-5 h-5" />}
-              iconColor="text-orange-500"
-              data={data}
-              isLoading={isLoading}
-              period={period}
-              interval={interval}
-              height={120}
-            />
-          )}
+            return (
+              <IndicatorCard
+                key={indicatorKey}
+                symbol={symbol}
+                indicator={indicatorKey}
+                title={config.title}
+                icon={config.icon}
+                iconColor={config.iconColor}
+                data={data}
+                isLoading={isLoading}
+                period={period}
+                interval={interval}
+                height={config.height}
+              />
+            );
+          })}
 
           {/* No indicators selected message */}
           {!showMACD && !showRSI && !showStochastic && !showBB && !showVolume && (

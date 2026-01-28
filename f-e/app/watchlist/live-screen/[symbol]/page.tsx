@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart, CandlestickChart } from 'lucide-react';
-import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
+import { TechnicalIndicatorsPanel, type ExtendedIndicatorData, type IndicatorKey } from '@/components/charts';
 import type { PeriodType } from '@/components/charts/TimeframeSelector';
 import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
 import LiveScreenSettingsDrawer from '@/components/modals/LiveScreenSettingsDrawer';
@@ -31,6 +31,7 @@ interface LiveScreenSettings {
   showBB: boolean;
   showVolume: boolean;
   showMovingAverages: boolean;
+  indicatorOrder: IndicatorKey[];
 }
 
 const DEFAULT_SETTINGS: LiveScreenSettings = {
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: LiveScreenSettings = {
   showBB: true,
   showVolume: true,
   showMovingAverages: true,
+  indicatorOrder: ['RSI', 'MACD', 'STOCH', 'BB', 'VOL'],
 };
 
 const SETTINGS_KEY = 'livescreen_settings';
@@ -199,6 +201,11 @@ export default function LiveScreenDetailPage() {
   const handleShowMovingAveragesChange = (value: boolean) => {
     setSettings(prev => ({ ...prev, showMovingAverages: value }));
     showToast(value ? 'Moving Averages enabled' : 'Moving Averages hidden', 'info', 1500);
+  };
+
+  const handleIndicatorOrderChange = (order: IndicatorKey[]) => {
+    setSettings(prev => ({ ...prev, indicatorOrder: order }));
+    showToast('Indicator order updated', 'info', 1500);
   };
 
   // Callback to receive data from TechnicalIndicatorsPanel (avoids duplicate API calls)
@@ -801,6 +808,7 @@ export default function LiveScreenDetailPage() {
           showStochastic={settings.showStochastic}
           showBB={settings.showBB}
           showVolume={settings.showVolume}
+          indicatorOrder={settings.indicatorOrder}
         />
 
         {/* Moving Averages Section */}
@@ -969,6 +977,15 @@ export default function LiveScreenDetailPage() {
 
       </div>
 
+      {/* Floating Settings Button */}
+      <button
+        onClick={() => setIsSettingsOpen(true)}
+        className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-purple-500 hover:bg-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center group"
+        title="Live Screen Settings"
+      >
+        <Settings className="w-6 h-6 transition-transform group-hover:rotate-45" />
+      </button>
+
       {/* Fixed floating close button */}
       <button
         onClick={() => router.push('/watchlist')}
@@ -1004,6 +1021,8 @@ export default function LiveScreenDetailPage() {
         onShowVolumeChange={handleShowVolumeChange}
         showMovingAverages={settings.showMovingAverages}
         onShowMovingAveragesChange={handleShowMovingAveragesChange}
+        indicatorOrder={settings.indicatorOrder}
+        onIndicatorOrderChange={handleIndicatorOrderChange}
       />
     </div>
   );
