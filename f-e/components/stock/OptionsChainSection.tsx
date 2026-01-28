@@ -352,15 +352,15 @@ export default function OptionsChainSection({
                   {(() => {
                     const filteredCalls = chainData.calls
                       .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15)
-                      .sort((a, b) => b.strike - a.strike); // Descending: OTM (high strikes) at top, ITM at bottom
+                      .sort((a, b) => a.strike - b.strike);
                     
                     // Find where to insert the current price marker
                     let priceMarkerInserted = false;
                     const elements: React.ReactNode[] = [];
                     
                     filteredCalls.forEach((contract, index) => {
-                      // Insert price marker before the first ITM call (strike < currentPrice) since we're sorted descending
-                      if (!priceMarkerInserted && contract.strike < currentPrice) {
+                      // Insert price marker before the first OTM call (strike > currentPrice)
+                      if (!priceMarkerInserted && contract.strike > currentPrice) {
                         elements.push(
                           <div key="price-marker-calls" className="flex items-center gap-2 py-2 my-1">
                             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-yellow-500 to-yellow-500"></div>
@@ -466,7 +466,7 @@ export default function OptionsChainSection({
                   {(() => {
                     const filteredPuts = chainData.puts
                       .filter(c => Math.abs(c.strike - currentPrice) / currentPrice < 0.15)
-                      .sort((a, b) => a.strike - b.strike); // Ascending: OTM (low strikes) at top, ITM at bottom
+                      .sort((a, b) => a.strike - b.strike);
                     
                     // Find where to insert the current price marker
                     let priceMarkerInserted = false;

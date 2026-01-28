@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, FileText, DollarSign, ZoomIn, ZoomOut, RotateCcw, Loader2 } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, ChevronRight, FileText, DollarSign, ZoomIn, ZoomOut, RotateCcw, Loader2 } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
 import { usePivyChat } from '@/components/context/PivyChatContext';
 import { usePaperTrading } from '@/components/context/PaperTradingContext';
@@ -207,6 +207,24 @@ export default function StockPreviewModal({
     sparkline: number[];
     loading: boolean;
   }>({ sparkline: [], loading: false });
+  
+  // State for My Screens indicator data (shown when stock is in favorites)
+  const [indicatorData, setIndicatorData] = React.useState<{
+    signal?: 'BUY' | 'SELL' | 'HOLD';
+    score?: number;
+    confidence?: number;
+    rsi?: number;
+    rsiStatus?: 'overbought' | 'oversold' | 'neutral';
+    trend?: 'bullish' | 'bearish' | 'neutral';
+    macdHistogram?: number[];
+    loading: boolean;
+    error?: string;
+  }>({ loading: false });
+  
+  // Ref for MiniTrendPulse animation
+  const trendPulseRef = React.useRef<HTMLCanvasElement>(null);
+  const animationRef = React.useRef<number | null>(null);
+  const offsetRef = React.useRef(0);
   
   // Chart scrubbing state (Robinhood-style touch interaction)
   const [isScrubbing, setIsScrubbing] = React.useState(false);
@@ -504,6 +522,153 @@ export default function StockPreviewModal({
       controller.abort();
     };
   }, [isOpen, symbol, selectedPeriod, selectedInterval]);
+
+  // Fetch indicator data when stock is in favorites (My Screens)
+  React.useEffect(() => {
+    if (!isOpen || !symbol || !isFavorite(symbol)) {
+      setIndicatorData({ loading: false });
+      return;
+    }
+
+    const controller = new AbortController();
+    setIndicatorData(prev => ({ ...prev, loading: true, error: undefined }));
+
+    const fetchIndicators = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+        const response = await fetch(
+          `${apiUrl}/api/market-data/indicators/${encodeURIComponent(symbol)}/?period=1D&interval=15m&indicator=ALL`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch indicators');
+        }
+
+        const data = await response.json();
+        
+        const rsiCurrent = data.rsi?.current;
+        const overallSignal = data.overallSignal;
+        const macdHistogram = data.macd?.histogram || [];
+        
+        // Determine RSI status
+        let rsiStatus: 'overbought' | 'oversold' | 'neutral' = 'neutral';
+        if (rsiCurrent >= 70) rsiStatus = 'overbought';
+        else if (rsiCurrent <= 30) rsiStatus = 'oversold';
+
+        // Determine trend from MACD histogram
+        let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        if (macdHistogram.length > 0) {
+          const lastHist = macdHistogram[macdHistogram.length - 1];
+          trend = lastHist > 0 ? 'bullish' : lastHist < 0 ? 'bearish' : 'neutral';
+        }
+
+        setIndicatorData({
+          signal: overallSignal?.signal as 'BUY' | 'SELL' | 'HOLD' | undefined,
+          score: overallSignal?.score,
+          confidence: overallSignal ? Math.round(Math.abs(overallSignal.score) * 100) : undefined,
+          rsi: rsiCurrent,
+          rsiStatus,
+          trend,
+          macdHistogram,
+          loading: false,
+        });
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        setIndicatorData({ loading: false, error: 'Failed to load' });
+      }
+    };
+
+    fetchIndicators();
+
+    return () => controller.abort();
+  }, [isOpen, symbol, isFavorite]);
+
+  // MiniTrendPulse animation effect for My Screens indicator
+  React.useEffect(() => {
+    const canvas = trendPulseRef.current;
+    const dataPoints = indicatorData.macdHistogram;
+    const trend = indicatorData.trend || 'neutral';
+    
+    if (!canvas || !dataPoints || dataPoints.length < 2) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = 48;
+    const height = 20;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const getColor = () => {
+      if (trend === 'bullish') return { main: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' };
+      if (trend === 'bearish') return { main: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' };
+      return { main: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' };
+    };
+
+    const colors = getColor();
+    const padding = 2;
+    const chartHeight = height - padding * 2;
+    
+    // Normalize data
+    const minVal = Math.min(...dataPoints);
+    const maxVal = Math.max(...dataPoints);
+    const range = maxVal - minVal || 1;
+    const normalizedPoints = dataPoints.map(v => 
+      padding + chartHeight - ((v - minVal) / range) * chartHeight
+    );
+
+    const pointsToShow = Math.min(15, normalizedPoints.length);
+    const scrollSpeed = 0.8;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+      
+      ctx.beginPath();
+      ctx.strokeStyle = colors.main;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const pointSpacing = width / (pointsToShow - 1);
+      let lastY = height / 2;
+      
+      for (let i = 0; i < pointsToShow; i++) {
+        const dataOffset = Math.floor(offsetRef.current / 3);
+        const dataIndex = (dataOffset + i) % normalizedPoints.length;
+        const y = normalizedPoints[dataIndex];
+        const x = i * pointSpacing;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        
+        if (i === pointsToShow - 1) lastY = y;
+      }
+      ctx.stroke();
+
+      // Glowing dot at end
+      const pulseSize = 2.5 + Math.sin(offsetRef.current * 0.15) * 1;
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, pulseSize, 0, Math.PI * 2);
+      ctx.fillStyle = colors.glow;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(width - 2, lastY, pulseSize * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = colors.main;
+      ctx.fill();
+
+      offsetRef.current += scrollSpeed;
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    animationRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [indicatorData.macdHistogram, indicatorData.trend]);
 
   // Use fetched timeframes if props don't have valid data
   const hasValidPropsTimeframes = timeframes && 
@@ -1140,39 +1305,111 @@ export default function StockPreviewModal({
             </button>
           </div>
 
-          {/* Quick Actions - Pivy Chat & Full View */}
-          <div className="flex gap-2">
+          {/* My Screens - Shows when stock is in favorites, links to live-screen page */}
+          {isFavorite(symbol) && (
             <button
-              onClick={handleTogglePivyChat}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                isInChat
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700'
-                  : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700'
-              }`}
+              onClick={() => {
+                handleClose();
+                setTimeout(() => {
+                  router.push(`/watchlist/live-screen/${encodeURIComponent(symbol)}`);
+                }, 280);
+              }}
+              className="w-full bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-3 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-md transition-all text-left"
             >
-              {isInChat ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span className="hidden xs:inline">In Pivy Chat</span>
-                  <span className="xs:hidden">Added</span>
-                </>
-              ) : (
-                <>
-                  <MessageSquarePlus className="w-4 h-4" />
-                  <span className="hidden xs:inline">Add to Pivy</span>
-                  <span className="xs:hidden">Pivy</span>
-                </>
-              )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Star className="w-3.5 h-3.5 text-purple-500 fill-purple-500" />
+                  </div>
+                  <span className="text-xs font-medium text-purple-600 dark:text-purple-400">My Screens</span>
+                </div>
+                
+                {indicatorData.loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-purple-300 border-t-transparent animate-spin" />
+                    <span className="text-xs text-gray-500">Loading...</span>
+                  </div>
+                ) : indicatorData.error ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{indicatorData.error}</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    {/* Animated MiniTrendPulse Visualizer */}
+                    {indicatorData.macdHistogram && indicatorData.macdHistogram.length > 0 && (
+                      <canvas
+                        ref={trendPulseRef}
+                        width={48}
+                        height={20}
+                        style={{ width: 48, height: 20 }}
+                        className="rounded"
+                      />
+                    )}
+                    
+                    {/* Signal Badge */}
+                    {indicatorData.signal && (
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${
+                        indicatorData.signal === 'BUY' 
+                          ? 'bg-emerald-500/10 border border-emerald-500/30' 
+                          : indicatorData.signal === 'SELL' 
+                            ? 'bg-red-500/10 border border-red-500/30' 
+                            : 'bg-yellow-500/10 border border-yellow-500/30'
+                      }`}>
+                        <span className={`text-xs font-bold ${
+                          indicatorData.signal === 'BUY' 
+                            ? 'text-emerald-500' 
+                            : indicatorData.signal === 'SELL' 
+                              ? 'text-red-500' 
+                              : 'text-yellow-600 dark:text-yellow-400'
+                        }`}>
+                          {indicatorData.signal}
+                        </span>
+                        {indicatorData.confidence != null && (
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                            {indicatorData.confidence}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* RSI Indicator */}
+                    {indicatorData.rsi != null && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">RSI</span>
+                        <span className={`text-xs font-semibold ${
+                          indicatorData.rsiStatus === 'overbought' 
+                            ? 'text-red-500' 
+                            : indicatorData.rsiStatus === 'oversold' 
+                              ? 'text-emerald-500' 
+                              : 'text-gray-600 dark:text-gray-300'
+                        }`}>
+                          {indicatorData.rsi.toFixed(0)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Trend Arrow */}
+                    {indicatorData.trend && indicatorData.trend !== 'neutral' && (
+                      <div className={`${
+                        indicatorData.trend === 'bullish' 
+                          ? 'text-emerald-500' 
+                          : 'text-red-500'
+                      }`}>
+                        {indicatorData.trend === 'bullish' ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : (
+                          <TrendingDown className="w-4 h-4" />
+                        )}
+                      </div>
+                    )}
+                    
+                    <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  </div>
+                )}
+              </div>
             </button>
-            <button
-              onClick={handleOpenFullView}
-              className="flex-1 py-2 text-sm font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 rounded-lg transition-all flex items-center justify-center gap-1.5"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span className="hidden xs:inline">Full View</span>
-              <span className="xs:hidden">View</span>
-            </button>
-          </div>
+          )}
 
           {/* Brief Description */}
           {assetDescriptions[symbol] && (
@@ -1438,10 +1675,37 @@ export default function StockPreviewModal({
         </div>
 
         {/* Actions - fixed at bottom */}
-        <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3 flex-shrink-0">
+          <button
+            onClick={handleTogglePivyChat}
+            className={`w-full py-3 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+              isInChat
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+            }`}
+          >
+            {isInChat ? (
+              <>
+                <Check className="w-5 h-5" />
+                Added to Today&apos;s Pivy Chat
+              </>
+            ) : (
+              <>
+                <MessageSquarePlus className="w-5 h-5" />
+                Add to Today&apos;s Pivy Chat
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleOpenFullView}
+            className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-2 border-blue-200 dark:border-blue-700 font-semibold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
+          >
+            <ExternalLink className="w-5 h-5" />
+            Open Full View
+          </button>
           <button
             onClick={handleClose}
-            className="w-full py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             Close
           </button>
