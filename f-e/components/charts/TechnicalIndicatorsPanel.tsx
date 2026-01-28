@@ -542,26 +542,45 @@ interface TechnicalIndicatorsPanelProps {
   symbol: string;
   className?: string;
   onDataLoaded?: (data: ExtendedIndicatorData | null, isLoading: boolean) => void;
+  // External period control - when provided, syncs with parent chart
+  externalPeriod?: PeriodType;
+  onPeriodChange?: (period: PeriodType) => void;
   // Visibility settings
   showMACD?: boolean;
   showRSI?: boolean;
   showStochastic?: boolean;
   showBB?: boolean;
   showVolume?: boolean;
+  // Hide the period selector when controlled externally
+  hidePeriodSelector?: boolean;
 }
 
 export default function TechnicalIndicatorsPanel({ 
   symbol, 
   className = '', 
   onDataLoaded,
+  externalPeriod,
+  onPeriodChange: externalPeriodChange,
   showMACD = true,
   showRSI = true,
   showStochastic = true,
   showBB = true,
   showVolume = true,
+  hidePeriodSelector = false,
 }: TechnicalIndicatorsPanelProps) {
-  const [period, setPeriod] = useState<PeriodType>('1D');
+  // Use external period if provided, otherwise internal state
+  const [internalPeriod, setInternalPeriod] = useState<PeriodType>('1D');
+  const period = externalPeriod ?? internalPeriod;
   const [interval, setInterval] = useState<IntervalType>('15m');
+  
+  // Sync internal period when external changes
+  useEffect(() => {
+    if (externalPeriod && externalPeriod !== internalPeriod) {
+      setInternalPeriod(externalPeriod);
+      // Update interval to match period
+      setInterval(getDefaultInterval(externalPeriod));
+    }
+  }, [externalPeriod, internalPeriod]);
   const [data, setData] = useState<ExtendedIndicatorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -617,10 +636,12 @@ export default function TechnicalIndicatorsPanel({
 
   const handlePeriodChange = useCallback((newPeriod: PeriodType) => {
     if (newPeriod !== period) {
-      setPeriod(newPeriod);
+      setInternalPeriod(newPeriod);
+      // Notify parent if callback provided
+      externalPeriodChange?.(newPeriod);
       // Interval will be auto-corrected by TimeframeSelector
     }
-  }, [period]);
+  }, [period, externalPeriodChange]);
 
   const handleIntervalChange = useCallback((newInterval: IntervalType) => {
     if (newInterval !== interval) {
@@ -648,15 +669,17 @@ export default function TechnicalIndicatorsPanel({
         </button>
       </div>
 
-      {/* Timeframe Selector */}
-      <TimeframeSelector
-        selectedPeriod={period}
-        selectedInterval={interval}
-        onPeriodChange={handlePeriodChange}
-        onIntervalChange={handleIntervalChange}
-        disabled={isLoading}
-        compact={false}
-      />
+      {/* Timeframe Selector - hidden when controlled externally */}
+      {!hidePeriodSelector && (
+        <TimeframeSelector
+          selectedPeriod={period}
+          selectedInterval={interval}
+          onPeriodChange={handlePeriodChange}
+          onIntervalChange={handleIntervalChange}
+          disabled={isLoading}
+          compact={false}
+        />
+      )}
 
       {/* Last Updated */}
       {lastUpdated && !isLoading && (

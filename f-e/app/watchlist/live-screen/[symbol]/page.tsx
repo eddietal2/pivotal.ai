@@ -4,12 +4,14 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart, CandlestickChart } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData } from '@/components/charts';
+import type { PeriodType } from '@/components/charts/TimeframeSelector';
 import IndicatorInfoModal from '@/components/modals/IndicatorInfoModal';
 import LiveScreenSettingsDrawer from '@/components/modals/LiveScreenSettingsDrawer';
 import { useToast } from '@/components/context/ToastContext';
 import { getPricePrefix, getPriceSuffix } from '@/lib/priceUtils';
 
-type ChartPeriod = '1D' | '1W' | '1M' | '1Y';
+// Use PeriodType from TimeframeSelector for consistency
+type ChartPeriod = PeriodType;
 
 interface ChartDataState {
   sparkline: number[];
@@ -780,6 +782,9 @@ export default function LiveScreenDetailPage() {
         <TechnicalIndicatorsPanel 
           symbol={decodedSymbol} 
           onDataLoaded={handleIndicatorDataLoaded}
+          externalPeriod={chartPeriod}
+          onPeriodChange={handlePeriodChange}
+          hidePeriodSelector={true}
           showMACD={settings.showMACD}
           showRSI={settings.showRSI}
           showStochastic={settings.showStochastic}
