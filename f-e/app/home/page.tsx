@@ -18,7 +18,6 @@ import { MarketPulseSkeleton, MarketOverviewSkeleton, SignalFeedSkeleton, Discla
 import Link from 'next/link';
 import CandleStickAnim from '@/components/ui/CandleStickAnim';
 import PivyChatCard from '@/components/home/PivyChatCard';
-import LiveSetupScansSection from '@/components/home/LiveSetupScansSection';
 import DisclaimersSection from '@/components/home/DisclaimersSection';
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import StockPreviewModal from '@/components/stock/StockPreviewModal';
@@ -63,42 +62,6 @@ const tickerMapping: Record<string, string> = {
   'CALL/PUT Ratio': 'CPC=F', // Placeholder
   'AAII Retailer Investor Sentiment': 'AAII', // Placeholder
 };
-
-// Mock data for the Real-time Confluence Feed (The most important component)
-const mockSignals = [
-  {
-    ticker: 'TSLA',
-    signal: 'Strong Bullish Entry',
-    confluence: ['MACD Crossover', 'RSI below 30 (Oversold)', 'High Volume Spike'],
-    timeframe: '4H',
-    change: '+3.45%',
-    type: 'Bullish',
-  },
-  {
-    ticker: 'NVDA',
-    signal: 'Confirmed Bearish Reversal',
-    confluence: ['RSI above 70 (Overbought)', 'MACD Bearish Cross', 'Declining Volume'],
-    timeframe: '1D',
-    change: '-1.89%',
-    type: 'Bearish',
-  },
-  {
-    ticker: 'GOOGL',
-    signal: 'Momentum Breakout Alert',
-    confluence: ['Volume 2x 20-Day Avg', 'Price action above resistance'],
-    timeframe: '1H',
-    change: '+1.12%',
-    type: 'Bullish',
-  },
-  {
-    ticker: 'AAPL',
-    signal: 'Consolidation Watch',
-    confluence: ['RSI Neutral (50)', 'MACD Flat'],
-    timeframe: '30M',
-    change: '-0.21%',
-    type: 'Neutral',
-  },
-];
 
 
 
@@ -155,8 +118,6 @@ export default function App() {
       window.localStorage.setItem('pulse_view_mode', pulseViewMode);
     } catch (err) { /* ignore */ }
   }, [pulseViewMode]);
-  // Timeframe filter for Live Setup Scans (D, W, M, Y)
-  const [signalTimeframe, setSignalTimeframe] = React.useState<'D'|'W'|'M'|'Y'>('D');
   // Default expansion for Market Pulse is always true; removed UI toggle
   // Instead of inline alerts, disclaimers live in a collapsible section at the bottom
   // Loading state for skeletons
@@ -469,9 +430,6 @@ export default function App() {
   };
 
 
-  // Filter signals by chosen timeframe
-  const filteredSignals = React.useMemo(() => mockSignals.filter((s) => normalizeTimeframe(s.timeframe) === signalTimeframe), [signalTimeframe]);
-
   return (
     <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900/20 dark:text-white font-sans">
 
@@ -515,6 +473,101 @@ export default function App() {
               Learn more about Pivy Chat →
             </Link>
           </div>
+
+          {/* Top Market Indicator at the Moment */}
+          {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : topIndicatorsError ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-red-200 dark:border-red-800/30">
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{topIndicatorsError}</p>
+                {retryCount > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Retrying... (attempt {retryCount}/10)
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    retryCountRef.current = 0;
+                    setRetryCount(0);
+                    fetchMarketData();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  disabled={topIndicatorsLoading}
+                >
+                  {topIndicatorsLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Retrying...
+                    </>
+                  ) : 'Try Again'}
+                </button>
+              </div>
+            </div>
+          ) : (topBullish || topBearish) && (
+            <CollapsibleSection
+              title={
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-500" />
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">Today's Top Market Indicators</span>
+                </div>
+              }
+              defaultOpen={true}
+              borderBottom={false}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
+                <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">An AI generated impression of these two together</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {topBullish && (
+                  <button
+                    onClick={() => openPreviewModal(topBullish.symbol, topBullish.ticker)}
+                    className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors text-left w-full"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full">
+                      <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-white">{topBullish.ticker}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBullish.symbol}</div>
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        +{topBullish.change?.toFixed(2)}%
+                      </div>
+                    </div>
+                  </button>
+                )}
+                {topBearish && (
+                  <button
+                    onClick={() => openPreviewModal(topBearish.symbol, topBearish.ticker)}
+                    className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-left w-full"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-800 rounded-full">
+                      <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 rotate-180" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-white">{topBearish.ticker}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBearish.symbol}</div>
+                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                        {topBearish.change?.toFixed(2)}%
+                      </div>
+                    </div>
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 text-center">
+                  <Link href="/watchlist" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
+                    View all market indicators →
+                  </Link>
+                </div>
+              </div>
+            </CollapsibleSection>
+          )}
 
           {/* Paper Trading Holdings - Only shown when enabled */}
           {isPaperTradingEnabled && (
@@ -646,111 +699,6 @@ export default function App() {
               </div>
             </CollapsibleSection>
           )}
-
-          {/* Top Market Indicator at the Moment */}
-          {topIndicatorsLoading ? <TopIndicatorsSkeleton /> : topIndicatorsError ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl mt-4 p-6 shadow-sm dark:shadow-lg border border-red-200 dark:border-red-800/30">
-              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                <div className="w-12 h-12 text-red-400 mb-4 flex items-center justify-center">
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to Load Market Data</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">{topIndicatorsError}</p>
-                {retryCount > 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Retrying... (attempt {retryCount}/10)
-                  </p>
-                )}
-                <button
-                  onClick={() => {
-                    retryCountRef.current = 0;
-                    setRetryCount(0);
-                    fetchMarketData();
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                  disabled={topIndicatorsLoading}
-                >
-                  {topIndicatorsLoading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                      </svg>
-                      Retrying...
-                    </>
-                  ) : 'Try Again'}
-                </button>
-              </div>
-            </div>
-          ) : (topBullish || topBearish) && (
-            <CollapsibleSection
-              title={
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-500" />
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">Today's Top Market Indicators</span>
-                </div>
-              }
-              defaultOpen={true}
-              borderBottom={false}
-            >
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700">
-                <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">An AI generated impression of these two together</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {topBullish && (
-                  <button
-                    onClick={() => openPreviewModal(topBullish.symbol, topBullish.ticker)}
-                    className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors text-left w-full"
-                  >
-                    <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full">
-                      <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-white">{topBullish.ticker}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBullish.symbol}</div>
-                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                        +{topBullish.change?.toFixed(2)}%
-                      </div>
-                    </div>
-                  </button>
-                )}
-                {topBearish && (
-                  <button
-                    onClick={() => openPreviewModal(topBearish.symbol, topBearish.ticker)}
-                    className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-left w-full"
-                  >
-                    <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-800 rounded-full">
-                      <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 rotate-180" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-white">{topBearish.ticker}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{topBearish.symbol}</div>
-                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                        {topBearish.change?.toFixed(2)}%
-                      </div>
-                    </div>
-                  </button>
-                )}
-              </div>
-              <div className="mt-4 text-center">
-                  <Link href="/watchlist" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium">
-                    View all market indicators →
-                  </Link>
-                </div>
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Real-time Confluence Feed */}
-          <LiveSetupScansSection
-            isLoading={isLoading}
-            filteredSignals={filteredSignals}
-            signalTimeframe={signalTimeframe}
-            setSignalTimeframe={setSignalTimeframe}
-            signalFeedInfoOpen={signalFeedInfoOpen}
-            setSignalFeedInfoOpen={setSignalFeedInfoOpen}
-          />
 
           {/* Market Pulse Info Modal (refactored to InfoModal) */}
           {/* Unified Info Modal: includes both Market Pulse details and Market Overview details */}
