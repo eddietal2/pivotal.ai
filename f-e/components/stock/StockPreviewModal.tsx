@@ -1140,6 +1140,40 @@ export default function StockPreviewModal({
             </button>
           </div>
 
+          {/* Quick Actions - Pivy Chat & Full View */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleTogglePivyChat}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                isInChat
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700'
+                  : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700'
+              }`}
+            >
+              {isInChat ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span className="hidden xs:inline">In Pivy Chat</span>
+                  <span className="xs:hidden">Added</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquarePlus className="w-4 h-4" />
+                  <span className="hidden xs:inline">Add to Pivy</span>
+                  <span className="xs:hidden">Pivy</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleOpenFullView}
+              className="flex-1 py-2 text-sm font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 rounded-lg transition-all flex items-center justify-center gap-1.5"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden xs:inline">Full View</span>
+              <span className="xs:hidden">View</span>
+            </button>
+          </div>
+
           {/* Brief Description */}
           {assetDescriptions[symbol] && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 space-y-2">
@@ -1404,37 +1438,10 @@ export default function StockPreviewModal({
         </div>
 
         {/* Actions - fixed at bottom */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3 flex-shrink-0">
-          <button
-            onClick={handleTogglePivyChat}
-            className={`w-full py-3 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-              isInChat
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-            }`}
-          >
-            {isInChat ? (
-              <>
-                <Check className="w-5 h-5" />
-                Added to Today&apos;s Pivy Chat
-              </>
-            ) : (
-              <>
-                <MessageSquarePlus className="w-5 h-5" />
-                Add to Today&apos;s Pivy Chat
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleOpenFullView}
-            className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-2 border-blue-200 dark:border-blue-700 font-semibold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
-          >
-            <ExternalLink className="w-5 h-5" />
-            Open Full View
-          </button>
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <button
             onClick={handleClose}
-            className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="w-full py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             Close
           </button>
