@@ -186,8 +186,8 @@ def calculate_volume_analysis(df):
     current_volume = volume.iloc[-1]
     avg_vol = avg_volume_20.iloc[-1]
     
-    # Volume ratio
-    volume_ratio = (current_volume / avg_vol * 100) if avg_vol > 0 else 100
+    # Volume ratio (as a multiplier, e.g., 1.5 = 1.5x average)
+    volume_ratio = (current_volume / avg_vol) if avg_vol > 0 else 1.0
     
     # Price-Volume trend (simple)
     price_change = close.pct_change()
@@ -204,12 +204,13 @@ def calculate_volume_analysis(df):
                 volume_trend.append('neutral')
     
     return {
-        'volume': [int(v) if not pd.isna(v) else 0 for v in volume.tolist()],
+        'volumes': [int(v) if not pd.isna(v) else 0 for v in volume.tolist()],
+        'avgVolume': int(avg_vol) if not pd.isna(avg_vol) else 0,
         'avgVolume20': [round(v, 0) if not pd.isna(v) else 0 for v in avg_volume_20.tolist()],
         'current': {
             'volume': int(current_volume) if not pd.isna(current_volume) else 0,
             'avgVolume': int(avg_vol) if not pd.isna(avg_vol) else 0,
-            'ratio': round(volume_ratio, 1) if not pd.isna(volume_ratio) else 100,
+            'ratio': round(volume_ratio, 2) if not pd.isna(volume_ratio) else 1.0,
         },
         'trend': volume_trend[-1] if volume_trend else 'neutral',
     }
