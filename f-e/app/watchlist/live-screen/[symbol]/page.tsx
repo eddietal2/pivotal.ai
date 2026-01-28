@@ -109,6 +109,15 @@ export default function LiveScreenDetailPage() {
   const chartRef = useRef<HTMLDivElement>(null);
   const lastFetchedPeriod = useRef<ChartPeriod | null>(null);
   
+  // Historical signals for chart markers (BUY/SELL/HOLD change points)
+  const [historicalSignals, setHistoricalSignals] = useState<Array<{
+    timestamp: number;
+    price: number;
+    signal: 'BUY' | 'SELL' | 'HOLD';
+    rsi: number;
+    score: number;
+  }>>([]);
+  
   // Settings state - initialized from localStorage
   const [settings, setSettings] = useState<LiveScreenSettings>(DEFAULT_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -266,6 +275,46 @@ export default function LiveScreenDetailPage() {
   useEffect(() => {
     fetchChartData(chartPeriod);
   }, [chartPeriod, fetchChartData]);
+
+  // Fetch historical signals when period changes
+  useEffect(() => {
+    if (!decodedSymbol) {
+      setHistoricalSignals([]);
+      return;
+    }
+    
+    const controller = new AbortController();
+    
+    const fetchHistoricalSignals = async () => {
+      try {
+        const periodToTimeframe: Record<ChartPeriod, string> = {
+          '1D': 'day',
+          '1W': 'week',
+          '1M': 'month',
+          '1Y': 'year',
+        };
+        const tf = periodToTimeframe[chartPeriod] || 'day';
+        
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/historical-signals/?symbol=${encodeURIComponent(decodedSymbol)}&timeframe=${tf}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setHistoricalSignals(data.signals || []);
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        console.error('Error fetching historical signals:', error);
+        setHistoricalSignals([]);
+      }
+    };
+    
+    fetchHistoricalSignals();
+    
+    return () => controller.abort();
+  }, [decodedSymbol, chartPeriod]);
 
   // Handle period change
   const handlePeriodChange = (period: ChartPeriod) => {
@@ -561,6 +610,48 @@ export default function LiveScreenDetailPage() {
                   ))}
                   <polygon fill="url(#liveChartGradient)" points={fillPoints} />
                   <polyline fill="none" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" points={points} />
+                  {/* Historical signal markers (BUY/SELL/HOLD change points) */}
+                  {historicalSignals.length > 0 && (() => {
+                    const markers: JSX.Element[] = [];
+                    const chartLength = data.length;
+                    
+                    historicalSignals.forEach((signal, idx) => {
+                      // Distribute signals across chart proportionally based on their order
+                      const signalIndex = Math.floor((idx / Math.max(historicalSignals.length - 1, 1)) * (chartLength - 1));
+                      const clampedIndex = Math.min(Math.max(signalIndex, 0), chartLength - 1);
+                      
+                      const x = (clampedIndex / (chartLength - 1)) * 100;
+                      const y = 100 - ((data[clampedIndex] - paddedMin) / paddedRange) * 100;
+                      
+                      let color = '#a855f7'; // HOLD - purple
+                      let bgColor = 'rgba(168, 85, 247, 0.25)';
+                      
+                      if (signal.signal === 'BUY') {
+                        color = '#06b6d4'; // cyan - visible on green charts
+                        bgColor = 'rgba(6, 182, 212, 0.25)';
+                      } else if (signal.signal === 'SELL') {
+                        color = '#f97316'; // orange - visible on red charts
+                        bgColor = 'rgba(249, 115, 22, 0.25)';
+                      }
+                      
+                      markers.push(
+                        <g key={`signal-${idx}`}>
+                          <circle cx={x} cy={signal.signal === 'SELL' ? y - 4 : y + 4} r="2.5" fill={bgColor} />
+                          {signal.signal === 'BUY' && (
+                            <path d={`M${x},${y + 6} L${x - 1.5},${y + 3} L${x + 1.5},${y + 3} Z`} fill={color} />
+                          )}
+                          {signal.signal === 'SELL' && (
+                            <path d={`M${x},${y - 6} L${x - 1.5},${y - 3} L${x + 1.5},${y - 3} Z`} fill={color} />
+                          )}
+                          {signal.signal === 'HOLD' && (
+                            <circle cx={x} cy={y + 4} r="1.2" fill={color} />
+                          )}
+                        </g>
+                      );
+                    });
+                    
+                    return markers;
+                  })()}
                   {isScrubbing && scrubX !== null && scrubY !== null && (
                     <>
                       <line x1={scrubX} y1="0" x2={scrubX} y2="100" stroke="#6b7280" strokeWidth="0.3" strokeDasharray="1.5,1.5" />
@@ -593,6 +684,26 @@ export default function LiveScreenDetailPage() {
               </button>
             ))}
           </div>
+
+          {/* Signal markers legend */}
+          {historicalSignals.length > 0 && chartMode === 'line' && (
+            <div className="flex items-center justify-center gap-4 text-[10px] text-gray-500 dark:text-gray-400 pt-2">
+              <div className="flex items-center gap-1">
+                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-cyan-500" style={{ transform: 'rotate(180deg)' }} />
+                <span>BUY</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-orange-500" />
+                <span>SELL</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span>HOLD</span>
+              </div>
+              <span className="text-gray-400">|</span>
+              <span>{historicalSignals.length} signal{historicalSignals.length !== 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
 
         {/* Overall Signal Card */}

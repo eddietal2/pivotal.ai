@@ -491,3 +491,37 @@ def live_screens(request):
         response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
         response['Access-Control-Allow-Credentials'] = 'true'
         return response
+
+
+@require_http_methods(["GET", "OPTIONS"])
+def historical_signals(request):
+    """
+    Get historical BUY/SELL/HOLD signal change points for a ticker.
+    Query params:
+      - symbol: ticker symbol (required)
+      - timeframe: 'day', 'week', 'month', 'year' (default: 'day')
+    """
+    if request.method == 'OPTIONS':
+        response = JsonResponse({})
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    symbol = request.GET.get('symbol', '').upper()
+    timeframe = request.GET.get('timeframe', 'day')
+    
+    if not symbol:
+        response = JsonResponse({'error': 'Symbol is required', 'signals': []}, status=400)
+        response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+    
+    from .services import get_historical_signals
+    result = get_historical_signals(symbol, timeframe)
+    
+    response = JsonResponse(result)
+    response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+    response['Access-Control-Allow-Credentials'] = 'true'
+    return response

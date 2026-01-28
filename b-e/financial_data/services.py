@@ -2159,5 +2159,183 @@ class LiveScreensService:
 import pandas as pd
 
 
+def get_historical_signals(ticker: str, timeframe: str = 'day', lookback_days: int = 365) -> dict:
+    """
+    Calculate historical BUY/SELL/HOLD signals for a ticker.
+    Returns timestamps and price levels where signal changes occurred.
+    """
+    import numpy as np
+    import yfinance as yf
+    from datetime import datetime, timedelta
+    
+    try:
+        # Determine period based on timeframe
+        if timeframe == 'day':
+            period = '6mo'
+            interval = '1d'
+        elif timeframe == 'week':
+            period = '2y'
+            interval = '1wk'
+        elif timeframe == 'month':
+            period = '5y'
+            interval = '1mo'
+        elif timeframe == 'year':
+            period = '10y'
+            interval = '1mo'
+        else:
+            period = '6mo'
+            interval = '1d'
+        
+        stock = yf.Ticker(ticker)
+        df = stock.history(period=period, interval=interval)
+        
+        if df.empty or len(df) < 20:
+            return {'signals': [], 'error': None}
+        
+        # Calculate technical indicators for signal generation
+        closes = df['Close'].values
+        highs = df['High'].values
+        lows = df['Low'].values
+        volumes = df['Volume'].values
+        
+        # RSI calculation
+        def calculate_rsi(prices, period=14):
+            deltas = np.diff(prices)
+            gains = np.where(deltas > 0, deltas, 0)
+            losses = np.where(deltas < 0, -deltas, 0)
+            
+            rsi = np.zeros(len(prices))
+            if len(gains) < period:
+                return rsi
+            
+            avg_gain = np.zeros(len(prices))
+            avg_loss = np.zeros(len(prices))
+            
+            # Initial SMA
+            avg_gain[period] = np.mean(gains[:period])
+            avg_loss[period] = np.mean(losses[:period])
+            
+            # EMA for subsequent values
+            for i in range(period + 1, len(prices)):
+                avg_gain[i] = (avg_gain[i-1] * (period - 1) + gains[i-1]) / period
+                avg_loss[i] = (avg_loss[i-1] * (period - 1) + losses[i-1]) / period
+            
+            rs = np.where(avg_loss != 0, avg_gain / avg_loss, 0)
+            rsi = 100 - (100 / (1 + rs))
+            return rsi
+        
+        # MACD calculation
+        def calculate_ema(prices, period):
+            if len(prices) < period:
+                return np.zeros(len(prices))
+            ema = np.zeros(len(prices))
+            multiplier = 2 / (period + 1)
+            ema[period-1] = np.mean(prices[:period])
+            for i in range(period, len(prices)):
+                ema[i] = (prices[i] - ema[i-1]) * multiplier + ema[i-1]
+            return ema
+        
+        ema12 = calculate_ema(closes, 12)
+        ema26 = calculate_ema(closes, 26)
+        macd_line = ema12 - ema26
+        
+        # Signal line - EMA of MACD
+        signal_line_full = np.zeros(len(closes))
+        if len(macd_line) > 35:
+            signal_line = calculate_ema(macd_line[26:], 9)
+            signal_line_full[26+8:] = signal_line[8:]
+        
+        rsi = calculate_rsi(closes)
+        
+        # SMA for trend
+        sma20 = np.zeros(len(closes))
+        sma50 = np.zeros(len(closes))
+        
+        if len(closes) >= 20:
+            sma20_data = np.convolve(closes, np.ones(20)/20, mode='valid')
+            sma20[19:] = sma20_data
+        
+        if len(closes) >= 50:
+            sma50_data = np.convolve(closes, np.ones(50)/50, mode='valid')
+            sma50[49:] = sma50_data
+        
+        # Generate signals based on multiple factors
+        signals = []
+        prev_signal = None
+        start_index = max(50, 35)  # Start after all indicators are valid
+        
+        for i in range(start_index, len(closes)):
+            timestamp = int(df.index[i].timestamp() * 1000)
+            price = float(closes[i])
+            
+            # Calculate signal score
+            score = 0
+            
+            # RSI signals
+            if rsi[i] < 30:
+                score += 2  # Oversold - bullish
+            elif rsi[i] > 70:
+                score -= 2  # Overbought - bearish
+            elif rsi[i] < 40:
+                score += 1
+            elif rsi[i] > 60:
+                score -= 1
+            
+            # MACD signals
+            if macd_line[i] > signal_line_full[i]:
+                score += 1
+            else:
+                score -= 1
+            
+            # MACD histogram momentum
+            macd_hist = macd_line[i] - signal_line_full[i]
+            prev_macd_hist = macd_line[i-1] - signal_line_full[i-1] if i > 0 else 0
+            if macd_hist > prev_macd_hist:
+                score += 1
+            else:
+                score -= 1
+            
+            # Price vs SMA trend
+            if sma20[i] > 0 and sma50[i] > 0:
+                if closes[i] > sma20[i] and sma20[i] > sma50[i]:
+                    score += 2  # Strong uptrend
+                elif closes[i] < sma20[i] and sma20[i] < sma50[i]:
+                    score -= 2  # Strong downtrend
+                elif closes[i] > sma20[i]:
+                    score += 1
+                elif closes[i] < sma20[i]:
+                    score -= 1
+            
+            # Determine signal
+            if score >= 3:
+                current_signal = 'BUY'
+            elif score <= -3:
+                current_signal = 'SELL'
+            else:
+                current_signal = 'HOLD'
+            
+            # Only record when signal changes
+            if current_signal != prev_signal:
+                signals.append({
+                    'timestamp': timestamp,
+                    'price': price,
+                    'signal': current_signal,
+                    'rsi': float(rsi[i]) if not np.isnan(rsi[i]) else 50,
+                    'score': score
+                })
+                prev_signal = current_signal
+        
+        return {
+            'signals': signals,
+            'error': None
+        }
+        
+    except Exception as e:
+        print(f"Error calculating historical signals for {ticker}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {'signals': [], 'error': str(e)}
+
+
 if __name__ == '__main__':
     main()

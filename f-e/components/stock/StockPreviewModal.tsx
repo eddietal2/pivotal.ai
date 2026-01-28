@@ -226,6 +226,15 @@ export default function StockPreviewModal({
   const animationRef = React.useRef<number | null>(null);
   const offsetRef = React.useRef(0);
   
+  // Historical signals for chart markers (BUY/SELL/HOLD change points)
+  const [historicalSignals, setHistoricalSignals] = React.useState<Array<{
+    timestamp: number;
+    price: number;
+    signal: 'BUY' | 'SELL' | 'HOLD';
+    rsi: number;
+    score: number;
+  }>>([]);
+  
   // Chart scrubbing state (Robinhood-style touch interaction)
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [scrubIndex, setScrubIndex] = React.useState<number | null>(null);
@@ -583,6 +592,46 @@ export default function StockPreviewModal({
 
     return () => controller.abort();
   }, [isOpen, symbol, isFavorite]);
+
+  // Fetch historical signals for chart markers
+  React.useEffect(() => {
+    if (!isOpen || !symbol) {
+      setHistoricalSignals([]);
+      return;
+    }
+    
+    const controller = new AbortController();
+    
+    const fetchHistoricalSignals = async () => {
+      try {
+        const timeframeMap: Record<string, string> = {
+          'day': 'day',
+          'week': 'week', 
+          'month': 'month',
+          'year': 'year',
+        };
+        const tf = timeframeMap[selectedTimeframe] || 'day';
+        
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/market-data/historical-signals/?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setHistoricalSignals(data.signals || []);
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        console.error('Error fetching historical signals:', error);
+        setHistoricalSignals([]);
+      }
+    };
+    
+    fetchHistoricalSignals();
+    
+    return () => controller.abort();
+  }, [isOpen, symbol, selectedTimeframe]);
 
   // MiniTrendPulse animation effect for My Screens indicator
   React.useEffect(() => {
@@ -1067,6 +1116,71 @@ export default function StockPreviewModal({
                 strokeLinejoin="round"
                 points={points}
               />
+              {/* Historical signal markers (BUY/SELL/HOLD change points) */}
+              {historicalSignals.length > 0 && (() => {
+                // Calculate approximate index positions for signal timestamps
+                // Signals are chronologically distributed across the chart data
+                const chartLength = chartData.length;
+                const markers: JSX.Element[] = [];
+                
+                historicalSignals.forEach((signal, idx) => {
+                  // Estimate position: distribute signals across chart proportionally
+                  // Since chartData is sampled, we approximate positions based on signal order
+                  const signalIndex = Math.floor((idx / Math.max(historicalSignals.length - 1, 1)) * (chartLength - 1));
+                  const clampedIndex = Math.min(Math.max(signalIndex, 0), chartLength - 1);
+                  
+                  const x = (clampedIndex / (chartLength - 1)) * 100;
+                  const y = 100 - ((chartData[clampedIndex] - paddedMin) / paddedRange) * 100;
+                  
+                  // Marker colors and shapes
+                  let color = '#a855f7'; // HOLD - purple
+                  let bgColor = 'rgba(168, 85, 247, 0.25)';
+                  
+                  if (signal.signal === 'BUY') {
+                    color = '#06b6d4'; // cyan - visible on green charts
+                    bgColor = 'rgba(6, 182, 212, 0.25)';
+                  } else if (signal.signal === 'SELL') {
+                    color = '#f97316'; // orange - visible on red charts
+                    bgColor = 'rgba(249, 115, 22, 0.25)';
+                  }
+                  
+                  // Signal marker
+                  markers.push(
+                    <g key={`signal-${idx}`}>
+                      {/* Background circle */}
+                      <circle
+                        cx={x}
+                        cy={signal.signal === 'SELL' ? y - 4 : y + 4}
+                        r="2.5"
+                        fill={bgColor}
+                      />
+                      {/* Arrow or dot */}
+                      {signal.signal === 'BUY' && (
+                        <path
+                          d={`M${x},${y + 6} L${x - 1.5},${y + 3} L${x + 1.5},${y + 3} Z`}
+                          fill={color}
+                        />
+                      )}
+                      {signal.signal === 'SELL' && (
+                        <path
+                          d={`M${x},${y - 6} L${x - 1.5},${y - 3} L${x + 1.5},${y - 3} Z`}
+                          fill={color}
+                        />
+                      )}
+                      {signal.signal === 'HOLD' && (
+                        <circle
+                          cx={x}
+                          cy={y + 4}
+                          r="1.2"
+                          fill={color}
+                        />
+                      )}
+                    </g>
+                  );
+                });
+                
+                return markers;
+              })()}
               {/* Scrub indicator - crosshair lines and dot */}
               {isScrubbing && scrubX !== null && scrubY !== null && (
                 <>
@@ -1304,6 +1418,26 @@ export default function StockPreviewModal({
               {chartMode === 'line' ? <BarChart2 className="w-4 h-4" /> : <LineChart className="w-4 h-4" />}
             </button>
           </div>
+
+          {/* Signal markers legend - show when we have historical signals */}
+          {historicalSignals.length > 0 && chartMode === 'line' && (
+            <div className="flex items-center justify-center gap-4 text-[10px] text-gray-500 dark:text-gray-400 py-1">
+              <div className="flex items-center gap-1">
+                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-cyan-500" style={{ transform: 'rotate(180deg)' }} />
+                <span>BUY</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-orange-500" />
+                <span>SELL</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span>HOLD</span>
+              </div>
+              <span className="text-gray-400">|</span>
+              <span>{historicalSignals.length} signal{historicalSignals.length !== 1 ? 's' : ''}</span>
+            </div>
+          )}
 
           {/* My Screens - Shows when stock is in favorites, links to live-screen page */}
           {isFavorite(symbol) && (
