@@ -38,6 +38,62 @@ def options_response():
     return response
 
 
+@csrf_exempt
+@require_http_methods(["POST", "OPTIONS"])
+def reset_account_view(request):
+    """
+    POST: Reset paper trading account - close all positions and reset balance
+    Accepts optional 'starting_balance' in request body (default: $100,000)
+    """
+    if request.method == 'OPTIONS':
+        return options_response()
+    
+    user = get_user_from_request(request)
+    if not user:
+        return cors_response({'error': 'Authentication required'}, status=401)
+    
+    try:
+        account = PaperTradingAccount.objects.get(user=user)
+    except PaperTradingAccount.DoesNotExist:
+        return cors_response({'error': 'No paper trading account found'}, status=404)
+    
+    # Parse starting balance from request body
+    starting_balance = Decimal('100000.00')  # Default
+    try:
+        data = json.loads(request.body) if request.body else {}
+        if 'starting_balance' in data:
+            balance_value = Decimal(str(data['starting_balance']))
+            # Validate range: $1,000 to $10,000,000
+            if Decimal('1000') <= balance_value <= Decimal('10000000'):
+                starting_balance = balance_value
+    except (json.JSONDecodeError, InvalidOperation):
+        pass  # Use default if parsing fails
+    
+    # Delete all stock positions
+    account.positions.all().delete()
+    
+    # Delete all option positions
+    account.option_positions.all().delete()
+    
+    # Reset balance to specified starting value
+    account.balance = starting_balance
+    account.initial_balance = starting_balance
+    account.save()
+    
+    return cors_response({
+        'success': True,
+        'message': 'Account reset successfully',
+        'account': {
+            'id': account.id,
+            'balance': str(account.balance),
+            'initial_balance': str(account.initial_balance),
+            'total_value': str(account.total_value),
+            'total_pl': str(account.total_pl),
+            'total_pl_percent': str(account.total_pl_percent),
+        }
+    })
+
+
 def get_user_from_request(request):
     """Extract user from request (using email from cookie or header)"""
     # Try to get user email from cookie first

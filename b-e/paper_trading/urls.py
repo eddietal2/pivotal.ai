@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Stock Trading
     path('account/', views.account_view, name='paper_account'),
+    path('account/reset/', views.reset_account_view, name='paper_account_reset'),
     path('positions/', views.positions_view, name='paper_positions'),
     path('positions/update-prices/', views.update_positions_prices, name='update_positions_prices'),
     path('trades/', views.trades_view, name='paper_trades'),

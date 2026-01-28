@@ -11,7 +11,7 @@ import LiveScreen from '../../components/watchlist/LiveScreen';
 import QuickActionMenu from '../../components/watchlist/QuickActionMenu';
 import InfoModal from '../../components/modals/InfoModal';
 import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
-import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText, RefreshCw, Database } from 'lucide-react';
+import { Info, LineChart, ChevronDown, ChevronRight, Settings, Star, Search, X, Activity, TrendingUp, TrendingDown, Zap, Clock, Layers, FileText, RefreshCw, Database, Receipt, AlertTriangle } from 'lucide-react';
 import { useFavorites, MAX_FAVORITES } from '@/components/context/FavoritesContext';
 import { useWatchlist, MAX_WATCHLIST } from '@/components/context/WatchlistContext';
 import { useToast } from '@/components/context/ToastContext';
@@ -32,7 +32,7 @@ function WatchlistPageContent() {
   const { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite } = useFavorites();
   const { watchlist, addToWatchlist, removeFromWatchlist, isInWatchlist, toggleWatchlist, reorderWatchlist } = useWatchlist();
   const { showToast } = useToast();
-  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, positions: paperTradingPositions, optionPositions: paperTradingOptionPositions, isLoading: isPaperTradingLoading, hasPosition } = usePaperTrading();
+  const { isEnabled: isPaperTradingEnabled, toggleEnabled: togglePaperTrading, account: paperTradingAccount, positions: paperTradingPositions, optionPositions: paperTradingOptionPositions, isLoading: isPaperTradingLoading, hasPosition, refreshAccount } = usePaperTrading();
   const searchParams = useSearchParams();
   const [pulseTimeframe, setPulseTimeframe] = useState<'D'|'W'|'M'|'Y'>('D');
   
@@ -289,6 +289,51 @@ function WatchlistPageContent() {
       return saved !== 'false'; // Default true
     }
     return true;
+  });
+  
+  // Paper Trading Settings
+  const [paperTradingSettingsExpanded, setPaperTradingSettingsExpanded] = useState(false);
+  
+  // P/L Display Format: '$' | '%' | 'both'
+  const [plDisplayFormat, setPlDisplayFormat] = useState<'$' | '%' | 'both'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('paperTradingPlFormat');
+      if (saved === '$' || saved === '%' || saved === 'both') return saved;
+    }
+    return 'both'; // Default: show both
+  });
+  
+  // Default Order Type: 'market' | 'limit'
+  const [defaultOrderType, setDefaultOrderType] = useState<'market' | 'limit'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('paperTradingOrderType');
+      if (saved === 'market' || saved === 'limit') return saved;
+    }
+    return 'market'; // Default: market orders
+  });
+  
+  // Confirm Before Trades
+  const [confirmBeforeTrades, setConfirmBeforeTrades] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('paperTradingConfirmTrades');
+      return saved !== 'false'; // Default true
+    }
+    return true;
+  });
+  
+  // Reset Account confirmation modal
+  const [showResetAccountModal, setShowResetAccountModal] = useState(false);
+  
+  // Starting Cash Balance for Paper Trading
+  const [startingCashBalance, setStartingCashBalance] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('paperTradingStartingBalance');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 1000 && parsed <= 10000000) return parsed;
+      }
+    }
+    return 100000; // Default: $100,000
   });
   
   // Track selected Live Screen IDs (individual screens)
@@ -2621,6 +2666,48 @@ function WatchlistPageContent() {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Reset Account Section */}
+                      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Reset Account</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Start fresh with a new balance</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 mb-3 flex-wrap">
+                          {[
+                            { value: 1000, label: '$1K' },
+                            { value: 10000, label: '$10K' },
+                            { value: 100000, label: '$100K' },
+                            { value: 500000, label: '$500K' },
+                            { value: 1000000, label: '$1M' },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setStartingCashBalance(option.value);
+                                localStorage.setItem('paperTradingStartingBalance', String(option.value));
+                              }}
+                              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                                startingCashBalance === option.value
+                                  ? 'bg-orange-500 text-white border-orange-500'
+                                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowResetAccountModal(true)}
+                          className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          Reset to ${startingCashBalance.toLocaleString()}
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -2630,14 +2717,45 @@ function WatchlistPageContent() {
                 </div>
               ) : (
                 /* Disabled State - Show Empty State */
-                <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                     Enable Paper Trading
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">
-                    Toggle the switch above to start paper trading with $100,000 in virtual funds.
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm mb-4">
+                    Toggle the switch above to start paper trading with virtual funds.
                   </p>
+                  
+                  {/* Starting Balance Selector */}
+                  <div className="w-full max-w-xs mb-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">Starting Balance</p>
+                    <div className="flex gap-1.5 justify-center flex-wrap">
+                      {[
+                        { value: 1000, label: '$1K' },
+                        { value: 10000, label: '$10K' },
+                        { value: 100000, label: '$100K' },
+                        { value: 500000, label: '$500K' },
+                        { value: 1000000, label: '$1M' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setStartingCashBalance(option.value);
+                            localStorage.setItem('paperTradingStartingBalance', String(option.value));
+                          }}
+                          className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                            startingCashBalance === option.value
+                              ? 'bg-orange-500 text-white border-orange-500'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
                   <div className="flex flex-col sm:flex-row items-center gap-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <span className="w-2 h-2 bg-orange-500 rounded-full" />
@@ -2675,25 +2793,26 @@ function WatchlistPageContent() {
         onClick={() => setIsDrawerOpen(false)}
       >
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/20 backdrop-blur-lg shadow-lg z-[100] transform transition-transform max-h-[80vh] ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/20 backdrop-blur-lg shadow-lg z-[100] transform transition-transform max-h-[80vh] flex flex-col ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <LineChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <h2 className="text-lg font-semibold">Manage Watchlist</h2>
-              <button 
-                onClick={() => setIsDrawerOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
+          {/* Header - fixed */}
+          <div className="flex-shrink-0 flex justify-between items-center p-4 border-b">
+            <LineChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <h2 className="text-lg font-semibold">Manage Watchlist</h2>
+            <button 
+              onClick={() => setIsDrawerOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* Market Pulse Settings */}
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            {/* Market Pulse Settings */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!section2Expanded && (paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setSection2Expanded(!section2Expanded);
                   setSection3Expanded(false);
@@ -2816,11 +2935,182 @@ function WatchlistPageContent() {
                 </div>
               )}
 
+              {/* Paper Trading Settings */}
+              <button
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!paperTradingSettingsExpanded && (section2Expanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
+                onClick={() => {
+                  setPaperTradingSettingsExpanded(!paperTradingSettingsExpanded);
+                  setMarketPulseSettingsExpanded(false);
+                  setSection3Expanded(false);
+                  setSection2Expanded(false);
+                  setDisplaySettingsExpanded(false);
+                  setDataSettingsExpanded(false);
+                  setWatchlistSettingsExpanded(false);
+                }}
+              >
+                <h3 className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-amber-500" />
+                  Paper Trading
+                </h3>
+                <ChevronDown className={`w-5 h-5 transition-transform ${paperTradingSettingsExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {paperTradingSettingsExpanded && (
+                <div className="mt-3 space-y-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Configure your paper trading preferences.
+                  </p>
+                  
+                  {/* Show P/L as */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Show P/L as</p>
+                    <div className="flex gap-2">
+                      {[
+                        { value: '$', label: '$' },
+                        { value: '%', label: '%' },
+                        { value: 'both', label: 'Both' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setPlDisplayFormat(option.value as '$' | '%' | 'both');
+                            localStorage.setItem('paperTradingPlFormat', option.value);
+                          }}
+                          className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            plDisplayFormat === option.value
+                              ? 'bg-amber-500 text-white border-amber-500'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Default Order Type */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Default Order Type</p>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'market', label: 'Market' },
+                        { value: 'limit', label: 'Limit' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setDefaultOrderType(option.value as 'market' | 'limit');
+                            localStorage.setItem('paperTradingOrderType', option.value);
+                          }}
+                          className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            defaultOrderType === option.value
+                              ? 'bg-amber-500 text-white border-amber-500'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Confirm Before Trades */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Before Trades</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Show confirmation dialog before executing</p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={confirmBeforeTrades}
+                        onClick={() => {
+                          const newValue = !confirmBeforeTrades;
+                          setConfirmBeforeTrades(newValue);
+                          localStorage.setItem('paperTradingConfirmTrades', String(newValue));
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${confirmBeforeTrades ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${confirmBeforeTrades ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </label>
+                  </div>
+                  
+                  {/* Starting Cash Balance */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Starting Cash Balance</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Balance when resetting account ($1K - $10M)</p>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 1000, label: '$1K' },
+                        { value: 10000, label: '$10K' },
+                        { value: 100000, label: '$100K' },
+                        { value: 500000, label: '$500K' },
+                        { value: 1000000, label: '$1M' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setStartingCashBalance(option.value);
+                            localStorage.setItem('paperTradingStartingBalance', String(option.value));
+                          }}
+                          className={`flex-1 px-2 py-2 text-xs rounded-lg border transition-colors ${
+                            startingCashBalance === option.value
+                              ? 'bg-amber-500 text-white border-amber-500'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2">
+                      <input
+                        type="number"
+                        min="1000"
+                        max="10000000"
+                        step="1000"
+                        value={startingCashBalance}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 1000 && val <= 10000000) {
+                            setStartingCashBalance(val);
+                            localStorage.setItem('paperTradingStartingBalance', String(val));
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="Custom amount..."
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Reset Account */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reset Account</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Clear all positions and reset to ${startingCashBalance.toLocaleString()}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDrawerOpen(false); // Close drawer first
+                        setShowResetAccountModal(true);
+                      }}
+                      className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      Reset Paper Trading Account
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Live Screen Categories */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!section3Expanded && (section2Expanded || paperTradingSettingsExpanded || displaySettingsExpanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setSection3Expanded(!section3Expanded);
+                  setPaperTradingSettingsExpanded(false);
                   setSection2Expanded(false);
                   setDisplaySettingsExpanded(false);
                   setDataSettingsExpanded(false);
@@ -2916,7 +3206,7 @@ function WatchlistPageContent() {
 
               {/* Display Settings */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded || dataSettingsExpanded || watchlistSettingsExpanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!displaySettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || dataSettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setDisplaySettingsExpanded(!displaySettingsExpanded);
                   setSection2Expanded(false);
@@ -3057,7 +3347,7 @@ function WatchlistPageContent() {
 
               {/* Data Settings */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded || displaySettingsExpanded || watchlistSettingsExpanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!dataSettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || watchlistSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setDataSettingsExpanded(!dataSettingsExpanded);
                   setSection2Expanded(false);
@@ -3183,7 +3473,7 @@ function WatchlistPageContent() {
 
               {/* Watchlist Settings */}
               <button
-                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${section2Expanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded ? 'opacity-50' : ''}`}
+                className={`text-lg mt-4 flex items-center justify-between w-full text-left transition-opacity ${!watchlistSettingsExpanded && (section2Expanded || paperTradingSettingsExpanded || section3Expanded || displaySettingsExpanded || dataSettingsExpanded) ? 'opacity-40' : ''}`}
                 onClick={() => {
                   setWatchlistSettingsExpanded(!watchlistSettingsExpanded);
                   setSection2Expanded(false);
@@ -3326,7 +3616,6 @@ function WatchlistPageContent() {
                 Close
               </button>
             </div>
-          </div>
         </div>
       </div>
       </>
@@ -4366,6 +4655,77 @@ function WatchlistPageContent() {
           </div>
         </div>
       </InfoModal>
+
+      {/* Reset Account Confirmation Modal */}
+      {showResetAccountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowResetAccountModal(false)}>
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reset Paper Trading Account?</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              This will close all positions and reset your balance to ${startingCashBalance.toLocaleString()}. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetAccountModal(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const user = localStorage.getItem('user');
+                    const email = user ? JSON.parse(user).email : null;
+                    if (!email) {
+                      showToast('Please log in to reset account', 'error');
+                      setShowResetAccountModal(false);
+                      return;
+                    }
+                    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+                    const response = await fetch(`${backendUrl}/api/paper-trading/account/reset/`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Email': email,
+                      },
+                      body: JSON.stringify({ starting_balance: startingCashBalance }),
+                    });
+                    if (response.ok) {
+                      showToast('Paper trading account reset successfully!', 'success');
+                      // Refresh paper trading data from both context and data hook
+                      if (refreshAccount) {
+                        await refreshAccount();
+                      }
+                      if (refreshPaperTradingData) {
+                        refreshPaperTradingData();
+                      }
+                    } else {
+                      const errData = await response.json();
+                      showToast(errData.error || 'Failed to reset account', 'error');
+                    }
+                  } catch (err) {
+                    showToast('Failed to reset account', 'error');
+                  }
+                  setShowResetAccountModal(false);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Reset Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Menu (for long-press/right-click on Market Pulse items) */}
       {quickActionMenu && (
