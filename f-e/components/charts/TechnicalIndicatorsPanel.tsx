@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, JSX } from 'react';
 import { Activity, BarChart3, Gauge, TrendingUp, RefreshCw, Zap, AlertTriangle, TrendingDown, ArrowUpCircle, ArrowDownCircle, BarChart } from 'lucide-react';
 import AnimatedIndicatorChart, { IndicatorData } from './AnimatedIndicatorChart';
 import TimeframeSelector, { type PeriodType, type IntervalType, getDefaultInterval } from './TimeframeSelector';

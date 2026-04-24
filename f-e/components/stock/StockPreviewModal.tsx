@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { JSX } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, ExternalLink, TrendingUp, TrendingDown, Info, MessageSquarePlus, Check, Star, BarChart2, LineChart, Briefcase, ChevronDown, ChevronRight, FileText, DollarSign, ZoomIn, ZoomOut, RotateCcw, Loader2 } from 'lucide-react';
 import { getPricePrefix, getPriceSuffix, formatAxisPrice } from '@/lib/priceUtils';
