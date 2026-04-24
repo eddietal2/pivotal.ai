@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, JSX } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Activity, TrendingUp, BarChart3, Settings, Info, Zap, LineChart, CandlestickChart } from 'lucide-react';
 import { TechnicalIndicatorsPanel, type ExtendedIndicatorData, type IndicatorKey } from '@/components/charts';
