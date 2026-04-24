@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     
     "plugins": [
@@ -30,7 +31,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "__tests__/pages/login.test.jsx"  ],
+    "**/*.mts",
+    "__tests__/pages/login.test.jsx"
+  ],
   "exclude": ["node_modules"]
 }
