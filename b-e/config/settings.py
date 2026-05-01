@@ -14,7 +14,7 @@ from pathlib import Path
 from os import getenv
 from dotenv import load_dotenv
 # Load variables from a .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,11 +72,11 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = False 
 
 # List of allowed frontend origins that can make requests to this Django API.
-# This MUST include the origin that was blocked: http://192.168.1.68:3000
+# This MUST include the origin that was blocked: http://192.168.0.134:3000
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://192.168.1.68:3000", # <-- This is where your frontend's address is specified.
+    "http://192.168.0.134:3000", # <-- This is where your frontend's address is specified.
     "https://pivotal-ai-web-app.vercel.app",  # Production frontend
     "https://jayla-streptococcal-aretha.ngrok-free.dev",  # ngrok tunnel for mobile testing
 ]
@@ -220,7 +220,7 @@ EMAIL_USE_SSL = getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
 DEFAULT_FROM_EMAIL = getenv('DEFAULT_FROM_EMAIL', 'eddie@finalbossxr.com')
 
 # Frontend URL for redirects
-FRONTEND_URL = getenv('FRONTEND_URL', 'http://192.168.1.68:3000')
+FRONTEND_URL = getenv('FRONTEND_URL', 'http://192.168.0.134:3000')
 
 # Backend URL for magic links (accessible from mobile devices)
 BACKEND_URL = getenv('BACKEND_URL', 'http://192.168.1.68:8000')

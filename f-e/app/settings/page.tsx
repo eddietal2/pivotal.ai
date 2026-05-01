@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { redirectTo } from '@/lib/redirect';
 import MarketStatusIndicator from '@/components/ui/MarketStatusIndicator';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.1.68:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.0.134:3000';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();

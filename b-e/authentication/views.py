@@ -593,7 +593,7 @@ def google_oauth_redirect(request):
     
     # Get Google OAuth credentials from settings/environment
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
-    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://pivotalai-production.up.railway.app/auth/google-callback')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://jayla-streptococcal-aretha.ngrok-free.dev/auth/google-callback')
     
     if not client_id:
         return JsonResponse({
@@ -641,7 +641,7 @@ def google_oauth_callback(request):
     # Get credentials from environment
     client_id = getenv('GOOGLE_OAUTH_CLIENT_ID', '')
     client_secret = getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
-    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://pivotalai-production.up.railway.app/auth/google-callback')
+    redirect_uri = getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://jayla-streptococcal-aretha.ngrok-free.dev/auth/google-callback')
     
     # Exchange authorization code for access token
     token_url = 'https://oauth2.googleapis.com/token'
@@ -943,7 +943,7 @@ def verify_email_change(request):
             
             # Redirect to frontend with new token and updated user data
             frontend_url = (
-                f"http://192.168.1.68:3000/settings?"
+                f"{settings.FRONTEND_URL}/settings?"
                 f"token={str(session_token)}&"
                 f"email={user.email}&"
                 f"user_id={user.id}&"
@@ -1173,7 +1173,7 @@ def verify_username_change(request):
             
             # Redirect to frontend with new token and updated user data
             frontend_url = (
-                f"http://192.168.1.68:3000/settings?"
+                f"{settings.FRONTEND_URL}/settings?"
                 f"token={str(session_token)}&"
                 f"email={user.email}&"
                 f"user_id={user.id}&"

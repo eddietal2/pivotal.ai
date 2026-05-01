@@ -4,7 +4,7 @@ Object.defineProperty(process.env, 'NEXT_PUBLIC_BACKEND_URL', {
   writable: true,
 });
 Object.defineProperty(process.env, 'NEXT_PUBLIC_BASE_URL', {
-  value: 'http://192.168.1.68:3000',
+  value: 'http://192.168.0.134:3000',
   writable: true,
 });
 
@@ -25,7 +25,7 @@ import { redirectTo } from '../../lib/redirect'
 // Set up environment variables
 beforeAll(() => {
   process.env.NEXT_PUBLIC_BACKEND_URL = 'http://127.0.0.1:8000';
-  process.env.NEXT_PUBLIC_BASE_URL = 'http://192.168.1.68:3000';
+  process.env.NEXT_PUBLIC_BASE_URL = 'http://192.168.0.134:3000';
 });
 
 // in your Jest setup (e.g., in setupFilesAfterEnv) or imported here.
@@ -78,7 +78,7 @@ const renderWithProviders = (ui, options) => {
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_BACKEND_URL = 'http://127.0.0.1:8000';
-process.env.NEXT_PUBLIC_BASE_URL = 'http://192.168.1.68:3000';
+process.env.NEXT_PUBLIC_BASE_URL = 'http://192.168.0.134:3000';
 
 // ----------------------- 
 // A. Rendering & Display
@@ -533,7 +533,7 @@ describe('Post Login Redirect', () => {
     // This test simulates the user clicking a magic link in their email.
     // The magic link contains a token, which when validated by the backend API,
     // returns a redirect_url that takes the user to their home page.
-    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const expectedHomePageURL = 'http://192.168.0.134:3000/home';
 
     // ARRANGE 0: Mock the magic link validation API response
     // This simulates the backend validating the JWT token from the email link
@@ -612,7 +612,7 @@ describe('Post Login Redirect', () => {
     // This test verifies that the login page stores user data and auth token
     // in localStorage before redirecting, so the home page can display logged-in state
     
-    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const expectedHomePageURL = 'http://192.168.0.134:3000/home';
     const mockUser = {
       email: 'user@example.com',
       id: '123',
@@ -687,7 +687,7 @@ describe('Post Login Redirect', () => {
     // This test verifies that if a user is already logged in (has auth data in localStorage),
     // the login page should automatically redirect them to the home page on mount
     
-    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const expectedHomePageURL = 'http://192.168.0.134:3000/home';
     const mockUser = {
       email: 'user@example.com',
       id: '123',
@@ -719,7 +719,7 @@ describe('Post Login Redirect', () => {
   // FE-305: If the login handler is visited with a token in the URL (e.g., via Google OAuth or Magic Link),
   // the app should store the token/user and show a success toast before redirecting to /home.
   it("FE-305 should show a logged-in toast and redirect when token is present in URL", async () => {
-    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const expectedHomePageURL = 'http://192.168.0.134:3000/home';
     const mockUser = { email: 'user@example.com', id: '123', username: 'user' };
     const mockToken = 'mock-token-abc';
 
@@ -758,7 +758,7 @@ describe('Post Login Redirect', () => {
 
   // FE-306: Post-login toast includes user's name when available
   it("FE-306 should display a personalized welcome toast with the user's name after login", async () => {
-    const expectedHomePageURL = 'http://192.168.1.68:3000/home';
+    const expectedHomePageURL = 'http://192.168.0.134:3000/home';
     const mockUser = { 
       email: 'john@example.com', 
       id: '456', 
@@ -825,7 +825,7 @@ describe('Post Login Redirect', () => {
     // This test verifies that if a user is not logged in (no auth data in localStorage),
     // attempting to access a protected route results in a redirect to the login page
     
-    const expectedLoginPageURL = 'http://192.168.1.68:3000/login';
+    const expectedLoginPageURL = 'http://192.168.0.134:3000/login';
     
     // ARRANGE: Ensure localStorage returns null for auth data (simulating unauthenticated user)
     localStorageMock.getItem.mockReturnValue(null);
