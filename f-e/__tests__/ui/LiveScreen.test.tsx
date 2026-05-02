@@ -83,6 +83,7 @@ const defaultProps = {
   isInWatchlist: jest.fn(() => false),
   onSwipeRemove: jest.fn(),
   enableSwipe: false,
+  isActive: true,
 };
 
 describe('LiveScreen Component', () => {
@@ -329,7 +330,8 @@ describe('LiveScreen Component', () => {
       render(<LiveScreen {...defaultProps} />);
       
       await waitFor(() => {
-        expect(screen.getByText('$175.50')).toBeInTheDocument();
+        const priceElements = screen.getAllByText('$175.50');
+        expect(priceElements.length).toBeGreaterThan(0);
       }, { timeout: 2000 });
     });
 
@@ -347,7 +349,8 @@ describe('LiveScreen Component', () => {
       render(<LiveScreen {...defaultProps} />);
       
       await waitFor(() => {
-        expect(screen.getByText('BUY')).toBeInTheDocument();
+        const buyElements = screen.getAllByText('BUY');
+        expect(buyElements.length).toBeGreaterThan(0);
       }, { timeout: 2000 });
     });
 
@@ -365,7 +368,8 @@ describe('LiveScreen Component', () => {
       render(<LiveScreen {...defaultProps} />);
       
       await waitFor(() => {
-        expect(screen.getByText('55.5')).toBeInTheDocument();
+        const rsiElements = screen.getAllByText('55.5');
+        expect(rsiElements.length).toBeGreaterThan(0);
       }, { timeout: 2000 });
     });
 

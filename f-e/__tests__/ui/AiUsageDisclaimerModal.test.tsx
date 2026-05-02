@@ -7,6 +7,9 @@ import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
 import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
+import { FavoritesProvider } from '@/components/context/FavoritesContext';
+import { MarketStatusProvider } from '@/components/context/MarketStatusContext';
+import { WatchlistProvider } from '@/components/context/WatchlistContext';
 
 // Mock Next.js navigation
 jest.mock('next/navigation', () => ({
@@ -46,17 +49,23 @@ describe('AI Usage modal flow', () => {
 
   test('clicking AI Usage opens modal and shows content', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -72,17 +81,23 @@ describe('AI Usage modal flow', () => {
 
   test('modal closes on ESC key press', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -96,17 +111,23 @@ describe('AI Usage modal flow', () => {
 
   test('modal content is accessible', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     act(() => {
       jest.advanceTimersByTime(2000);

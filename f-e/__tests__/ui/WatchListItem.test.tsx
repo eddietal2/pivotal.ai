@@ -47,7 +47,7 @@ describe('WatchListItem', () => {
 
   test('handles zero change correctly', () => {
     render(<WatchListItem name="Stable Coin" symbol="USDC" price="$1.00" change={0} />);
-    expect(screen.getByText('+0.00%')).toBeInTheDocument();
+    expect(screen.getByText('Unch')).toBeInTheDocument();
   });
 
   test('renders without sparkline when sparkline is empty', () => {

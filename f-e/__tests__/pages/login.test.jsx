@@ -19,6 +19,9 @@ import { ToastProvider } from '../../components/context/ToastContext'
 import { UIProvider } from '../../components/context/UIContext'
 import { PivyChatProvider } from '../../components/context/PivyChatContext'
 import { PaperTradingProvider } from '../../components/context/PaperTradingContext'
+import { FavoritesProvider } from '@/components/context/FavoritesContext'
+import { MarketStatusProvider } from '@/components/context/MarketStatusContext'
+import { WatchlistProvider } from '@/components/context/WatchlistContext'
 import PostLoginToastHandler from '@/components/ui/PostLoginToastHandler';
 import { redirectTo } from '../../lib/redirect'
 
@@ -60,18 +63,24 @@ jest.mock('next/navigation', () => ({
 // Utility function to render with ThemeProvider, ToastProvider, UIProvider, PaperTradingProvider and PivyChatProvider
 const renderWithProviders = (ui, options) => {
   return render(
-    <ThemeProvider>
-      <ToastProvider>
-        <UIProvider>
-          <PaperTradingProvider>
-            <PivyChatProvider>
-              <PostLoginToastHandler />
-              {ui}
-            </PivyChatProvider>
-          </PaperTradingProvider>
-        </UIProvider>
-      </ToastProvider>
-    </ThemeProvider>,
+    <MarketStatusProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <UIProvider>
+            <FavoritesProvider>
+              <WatchlistProvider>
+                <PaperTradingProvider>
+                  <PivyChatProvider>
+                    <PostLoginToastHandler />
+                    {ui}
+                  </PivyChatProvider>
+                </PaperTradingProvider>
+              </WatchlistProvider>
+            </FavoritesProvider>
+          </UIProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </MarketStatusProvider>,
     options
   );
 }

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PivyPage from '../../app/pivy/page';
+import { MarketStatusProvider } from '@/components/context/MarketStatusContext';
 
 // Mock useSearchParams
 jest.mock('next/navigation', () => ({
@@ -9,7 +10,7 @@ jest.mock('next/navigation', () => ({
 
 describe('Pivy Chat page', () => {
   test('renders and shows chat cards with loading skeleton initially', async () => {
-    render(<PivyPage />);
+    render(<MarketStatusProvider><PivyPage /></MarketStatusProvider>);
 
     // Initially shows loading skeleton
     expect(screen.getByTestId('candlestick-animation')).toBeInTheDocument();
@@ -25,7 +26,7 @@ describe('Pivy Chat page', () => {
   });
 
   test('welcome alert can be dismissed', async () => {
-    render(<PivyPage />);
+    render(<MarketStatusProvider><PivyPage /></MarketStatusProvider>);
 
     // Wait for loading to complete
     await waitFor(() => {
@@ -47,7 +48,7 @@ describe('Pivy Chat page', () => {
   });
 
   test.skip('settings drawer can be opened', async () => {
-    render(<PivyPage />);
+    render(<MarketStatusProvider><PivyPage /></MarketStatusProvider>);
 
     // Wait for loading to complete
     await waitFor(() => {
@@ -67,7 +68,7 @@ describe('Pivy Chat page', () => {
   });
 
   test('shows recent messages in chat cards', async () => {
-    render(<PivyPage />);
+    render(<MarketStatusProvider><PivyPage /></MarketStatusProvider>);
 
     // Wait for loading to complete
     await waitFor(() => {
@@ -80,7 +81,7 @@ describe('Pivy Chat page', () => {
   });
 
   test('timeframe selector shows current month and year', async () => {
-    render(<PivyPage />);
+    render(<MarketStatusProvider><PivyPage /></MarketStatusProvider>);
 
     // Wait for loading to complete
     await waitFor(() => {

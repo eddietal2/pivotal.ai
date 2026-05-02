@@ -41,6 +41,21 @@ jest.mock('@/components/context/ThemeContext', () => {
   };
 });
 
+// Mock the MarketStatusContext module at module level
+jest.mock('@/components/context/MarketStatusContext', () => {
+  const React = require('react');
+  return {
+    useMarketStatus: jest.fn(() => ({
+      status: 'closed',
+      statusText: 'Market Closed',
+      statusDescription: 'Weekend',
+      nextEvent: 'Opens Monday',
+      isLoading: false,
+    })),
+    MarketStatusProvider: ({ children }) => React.createElement('div', null, children),
+  };
+});
+
 // Mock the ToastContext module at module level
 jest.mock('@/components/context/ToastContext', () => {
   const React = require('react');
@@ -1411,8 +1426,8 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     const lightText = screen.getByText(/^light$/i);
     expect(lightText).toBeInTheDocument();
     
-    // ASSERT: Moon icon is no longer present
-    const moonIconAfterToggle = darkContainer.querySelector('svg.lucide-moon');
+    // ASSERT: Moon icon is no longer present in the toggle button
+    const moonIconAfterToggle = lightToggleButton.querySelector('svg.lucide-moon');
     expect(moonIconAfterToggle).not.toBeInTheDocument();
   });
 
@@ -1636,8 +1651,8 @@ describe('Settings: Light/Dark Mode Toggle', () => {
     const lightText = screen.getByText(/^light$/i);
     expect(lightText).toBeInTheDocument();
     
-    // ASSERT: Moon icon is NOT present (would indicate light mode)
-    const moonIcon = newPageContainer.querySelector('svg.lucide-moon');
+    // ASSERT: Moon icon is NOT present in the toggle button (would indicate light mode)
+    const moonIcon = lightToggleButton.querySelector('svg.lucide-moon');
     expect(moonIcon).not.toBeInTheDocument();
     
     // ASSERT: localStorage was checked for theme preference

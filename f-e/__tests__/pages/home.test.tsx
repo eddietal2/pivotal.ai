@@ -5,6 +5,9 @@ import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
 import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
+import { FavoritesProvider } from '@/components/context/FavoritesContext';
+import { MarketStatusProvider } from '@/components/context/MarketStatusContext';
+import { WatchlistProvider } from '@/components/context/WatchlistContext';
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -31,15 +34,21 @@ jest.mock('next/link', () => {
 
 // Wrapper component with all required providers
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <ToastProvider>
-    <UIProvider>
-      <PaperTradingProvider>
-        <PivyChatProvider>
-          {children}
-        </PivyChatProvider>
-      </PaperTradingProvider>
-    </UIProvider>
-  </ToastProvider>
+  <MarketStatusProvider>
+    <ToastProvider>
+      <UIProvider>
+        <FavoritesProvider>
+          <WatchlistProvider>
+            <PaperTradingProvider>
+              <PivyChatProvider>
+                {children}
+              </PivyChatProvider>
+            </PaperTradingProvider>
+          </WatchlistProvider>
+        </FavoritesProvider>
+      </UIProvider>
+    </ToastProvider>
+  </MarketStatusProvider>
 );
 
 // Helper function to render with providers

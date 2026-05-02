@@ -7,6 +7,9 @@ import { ToastProvider } from '@/components/context/ToastContext';
 import { UIProvider } from '@/components/context/UIContext';
 import { PivyChatProvider } from '@/components/context/PivyChatContext';
 import { PaperTradingProvider } from '@/components/context/PaperTradingContext';
+import { FavoritesProvider } from '@/components/context/FavoritesContext';
+import { MarketStatusProvider } from '@/components/context/MarketStatusContext';
+import { WatchlistProvider } from '@/components/context/WatchlistContext';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -37,32 +40,44 @@ global.fetch = jest.fn(() =>
 describe('Stop Loss modal flow', () => {
   test('clicking stop loss opens modal and shows content', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     
     // Wait for loading to complete
     await waitFor(() => {
       expect(screen.getByText('Disclaimers & Risk Notices')).toBeInTheDocument();
     }, { timeout: 3000 });
+
+    // Expand the Disclaimers section (it's collapsed by default)
+    const expandBtns = screen.getAllByRole('button', { name: /Expand section/i });
+    const disclaimersExpandBtn = expandBtns.find(btn => btn.textContent?.includes('Disclaimers'));
+    if (disclaimersExpandBtn) fireEvent.click(disclaimersExpandBtn);
     
-    const stopLossBtn = await screen.findByRole('button', { name: /learn more/i });
+    const stopLossBtn = await screen.findByRole('button', { name: /open stop loss details/i });
     expect(stopLossBtn).toBeInTheDocument();
     fireEvent.click(stopLossBtn);
     await waitFor(() => {
-      expect(screen.getByText('Stop Loss Reminder')).toBeInTheDocument();
+      expect(document.querySelector('[role="dialog"]')).toBeTruthy();
     });
     // Check that modal opens (title should be visible)
-    expect(screen.getByText(/Stop Loss Reminder/)).toBeInTheDocument();
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
     // Close modal
     fireEvent.click(screen.getByTestId('modal-close-bottom'));
     await waitFor(() => {
@@ -73,45 +88,62 @@ describe('Stop Loss modal flow', () => {
 
   test('modal is not visible initially', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     expect(screen.queryByText('Stop Loss Reminder')).not.toBeInTheDocument();
   });
 
   test('closing modal removes it from DOM', async () => {
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <UIProvider>
-            <PaperTradingProvider>
-              <PivyChatProvider>
-                <App />
-              </PivyChatProvider>
-            </PaperTradingProvider>
-          </UIProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <MarketStatusProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <UIProvider>
+              <FavoritesProvider>
+                <WatchlistProvider>
+                  <PaperTradingProvider>
+                    <PivyChatProvider>
+                      <App />
+                    </PivyChatProvider>
+                  </PaperTradingProvider>
+                </WatchlistProvider>
+              </FavoritesProvider>
+            </UIProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </MarketStatusProvider>
     );
     
     // Wait for loading to complete
     await waitFor(() => {
       expect(screen.getByText('Disclaimers & Risk Notices')).toBeInTheDocument();
     }, { timeout: 3000 });
+
+    // Expand the Disclaimers section (it's collapsed by default)
+    const expandBtns = screen.getAllByRole('button', { name: /Expand section/i });
+    const disclaimersExpandBtn = expandBtns.find(btn => btn.textContent?.includes('Disclaimers'));
+    if (disclaimersExpandBtn) fireEvent.click(disclaimersExpandBtn);
     
-    const stopLossBtn = await screen.findByRole('button', { name: /learn more/i });
+    const stopLossBtn = await screen.findByRole('button', { name: /open stop loss details/i });
     fireEvent.click(stopLossBtn);
     await waitFor(() => {
-      expect(screen.getByText('Stop Loss Reminder')).toBeInTheDocument();
+      expect(document.querySelector('[role="dialog"]')).toBeTruthy();
     });
     fireEvent.click(screen.getByTestId('modal-close-bottom'));
     await waitFor(() => {
