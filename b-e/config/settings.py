@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'authentication',
     'financial_data',
     'paper_trading',
+    'pivy_chat',
 ]
 
 MIDDLEWARE = [
