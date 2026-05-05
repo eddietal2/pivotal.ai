@@ -23,5 +23,6 @@ urlpatterns = [
     path('auth/', include('authentication.urls')),
     path('api/market-data/', include('financial_data.urls')),
     path('api/paper-trading/', include('paper_trading.urls')),
+    path('api/pivy-chat/', include('pivy_chat.urls')),
     path('', views.wassup_world, name='wassup_world'),
 ]

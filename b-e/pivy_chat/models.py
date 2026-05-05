@@ -1,5 +1,4 @@
 from django.db import models
-from django.conf import settings
 
 
 class ChatDay(models.Model):
@@ -33,7 +32,7 @@ class ChatMessage(models.Model):
     content = models.TextField()
     # null = global message visible to all users; set = only visible to that user
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'authentication.User',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

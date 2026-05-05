@@ -210,6 +210,24 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+# Celery Beat Schedule
+# All times in UTC. ET = UTC-5 (EST) / UTC-4 (EDT).
+# 8:30 AM ET = 13:30 UTC (EST) / 12:30 UTC (EDT)
+# Using 13:30 UTC to be safe (covers EST; runs 1hr early in EDT which is fine pre-market)
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    # Morning brief: 8:30 AM ET (13:30 UTC), Mon–Fri
+    'morning-market-brief': {
+        'task': 'pivy_chat.generate_morning_brief',
+        'schedule': crontab(hour=13, minute=30, day_of_week='1-5'),
+    },
+    # Intraday monitor: every 30 min, 9:30 AM–4:00 PM ET (14:00–21:00 UTC), Mon–Fri
+    'intraday-alert-monitor': {
+        'task': 'pivy_chat.monitor_intraday_alerts',
+        'schedule': crontab(minute='0,30', hour='14-20', day_of_week='1-5'),
+    },
+}
+
 # Email settings
 EMAIL_BACKEND = getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = getenv('EMAIL_HOST', 'mail.spacemail.com')
